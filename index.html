@@ -584,7 +584,7 @@ function setStep(n,status,msg){
 async function startConvert(){
   const groqKey=localStorage.getItem('groq_api_key');
   const claudeKey=localStorage.getItem('claude_api_key');
-  if(!groqKey||!claudeKey){openSettings();return;}
+  if(!groqKey){openSettings();return;}
   if(!selectedFile)return;
 
   document.getElementById('convertBtn').disabled=true;
