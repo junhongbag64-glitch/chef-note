@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ChefNote</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body { font-family:'Noto Sans KR',sans-serif; background:#fff; color:#0a0a0a; min-height:100vh; }
+.header { background:#fff; padding:18px 20px 14px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #f0f0f0; position:sticky; top:0; z-index:100; }
+.logo-main { font-size:22px; font-weight:900; color:#0a0a0a; letter-spacing:-1px; }
+.logo-sub { font-size:11px; font-weight:300; color:#aaa; letter-spacing:1px; margin-left:6px; }
+.header-actions { display:flex; gap:8px; }
+.icon-btn { background:none; border:1px solid #e8e8e8; border-radius:10px; width:38px; height:38px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:17px; }
+.upload-zone { margin:16px; border:1.5px dashed #d0d0d0; border-radius:20px; padding:28px 20px; text-align:center; cursor:pointer; transition:all 0.2s; background:#fafafa; }
+.upload-zone:hover { border-color:#0a0a0a; background:#f5f5f5; }
+.upload-zone h2 { font-size:15px; font-weight:700; margin-bottom:4px; }
+.upload-zone p { font-size:12px; color:#aaa; font-weight:300; }
+.upload-zone-icon { font-size:32px; margin-bottom:10px; }
+.file-input { display:none; }
+.file-pill { margin:0 16px 14px; background:#f5f5f5; border-radius:12px; padding:12px 16px; display:flex; align-items:center; gap:12px; }
+.file-pill-name { font-size:13px; font-weight:700; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.file-pill-size { font-size:12px; color:#aaa; }
+.convert-btn { margin:0 16px 20px; width:calc(100% - 32px); padding:16px; background:#0a0a0a; color:#fff; border:none; border-radius:14px; font-size:15px; font-weight:700; cursor:pointer; font-family:'Noto Sans KR',sans-serif; }
+.convert-btn:disabled { background:#ccc; cursor:not-allowed; }
+.progress-wrap { margin:0 16px 20px; background:#f5f5f5; border-radius:16px; padding:18px; }
+.progress-label { font-size:10px; font-weight:700; color:#aaa; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:12px; }
+.p-step { display:flex; align-items:center; gap:10px; padding:7px 0; font-size:13px; color:#bbb; font-family:'Noto Sans KR',sans-serif; }
+.p-step.active { color:#0a0a0a; font-weight:700; }
+.p-step.done { color:#22c55e; font-weight:500; }
+.spinner { width:14px; height:14px; border:2px solid #0a0a0a; border-top-color:transparent; border-radius:50%; animation:spin 0.8s linear infinite; flex-shrink:0; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.error-msg { margin:0 16px 16px; background:#fff5f5; border:1px solid #fecaca; border-radius:12px; padding:13px 16px; font-size:13px; color:#dc2626; line-height:1.6; }
+.section-hd { padding:8px 16px 16px; display:flex; align-items:baseline; justify-content:space-between; }
+.section-hd-title { font-size:20px; font-weight:900; color:#0a0a0a; letter-spacing:-0.8px; }
+.section-hd-count { font-size:12px; color:#aaa; font-weight:300; }
+.recipe-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:0 16px 32px; }
+.recipe-card { background:#fff; border-radius:18px; overflow:hidden; border:1.5px solid #e8e8e8; box-shadow:0 4px 20px rgba(0,0,0,0.08); cursor:pointer; transition:all 0.2s; }
+.recipe-card:hover { transform:translateY(-3px); box-shadow:0 8px 30px rgba(0,0,0,0.14); }
+.recipe-card-img { width:100%; aspect-ratio:1/1; display:flex; align-items:center; justify-content:center; font-size:52px; background:#f8f8f8; }
+.recipe-card-body { padding:12px; }
+.recipe-card-name { font-size:13px; font-weight:800; color:#0a0a0a; letter-spacing:-0.4px; margin-bottom:8px; line-height:1.3; }
+.recipe-card-tags { display:flex; gap:5px; flex-wrap:wrap; }
+.recipe-tag { font-size:10px; font-weight:500; color:#666; background:#f5f5f5; border-radius:6px; padding:3px 7px; }
+.note-card { background:#f8f8f8; border-radius:14px; padding:14px 16px; margin:0 16px 8px; cursor:pointer; transition:all 0.2s; border:1px solid transparent; }
+.note-card:hover { border-color:#0a0a0a; }
+.note-card-badge { display:inline-block; font-size:10px; font-weight:700; padding:3px 8px; border-radius:6px; margin-bottom:6px; }
+.badge-exam { background:#dbeafe; color:#1d4ed8; }
+.badge-theory { background:#fef3c7; color:#92400e; }
+.badge-tip { background:#dcfce7; color:#15803d; }
+.badge-assignment { background:#fce7f3; color:#9d174d; }
+.note-card-title { font-size:14px; font-weight:700; color:#0a0a0a; margin-bottom:4px; }
+.note-card-preview { font-size:12px; color:#888; line-height:1.5; font-weight:300; }
+.empty { text-align:center; padding:48px 20px; }
+.empty-icon { font-size:48px; margin-bottom:12px; }
+.empty-text { font-size:14px; color:#aaa; font-weight:300; line-height:1.6; }
+
+/* 레시피 디테일 */
+#recipeDetail { display:none; position:fixed; inset:0; background:#fff; z-index:400; flex-direction:column; overflow-y:auto; }
+#recipeDetail.open { display:flex; }
+.rd-hero { position:relative; width:100%; aspect-ratio:4/3; background:#f5f5f5; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:80px; }
+.rd-hero-overlay { position:absolute; inset:0; background:linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, transparent 40%, transparent 60%, rgba(0,0,0,0.55) 100%); }
+.rd-hero-back { position:absolute; top:16px; left:16px; background:rgba(255,255,255,0.9); border:none; border-radius:50%; width:40px; height:40px; font-size:20px; cursor:pointer; z-index:5; }
+.rd-hero-title { position:absolute; bottom:20px; left:20px; right:20px; z-index:5; }
+.rd-hero-title h1 { font-size:26px; font-weight:900; color:#fff; letter-spacing:-0.8px; line-height:1.2; }
+.rd-date { font-size:12px; color:rgba(255,255,255,0.7); margin-top:4px; font-weight:300; }
+.rd-body { padding:24px 20px; flex:1; }
+.rd-section-title { font-size:11px; font-weight:700; color:#aaa; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:14px; }
+.rd-ing-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:28px; }
+.rd-ing-chip { background:#f8f8f8; border-radius:10px; padding:10px 12px; }
+.rd-ing-name { font-size:13px; font-weight:700; color:#0a0a0a; }
+.rd-ing-amt { font-size:11px; color:#aaa; margin-top:2px; }
+.rd-step { display:flex; gap:14px; padding:14px 0; border-bottom:1px solid #f5f5f5; align-items:flex-start; }
+.rd-step:last-child { border-bottom:none; }
+.rd-step-num { width:30px; height:30px; background:#0a0a0a; color:#fff; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; flex-shrink:0; }
+.rd-step-text { font-size:14px; color:#333; line-height:1.7; padding-top:5px; font-family:'Noto Sans KR',sans-serif; }
+.rd-tip { background:#f8f8f8; border-radius:12px; padding:14px; margin-bottom:10px; font-size:13px; color:#555; line-height:1.6; }
+.rd-tip::before { content:'💡 '; }
+.rd-cook-btn { width:100%; padding:18px; background:#FF6B00; color:#fff; border:none; border-radius:16px; font-size:16px; font-weight:800; cursor:pointer; font-family:'Noto Sans KR',sans-serif; margin-top:24px; margin-bottom:32px; }
+.culinary-term { color:#FF6B00; font-weight:800; cursor:pointer; border-bottom:2px dashed #FF6B00; display:inline; }
+
+/* 노트 디테일 */
+#noteDetail { display:none; position:fixed; inset:0; background:#fff; z-index:400; flex-direction:column; overflow-y:auto; }
+#noteDetail.open { display:flex; }
+.nd-header { padding:20px; display:flex; align-items:center; gap:14px; border-bottom:1px solid #f0f0f0; position:sticky; top:0; background:#fff; z-index:5; }
+.nd-back { background:#f5f5f5; border:none; border-radius:50%; width:40px; height:40px; font-size:20px; cursor:pointer; flex-shrink:0; }
+.nd-title { font-size:18px; font-weight:900; letter-spacing:-0.5px; flex:1; }
+.nd-body { padding:20px; }
+.nd-content { background:#f8f8f8; border-radius:14px; padding:16px; font-size:14px; color:#333; line-height:1.9; font-family:'Noto Sans KR',sans-serif; white-space:pre-wrap; }
+
+/* 쿠킹 모드 */
+#cookingMode { display:none; position:fixed; inset:0; background:#fff; z-index:500; flex-direction:column; }
+#cookingMode.open { display:flex; }
+.cm-top-bar { height:3px; background:#f0f0f0; }
+.cm-progress { height:3px; background:#0a0a0a; transition:width 0.4s ease; }
+.cm-nav { padding:14px 20px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #f0f0f0; }
+.cm-recipe-name { font-size:14px; font-weight:700; max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cm-counter { font-size:12px; color:#aaa; }
+.cm-close { background:#f5f5f5; border:none; border-radius:50%; width:36px; height:36px; font-size:18px; cursor:pointer; }
+.cm-stage { flex:1; display:flex; align-items:center; justify-content:center; padding:32px 40px; position:relative; }
+.cm-tap { position:absolute; top:0; bottom:0; width:38%; z-index:10; display:flex; align-items:center; cursor:pointer; }
+.cm-tap-l { left:0; justify-content:flex-start; padding-left:16px; }
+.cm-tap-r { right:0; justify-content:flex-end; padding-right:16px; }
+.cm-arrow { font-size:32px; color:#ccc; }
+.cm-content { text-align:center; z-index:5; max-width:320px; }
+.cm-step-label { font-size:11px; font-weight:700; color:#aaa; letter-spacing:2px; text-transform:uppercase; margin-bottom:24px; }
+.cm-step-body { font-size:28px; font-weight:800; color:#0a0a0a; line-height:1.4; letter-spacing:-0.5px; font-family:'Noto Sans KR',sans-serif; }
+.cm-footer { padding:20px; border-top:1px solid #f0f0f0; background:#fff; }
+.cm-dots { display:flex; justify-content:center; gap:5px; margin-bottom:18px; }
+.cm-dot { width:5px; height:5px; border-radius:50%; background:#e0e0e0; transition:all 0.3s; }
+.cm-dot.on { background:#0a0a0a; width:18px; border-radius:3px; }
+.cm-btns { display:flex; gap:10px; }
+.cm-btn-prev { flex:1; padding:17px; background:#f5f5f5; color:#0a0a0a; border:none; border-radius:14px; font-size:16px; font-weight:700; cursor:pointer; font-family:'Noto Sans KR',sans-serif; }
+.cm-btn-next { flex:2; padding:17px; background:#0a0a0a; color:#fff; border:none; border-radius:14px; font-size:16px; font-weight:700; cursor:pointer; font-family:'Noto Sans KR',sans-serif; }
+.cm-btn-next.done { background:#22c55e; }
+.cm-slide { animation:cmIn 0.22s ease; }
+.cm-slide-back { animation:cmInBack 0.22s ease; }
+@keyframes cmIn { from { opacity:0; transform:translateX(30px); } to { opacity:1; transform:translateX(0); } }
+@keyframes cmInBack { from { opacity:0; transform:translateX(-30px); } to { opacity:1; transform:translateX(0); } }
+
+/* 용어 시트 */
+.term-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:600; align-items:flex-end; }
+.term-overlay.open { display:flex; }
+.term-sheet { background:#fff; border-radius:24px 24px 0 0; padding:24px 20px 48px; width:100%; animation:sheetUp 0.28s ease; }
+@keyframes sheetUp { from { transform:translateY(100%); } to { transform:translateY(0); } }
+.term-handle { width:36px; height:3px; background:#e0e0e0; border-radius:2px; margin:0 auto 20px; }
+.term-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; }
+.term-word { font-size:26px; font-weight:900; letter-spacing:-0.8px; }
+.term-cat { font-size:11px; color:#FF6B00; font-weight:700; margin-top:4px; }
+.term-x { background:#f5f5f5; border:none; border-radius:50%; width:36px; height:36px; font-size:18px; cursor:pointer; }
+.term-block { background:#f8f8f8; border-radius:14px; padding:14px 16px; margin-bottom:10px; }
+.term-block-lbl { font-size:10px; font-weight:700; color:#aaa; letter-spacing:1.2px; text-transform:uppercase; margin-bottom:7px; }
+.term-block-txt { font-size:14px; color:#333; line-height:1.7; font-family:'Noto Sans KR',sans-serif; }
+
+/* 설정 */
+.modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:700; align-items:flex-end; }
+.modal.open { display:flex; }
+.modal-sheet { background:#fff; border-radius:24px 24px 0 0; padding:28px 20px 48px; width:100%; }
+.modal-sheet h2 { font-size:20px; font-weight:900; letter-spacing:-0.8px; margin-bottom:6px; }
+.modal-sheet .modal-desc { font-size:12px; color:#aaa; margin-bottom:20px; line-height:1.6; }
+.modal-sheet label { font-size:10px; font-weight:700; color:#aaa; letter-spacing:1.2px; text-transform:uppercase; display:block; margin-bottom:8px; }
+.modal-sheet input { width:100%; padding:14px; border:1.5px solid #e8e8e8; border-radius:12px; font-size:14px; outline:none; margin-bottom:16px; font-family:'Noto Sans KR',sans-serif; }
+.modal-sheet input:focus { border-color:#0a0a0a; }
+.modal-save { width:100%; padding:15px; background:#0a0a0a; color:#fff; border:none; border-radius:14px; font-size:15px; font-weight:700; cursor:pointer; font-family:'Noto Sans KR',sans-serif; }
+.modal-divider { height:1px; background:#f0f0f0; margin:16px 0; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div><span class="logo-main">ChefNote</span><span class="logo-sub">by you</span></div>
+  <div class="header-actions">
+    <button class="icon-btn" onclick="document.getElementById('fileInput').click()">＋</button>
+    <button class="icon-btn" onclick="openSettings()">⚙</button>
+  </div>
+</div>
+
+<input type="file" id="fileInput" class="file-input" accept=".mp3,.m4a,.wav,.mp4,.ogg,.webm,.aac" onchange="handleFile(this)">
+<div id="filePill" style="display:none"></div>
+<button id="convertBtn" class="convert-btn" style="display:none" onclick="startConvert()">레시피로 변환하기 →</button>
+<div id="progressBox" style="display:none" class="progress-wrap">
+  <div class="progress-label">변환 중</div>
+  <div class="p-step" id="step1">⏳&nbsp;파일 확인 중</div>
+  <div class="p-step" id="step2">⏳&nbsp;음성 변환 중</div>
+  <div class="p-step" id="step3">⏳&nbsp;수업 주제 파악 중</div>
+  <div class="p-step" id="step4">⏳&nbsp;내용 추출 중</div>
+</div>
+<div id="errorBox" style="display:none" class="error-msg"></div>
+
+<div id="uploadPrompt">
+  <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+    <div class="upload-zone-icon">🎙️</div>
+    <h2>수업 녹음 업로드</h2>
+    <p>mp3 · m4a · wav · mp4 · 크기 제한 없음</p>
+  </div>
+  <div class="empty"><div class="empty-icon">📖</div><div class="empty-text">아직 저장된 내용이 없어요<br>수업 녹음을 업로드해보세요</div></div>
+</div>
+
+<div id="collectionView" style="display:none">
+  <div class="upload-zone" style="margin:16px 16px 8px" onclick="document.getElementById('fileInput').click()">
+    <div class="upload-zone-icon">🎙️</div>
+    <h2>새 수업 녹음 업로드</h2>
+    <p>크기 제한 없음 · 자동 처리</p>
+  </div>
+  <div id="examSection" style="display:none">
+    <div class="section-hd"><span class="section-hd-title">📝 시험 정보</span></div>
+    <div id="examList"></div>
+  </div>
+  <div id="theorySection" style="display:none">
+    <div class="section-hd"><span class="section-hd-title">📚 이론 & 지식</span></div>
+    <div id="theoryList"></div>
+  </div>
+  <div id="tipsSection" style="display:none">
+    <div class="section-hd"><span class="section-hd-title">💡 수업 팁</span></div>
+    <div id="tipsList"></div>
+  </div>
+  <div id="assignSection" style="display:none">
+    <div class="section-hd"><span class="section-hd-title">📋 과제 & 준비물</span></div>
+    <div id="assignList"></div>
+  </div>
+  <div class="section-hd">
+    <span class="section-hd-title">🍳 레시피</span>
+    <span class="section-hd-count" id="recipeCount"></span>
+  </div>
+  <div class="recipe-grid" id="recipeGrid"></div>
+</div>
+
+<!-- 레시피 디테일 -->
+<div id="recipeDetail">
+  <div class="rd-hero" id="rdHero">
+    <button class="rd-hero-back" onclick="closeDetail()">←</button>
+    <div class="rd-hero-overlay"></div>
+    <div class="rd-hero-title"><h1 id="rdName"></h1><div class="rd-date" id="rdDate"></div></div>
+  </div>
+  <div class="rd-body">
+    <div class="rd-section-title">재료</div>
+    <div class="rd-ing-grid" id="rdIngs"></div>
+    <div class="rd-section-title">조리 순서</div>
+    <div id="rdSteps"></div>
+    <div class="rd-section-title" style="margin-top:24px">셰프의 팁</div>
+    <div id="rdTips"></div>
+    <button class="rd-cook-btn" onclick="startCooking()">🍳 요리 모드로 시작하기</button>
+  </div>
+</div>
+
+<!-- 노트 디테일 -->
+<div id="noteDetail">
+  <div class="nd-header">
+    <button class="nd-back" onclick="closeNoteDetail()">←</button>
+    <div class="nd-title" id="ndTitle"></div>
+  </div>
+  <div class="nd-body">
+    <div class="nd-content" id="ndContent"></div>
+  </div>
+</div>
+
+<!-- 쿠킹 모드 -->
+<div id="cookingMode">
+  <div class="cm-top-bar"><div class="cm-progress" id="cmBar"></div></div>
+  <div class="cm-nav">
+    <div class="cm-recipe-name" id="cmName"></div>
+    <div class="cm-counter" id="cmCounter"></div>
+    <button class="cm-close" onclick="closeCooking()">✕</button>
+  </div>
+  <div class="cm-stage">
+    <div class="cm-tap cm-tap-l" onclick="cmPrev()"><div class="cm-arrow">‹</div></div>
+    <div class="cm-content" id="cmContent">
+      <div class="cm-step-label" id="cmLabel"></div>
+      <div class="cm-step-body" id="cmBody"></div>
+    </div>
+    <div class="cm-tap cm-tap-r" onclick="cmNext()"><div class="cm-arrow">›</div></div>
+  </div>
+  <div class="cm-footer">
+    <div class="cm-dots" id="cmDots"></div>
+    <div class="cm-btns">
+      <button class="cm-btn-prev" onclick="cmPrev()">이전</button>
+      <button class="cm-btn-next" id="cmNextBtn" onclick="cmNext()">다음 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- 용어 시트 -->
+<div class="term-overlay" id="termOverlay">
+  <div class="term-sheet">
+    <div class="term-handle"></div>
+    <div class="term-header">
+      <div><div class="term-word" id="tWord"></div><div class="term-cat" id="tCat"></div></div>
+      <button class="term-x" onclick="closeTerm()">✕</button>
+    </div>
+    <div class="term-block"><div class="term-block-lbl">뜻</div><div class="term-block-txt" id="tDesc"></div></div>
+    <div class="term-block" id="tIngBlock" style="display:none"><div class="term-block-lbl">관련 재료</div><div class="term-block-txt" id="tIng"></div></div>
+    <div class="term-block" id="tTipBlock" style="display:none"><div class="term-block-lbl">셰프의 킥</div><div class="term-block-txt" id="tTip"></div></div>
+  </div>
+</div>
+
+<!-- 설정 -->
+<div class="modal" id="settingsModal">
+  <div class="modal-sheet">
+    <h2>설정</h2>
+    <div class="modal-desc">API 키를 입력하세요. Groq는 무료, Claude는 고품질 분석에 사용됩니다.</div>
+    <label>Groq API Key (음성 변환용 · 무료)</label>
+    <input type="password" id="groqKeyInput" placeholder="gsk_...">
+    <div class="modal-divider"></div>
+    <label>Claude API Key (AI 분석용 · 고품질)</label>
+    <input type="password" id="claudeKeyInput" placeholder="sk-ant-...">
+    <button class="modal-save" onclick="saveSettings()">저장</button>
+  </div>
+</div>
+
+<script>
+const WHISPER_HINT = `미르포아,사세데피스,부케가르니,줄리엔,브뤼누아즈,콩카세,루,베샤멜,벨루테,에스파뇰,올랑데즈,데글라세,블랑시르,소테,브레제,포셰,플람베,치킨스톡,비프스톡,브라운스톡,데미글라스,콩소메,트뤼프,푸아그라,리조또,뇨끼,갈랑틴,테린,파테,콩피,캐러멜라이징,블랜칭,마리네이팅,미소,다시,미림,사케,쯔유,데리야끼,가쓰오부시,곤부,와사비,시소,가라아게,돈카츠,야키토리,차완무시,두반장,춘장,화자오,마파두부,볼로네제,카르보나라,페스토,비네그레트`;
+
+const TERM_DICT = {
+  "미르포아":{ cat:"양식 기본기법", desc:"양파, 당근, 셀러리를 2:1:1로 굵게 썬 향 베이스 채소 믹스.", ing:"양파, 당근, 셀러리", tip:"낮은 불에서 천천히 볶아야 색 없이 향만 납니다." },
+  "사세데피스":{ cat:"양식 기본기법", desc:"파슬리 줄기, 타임, 베이리프, 통후추, 정향을 셀러리로 감싼 향신료 다발.", ing:"파슬리, 타임, 베이리프, 통후추, 정향", tip:"너무 오래 두면 쓴맛이 나므로 반드시 완성 전 제거합니다." },
+  "부케가르니":{ cat:"양식 기본기법", desc:"타임, 베이리프, 파슬리 줄기를 묶은 허브 다발.", tip:"실로 단단히 묶어야 조리 중 풀리지 않습니다." },
+  "줄리엔":{ cat:"칼질 기법", desc:"채소를 성냥개비 모양(5cm×3mm×3mm)으로 가늘게 써는 방법.", tip:"먼저 슬라이스 후 겹쳐서 채 썰면 균일하게 됩니다." },
+  "브뤼누아즈":{ cat:"칼질 기법", desc:"채소를 3mm 정육면체로 아주 작게 써는 방법.", tip:"줄리엔을 먼저 만든 후 90도 돌려 썰면 됩니다." },
+  "콩카세":{ cat:"칼질 기법", desc:"토마토 껍질·씨 제거 후 굵게 다지는 방법.", tip:"끓는 물에 10초 데친 후 얼음물에 담그면 껍질이 쉽게 벗겨집니다." },
+  "루":{ cat:"소스 농후제", desc:"밀가루와 버터를 동량으로 볶아 만든 소스 농후제.", ing:"버터, 밀가루 (1:1)", tip:"따뜻한 액체를 조금씩 넣으며 저어야 덩어리가 없습니다." },
+  "베샤멜":{ cat:"모체소스", desc:"화이트루에 우유를 넣어 만든 화이트소스.", ing:"버터, 밀가루, 우유, 소금, 넛메그", tip:"우유를 미리 데워서 넣으면 덩어리가 생기지 않습니다." },
+  "데미글라스":{ cat:"소스", desc:"에스파뇰 소스를 농축한 진한 갈색 소스.", tip:"원래 부피의 절반이 될 때까지 졸여야 풍미가 납니다." },
+  "데글라세":{ cat:"조리기법", desc:"팬에 눌어붙은 육즙에 와인이나 스톡을 넣어 긁어내는 기법.", tip:"팬이 뜨거울 때 바로 해야 잘 녹아납니다." },
+  "블랑시르":{ cat:"조리기법", desc:"끓는 물에 짧게 데친 후 얼음물에 담가 색과 식감을 살리는 기법.", tip:"얼음물에 충분히 담가야 조리가 완전히 멈춥니다." },
+  "소테":{ cat:"조리기법", desc:"소량의 기름으로 강한 불에서 빠르게 볶는 조리법.", tip:"팬을 충분히 달군 후 재료를 넣어야 눌어붙지 않습니다." },
+  "콩피":{ cat:"조리기법", desc:"기름에 완전히 잠기게 하여 80도 이하로 천천히 익히는 기법.", tip:"오리 다리는 90분 이상 해야 완벽한 질감이 나옵니다." },
+  "캐러멜라이징":{ cat:"조리기법", desc:"당분을 열로 갈색화시키는 기법.", tip:"양파는 40분 이상 낮은 불에서 볶아야 진짜 캐러멜라이징이 됩니다." },
+  "미소":{ cat:"일식 기본", desc:"콩을 발효시켜 만든 일본식 된장.", tip:"불을 끈 후 풀어야 향이 살아납니다." },
+  "다시":{ cat:"일식 기본", desc:"가쓰오부시와 곤부로 만든 일본 기본 육수.", ing:"가쓰오부시, 곤부, 물", tip:"곤부는 절대 끓이지 말고 60도에서 우려야 쓴맛이 없습니다." },
+  "데리야끼":{ cat:"일식 기법", desc:"간장, 미림, 설탕 소스를 발라가며 구워 윤기를 내는 조리법.", tip:"여러 번 나눠 발라야 윤기 있는 코팅이 됩니다." },
+  "두반장":{ cat:"중식 기본", desc:"고추와 누에콩을 발효시킨 중국식 매운 장.", tip:"기름에 먼저 볶아야 색과 향이 제대로 납니다." },
+  "화자오":{ cat:"중식 향신료", desc:"쓰촨 후추. 얼얼한 마비감이 특징.", tip:"기름에 먼저 우려내면 향이 훨씬 잘 퍼집니다." },
+  "볼로네제":{ cat:"이탈리안 소스", desc:"다진 소고기와 토마토로 만든 미트소스.", tip:"최소 2시간 낮은 불에서 끓여야 깊은 맛이 납니다." },
+  "카르보나라":{ cat:"이탈리안 소스", desc:"판체타, 달걀, 파르미지아노로 만든 로마식 파스타 소스.", tip:"불을 끈 상태에서 달걀을 넣어야 스크램블이 되지 않습니다." },
+  "페스토":{ cat:"이탈리안 소스", desc:"바질, 잣, 파르미지아노, 올리브오일로 만든 제노바식 소스.", tip:"바질을 블랜치하면 색이 오래 유지됩니다." },
+  "리조또":{ cat:"이탈리안 요리", desc:"아르보리오 쌀을 스톡으로 조금씩 부어가며 저어서 만드는 쌀 요리.", tip:"스톡을 한꺼번에 넣지 말고 조금씩 부어가며 전분을 뽑아내세요." },
+  "비네그레트":{ cat:"드레싱", desc:"오일과 식초를 3:1로 유화시킨 기본 드레싱.", tip:"머스타드를 유화제로 쓰면 분리되지 않습니다." },
+  "치킨스톡":{ cat:"스톡", desc:"닭 뼈와 채소를 오래 끓여 만든 기본 육수.", tip:"찬물에서 시작해야 잡내 없이 맑은 스톡이 됩니다." },
+  "브라운스톡":{ cat:"스톡", desc:"뼈를 오븐에 구운 후 끓여 만든 진한 갈색 육수.", tip:"뼈를 220도에서 충분히 구워야 색과 깊은 맛이 납니다." }
+};
+
+const FOOD_EMOJIS = ['🥘','🍲','🥗','🍝','🥩','🍗','🍛','🫕','🍜','🍱','🥞','🫔'];
+const CHUNK_DURATION = 8 * 60;
+
+// ── WAV 인코더 ──
+function audioBufferToWav(buffer) {
+  const sampleRate = 16000;
+  const data = buffer.getChannelData(0);
+  const dataLength = data.length * 2;
+  const ab = new ArrayBuffer(44 + dataLength);
+  const view = new DataView(ab);
+  const ws = (o, s) => { for (let i = 0; i < s.length; i++) view.setUint8(o + i, s.charCodeAt(i)); };
+  ws(0,'RIFF'); view.setUint32(4,36+dataLength,true); ws(8,'WAVE');
+  ws(12,'fmt '); view.setUint32(16,16,true); view.setUint16(20,1,true);
+  view.setUint16(22,1,true); view.setUint32(24,sampleRate,true);
+  view.setUint32(28,sampleRate*2,true); view.setUint16(32,2,true);
+  view.setUint16(34,16,true); ws(36,'data'); view.setUint32(40,dataLength,true);
+  let offset = 44;
+  for (let i = 0; i < data.length; i++) {
+    const s = Math.max(-1, Math.min(1, data[i]));
+    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    offset += 2;
+  }
+  return new Blob([ab], { type: 'audio/wav' });
+}
+
+async function processAudioFile(file, apiKey, onProgress) {
+  onProgress('오디오 분석 중...');
+  const arrayBuffer = await file.arrayBuffer();
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+  let audioBuffer;
+  try { audioBuffer = await audioCtx.decodeAudioData(arrayBuffer); }
+  catch(e) { throw new Error('오디오 파일을 읽을 수 없습니다. mp3, m4a, wav 파일인지 확인해주세요.'); }
+  await audioCtx.close();
+
+  const totalDuration = audioBuffer.duration;
+  const totalChunks = Math.ceil(totalDuration / CHUNK_DURATION);
+  const sampleRate = 16000;
+  let fullTranscript = '';
+
+  for (let i = 0; i < totalChunks; i++) {
+    onProgress(`음성 변환 중... (${i+1}/${totalChunks} 파트, 총 ${Math.round(totalDuration/60)}분)`);
+    const startSample = Math.round(i * CHUNK_DURATION * sampleRate);
+    const endSample = Math.min(Math.round((i+1) * CHUNK_DURATION * sampleRate), audioBuffer.length);
+    const chunkLength = endSample - startSample;
+    const offlineCtx = new OfflineAudioContext(1, chunkLength, sampleRate);
+    const source = offlineCtx.createBufferSource();
+    const chunkBuffer = new AudioBuffer({ length: chunkLength, sampleRate, numberOfChannels: 1 });
+    const chunkData = new Float32Array(chunkLength);
+    const inputData = audioBuffer.getChannelData(0);
+    if (audioBuffer.numberOfChannels > 1) {
+      const ch2 = audioBuffer.getChannelData(1);
+      for (let j = 0; j < chunkLength; j++) chunkData[j] = (inputData[startSample+j] + ch2[startSample+j]) / 2;
+    } else {
+      for (let j = 0; j < chunkLength; j++) chunkData[j] = inputData[startSample+j];
+    }
+    chunkBuffer.copyToChannel(chunkData, 0);
+    source.buffer = chunkBuffer;
+    source.connect(offlineCtx.destination);
+    source.start();
+    const rendered = await offlineCtx.startRendering();
+    const wavBlob = audioBufferToWav(rendered);
+    const wavFile = new File([wavBlob], `chunk_${i}.wav`, { type: 'audio/wav' });
+    const fd = new FormData();
+    fd.append('file', wavFile); fd.append('model', 'whisper-large-v3');
+    fd.append('language', 'ko'); fd.append('prompt', WHISPER_HINT);
+    const res = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+      method: 'POST', headers: { 'Authorization': 'Bearer ' + apiKey }, body: fd
+    });
+    if (!res.ok) { const e = await res.json(); throw new Error('STT 실패: ' + (e.error?.message || res.status)); }
+    fullTranscript += (await res.json()).text + ' ';
+  }
+  return fullTranscript.trim();
+}
+
+// ── Claude API 호출 ──
+async function callClaude(claudeKey, systemPrompt, userPrompt) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': claudeKey,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-5',
+      max_tokens: 4000,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userPrompt }]
+    })
+  });
+  if (!res.ok) {
+    const e = await res.json();
+    throw new Error('Claude API 실패: ' + (e.error?.message || res.status));
+  }
+  const data = await res.json();
+  return data.content[0].text;
+}
+
+function parseJSON(text) {
+  try { return JSON.parse(text); }
+  catch {
+    const m = text.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+    if (m) return JSON.parse(m[0]);
+    throw new Error('파싱 실패');
+  }
+}
+
+// ── 2단계 Claude 처리 ──
+async function extractContent(transcript, claudeKey, onProgress) {
+  const SYSTEM = `당신은 조리학교 수업 전문 노트 테이커입니다. 
+요리 전문 용어를 정확히 알고 있으며, 여러 요리를 동시에 진행하는 수업에서도 각 요리의 내용을 정확히 분리할 수 있습니다.
+발음이 부정확한 요리 용어는 올바른 한국어 용어로 교정합니다.
+JSON 형식으로만 응답하며 마크다운을 사용하지 않습니다.`;
+
+  // 1단계: 주제 파악
+  onProgress('1단계: 수업 주제 파악 중...');
+  const step1 = await callClaude(claudeKey, SYSTEM, `
+다음 요리 수업 녹음에서 다루는 모든 주제를 파악하세요.
+특히 여러 요리를 동시에 진행하는 경우 각 요리를 모두 파악하세요.
+
+JSON만 응답: {"recipes":["요리명1","요리명2"],"exam":true또는false,"theory":["이론주제1"],"tips":true또는false,"assignment":true또는false}
+
+텍스트 앞부분: ${transcript.slice(0, 3000)}
+텍스트 뒷부분: ${transcript.slice(-2000)}`);
+
+  let topics;
+  try { topics = parseJSON(step1); }
+  catch { topics = { recipes: [], exam: false, theory: [], tips: false, assignment: false }; }
+
+  const result = { recipes: [], exam: [], theory: [], tips: [], assignment: [] };
+  const tasks = [];
+  if (topics.recipes?.length) topics.recipes.forEach(r => tasks.push({ type: 'recipe', name: r }));
+  if (topics.exam) tasks.push({ type: 'exam' });
+  if (topics.theory?.length) topics.theory.forEach(t => tasks.push({ type: 'theory', name: t }));
+  if (topics.tips) tasks.push({ type: 'tips' });
+  if (topics.assignment) tasks.push({ type: 'assignment' });
+
+  // 2단계: 각 항목 상세 추출
+  for (let i = 0; i < tasks.length; i++) {
+    const task = tasks[i];
+    onProgress(`2단계: ${task.name || task.type} 추출 중... (${i+1}/${tasks.length})`);
+
+    if (task.type === 'recipe') {
+      const raw = await callClaude(claudeKey, SYSTEM, `
+다음 요리 수업 녹음에서 "${task.name}" 레시피만 추출하세요.
+수업에서 여러 요리를 동시에 진행하므로 "${task.name}"과 관련된 내용만 정확히 골라내세요.
+다른 요리의 내용이 섞이지 않도록 주의하세요.
+조리 단계는 최대한 상세하게 작성하세요.
+
+JSON만 응답: {"recipeName":"이름","ingredients":["재료명 분량"],"steps":["상세한 조리 단계"],"tips":["셰프 팁"]}
+
+텍스트: ${transcript}`);
+      try {
+        const recipe = parseJSON(raw);
+        if (recipe.steps?.length > 0) result.recipes.push(recipe);
+      } catch(e) {}
+
+    } else if (task.type === 'exam') {
+      const raw = await callClaude(claudeKey, SYSTEM, `
+다음 요리 수업 녹음에서 시험/평가 관련 내용을 모두 추출하세요.
+시험 날짜, 범위, 출제 유형, 예상 문제, 평가 기준을 빠짐없이 추출하세요.
+
+JSON만 응답: [{"title":"제목","content":"상세 내용"}]
+
+텍스트: ${transcript}`);
+      try {
+        const items = parseJSON(raw);
+        if (Array.isArray(items)) result.exam = items;
+      } catch(e) {}
+
+    } else if (task.type === 'theory') {
+      const raw = await callClaude(claudeKey, SYSTEM, `
+다음 요리 수업 녹음에서 "${task.name}"에 관한 이론 내용을 추출하세요.
+구별법, 특징, 원리, 지식 등을 상세히 작성하세요.
+
+JSON만 응답: {"title":"${task.name}","content":"상세 내용"}
+
+텍스트: ${transcript}`);
+      try {
+        const item = parseJSON(raw);
+        if (item.content) result.theory.push(item);
+      } catch(e) {}
+
+    } else if (task.type === 'tips') {
+      const raw = await callClaude(claudeKey, SYSTEM, `
+다음 요리 수업 녹음에서 교수님/셰프님의 특별 팁과 주의사항을 추출하세요.
+레시피 안에 포함된 팁이 아닌 별도로 강조한 내용을 추출하세요.
+
+JSON만 응답: [{"title":"팁 제목","content":"내용"}]
+
+텍스트: ${transcript}`);
+      try {
+        const items = parseJSON(raw);
+        if (Array.isArray(items)) result.tips = items;
+      } catch(e) {}
+
+    } else if (task.type === 'assignment') {
+      const raw = await callClaude(claudeKey, SYSTEM, `
+다음 요리 수업 녹음에서 과제, 준비물, 제출물 관련 내용을 추출하세요.
+
+JSON만 응답: [{"title":"제목","content":"내용"}]
+
+텍스트: ${transcript}`);
+      try {
+        const items = parseJSON(raw);
+        if (Array.isArray(items)) result.assignment = items;
+      } catch(e) {}
+    }
+  }
+
+  return result;
+}
+
+// ── 용어 하이라이트 ──
+function highlightTerms(txt) {
+  const terms = Object.keys(TERM_DICT).sort((a,b)=>b.length-a.length);
+  let parts = [{t:'text',v:txt}];
+  terms.forEach(term=>{
+    const next=[];
+    parts.forEach(p=>{
+      if(p.t!=='text'){next.push(p);return;}
+      const sp=p.v.split(term);
+      sp.forEach((chunk,i)=>{if(chunk)next.push({t:'text',v:chunk});if(i<sp.length-1)next.push({t:'term',v:term});});
+    });
+    parts=next;
+  });
+  return parts.map(p=>p.t==='term'?`<span class="culinary-term" onclick="showTerm('${p.v}')">${p.v}</span>`:p.v).join('');
+}
+function showTerm(term){
+  const d=TERM_DICT[term];if(!d)return;
+  document.getElementById('tWord').textContent=term;
+  document.getElementById('tCat').textContent=d.cat;
+  document.getElementById('tDesc').textContent=d.desc;
+  const ib=document.getElementById('tIngBlock'),tb=document.getElementById('tTipBlock');
+  if(d.ing){document.getElementById('tIng').textContent=d.ing;ib.style.display='block';}else ib.style.display='none';
+  if(d.tip){document.getElementById('tTip').textContent=d.tip;tb.style.display='block';}else tb.style.display='none';
+  document.getElementById('termOverlay').classList.add('open');
+}
+function closeTerm(){document.getElementById('termOverlay').classList.remove('open');}
+document.getElementById('termOverlay').addEventListener('click',e=>{if(e.target===e.currentTarget)closeTerm();});
+
+// ── 파일 처리 ──
+let selectedFile = null;
+function handleFile(input){
+  const file=input.files[0];if(!file)return;
+  selectedFile=file;
+  const sizeMB=(file.size/1024/1024).toFixed(1);
+  document.getElementById('filePill').style.display='block';
+  document.getElementById('filePill').innerHTML=`<div class="file-pill"><span style="font-size:20px">🎵</span><div class="file-pill-name">${file.name}</div><div class="file-pill-size">${sizeMB}MB</div></div>`;
+  document.getElementById('convertBtn').style.display='block';
+  document.getElementById('errorBox').style.display='none';
+}
+function showError(msg){const b=document.getElementById('errorBox');b.textContent=msg;b.style.display='block';}
+function setStep(n,status,msg){
+  const el=document.getElementById('step'+n);
+  if(status==='active'){el.className='p-step active';el.innerHTML=`<div class="spinner"></div>&nbsp;${msg}`;}
+  else if(status==='done'){el.className='p-step done';el.innerHTML=`✅&nbsp;${msg}`;}
+  else{el.className='p-step';el.innerHTML=`⏳&nbsp;${msg}`;}
+}
+
+async function startConvert(){
+  const groqKey=localStorage.getItem('groq_api_key');
+  const claudeKey=localStorage.getItem('claude_api_key');
+  if(!groqKey||!claudeKey){openSettings();return;}
+  if(!selectedFile)return;
+
+  document.getElementById('convertBtn').disabled=true;
+  document.getElementById('progressBox').style.display='block';
+  document.getElementById('errorBox').style.display='none';
+  setStep(1,'active','파일 확인 중...');
+  await sleep(300); setStep(1,'done','파일 확인 완료');
+
+  try {
+    setStep(2,'active','오디오 분석 중...');
+    const transcript = await processAudioFile(selectedFile, groqKey, (msg)=>setStep(2,'active',msg));
+    setStep(2,'done','음성 변환 완료');
+    setStep(3,'active','수업 주제 파악 중...');
+
+    const result = await extractContent(transcript, claudeKey, (msg)=>{
+      if(msg.includes('1단계')) setStep(3,'active',msg);
+      else { setStep(3,'done','주제 파악 완료'); setStep(4,'active',msg); }
+    });
+    setStep(4,'done','내용 추출 완료');
+
+    const date=new Date().toLocaleDateString('ko-KR');
+    const sessions=JSON.parse(localStorage.getItem('chefnote_sessions')||'[]');
+    sessions.unshift({date,fileName:selectedFile.name,...result});
+    localStorage.setItem('chefnote_sessions',JSON.stringify(sessions));
+
+    document.getElementById('progressBox').style.display='none';
+    document.getElementById('filePill').style.display='none';
+    document.getElementById('convertBtn').style.display='none';
+    renderGrid();
+  } catch(e){
+    showError('오류: '+e.message);
+    document.getElementById('progressBox').style.display='none';
+  }
+  document.getElementById('convertBtn').disabled=false;
+}
+
+// ── 그리드 ──
+let allRecipes=[], allExam=[], allTheory=[], allTips=[], allAssign=[];
+
+function renderGrid(){
+  const sessions=JSON.parse(localStorage.getItem('chefnote_sessions')||'[]');
+  if(!sessions.length){
+    document.getElementById('uploadPrompt').style.display='block';
+    document.getElementById('collectionView').style.display='none';
+    return;
+  }
+  document.getElementById('uploadPrompt').style.display='none';
+  document.getElementById('collectionView').style.display='block';
+
+  allRecipes=[]; allExam=[]; allTheory=[]; allTips=[]; allAssign=[];
+  sessions.forEach(s=>{
+    (s.recipes||[]).forEach(r=>allRecipes.push({item:r,date:s.date}));
+    (s.exam||[]).forEach(n=>allExam.push({item:n,date:s.date}));
+    (s.theory||[]).forEach(n=>allTheory.push({item:n,date:s.date}));
+    (s.tips||[]).forEach(n=>allTips.push({item:n,date:s.date}));
+    (s.assignment||[]).forEach(n=>allAssign.push({item:n,date:s.date}));
+  });
+
+  const renderSection = (secId, listId, items, badgeClass, badgeLabel, offset) => {
+    const sec=document.getElementById(secId);
+    if(!items.length){sec.style.display='none';return;}
+    sec.style.display='block';
+    document.getElementById(listId).innerHTML=items.map(({item},i)=>`
+      <div class="note-card" onclick="openNoteDetail(${i+offset})">
+        <span class="note-card-badge ${badgeClass}">${badgeLabel}</span>
+        <div class="note-card-title">${item.title||'노트'}</div>
+        <div class="note-card-preview">${(item.content||'').slice(0,80)}...</div>
+      </div>`).join('');
+  };
+
+  renderSection('examSection','examList',allExam,'badge-exam','시험',0);
+  renderSection('theorySection','theoryList',allTheory,'badge-theory','이론',allExam.length);
+  renderSection('tipsSection','tipsList',allTips,'badge-tip','팁',allExam.length+allTheory.length);
+  renderSection('assignSection','assignList',allAssign,'badge-assignment','과제',allExam.length+allTheory.length+allTips.length);
+
+  document.getElementById('recipeCount').textContent=`${allRecipes.length}개`;
+  document.getElementById('recipeGrid').innerHTML=allRecipes.map(({item:r,date},i)=>`
+    <div class="recipe-card" onclick="openDetail(${i})">
+      <div class="recipe-card-img">${FOOD_EMOJIS[i%FOOD_EMOJIS.length]}</div>
+      <div class="recipe-card-body">
+        <div class="recipe-card-name">${r.recipeName||'레시피'}</div>
+        <div class="recipe-card-tags"><div class="recipe-tag">⏱ ${r.steps?.length||0}단계</div><div class="recipe-tag">📅 ${date}</div></div>
+      </div>
+    </div>`).join('');
+}
+
+// ── 노트 디테일 ──
+function openNoteDetail(idx){
+  const allFlat=[...allExam,...allTheory,...allTips,...allAssign];
+  const {item}=allFlat[idx]||{};
+  if(!item)return;
+  document.getElementById('ndTitle').textContent=item.title||'노트';
+  document.getElementById('ndContent').textContent=item.content||'내용 없음';
+  document.getElementById('noteDetail').classList.add('open');
+}
+function closeNoteDetail(){document.getElementById('noteDetail').classList.remove('open');}
+
+// ── 레시피 디테일 ──
+let activeRecipe=null;
+function openDetail(idx){
+  const {item:r,date}=allRecipes[idx];
+  activeRecipe=r;
+  const hero=document.getElementById('rdHero');
+  hero.querySelectorAll('.emoji').forEach(e=>e.remove());
+  hero.insertAdjacentHTML('afterbegin',`<span class="emoji" style="font-size:80px;z-index:1">${FOOD_EMOJIS[idx%FOOD_EMOJIS.length]}</span>`);
+  document.getElementById('rdName').textContent=r.recipeName||'레시피';
+  document.getElementById('rdDate').textContent=date;
+  document.getElementById('rdIngs').innerHTML=(r.ingredients||[]).map(i=>{
+    const m=i.match(/^(.+?)\s+([\d약적소정당]+.*)$/);
+    const n=m?m[1]:i,a=m?m[2]:'';
+    return `<div class="rd-ing-chip"><div class="rd-ing-name">${highlightTerms(n)}</div>${a?`<div class="rd-ing-amt">${a}</div>`:''}</div>`;
+  }).join('');
+  document.getElementById('rdSteps').innerHTML=(r.steps||[]).map((s,i)=>`<div class="rd-step"><div class="rd-step-num">${i+1}</div><div class="rd-step-text">${highlightTerms(s)}</div></div>`).join('');
+  document.getElementById('rdTips').innerHTML=(r.tips||[]).map(t=>`<div class="rd-tip">${highlightTerms(t)}</div>`).join('');
+  document.getElementById('recipeDetail').classList.add('open');
+  document.getElementById('recipeDetail').scrollTop=0;
+}
+function closeDetail(){document.getElementById('recipeDetail').classList.remove('open');}
+
+// ── 쿠킹 모드 ──
+let cmSteps=[],cmIdx=0;
+function startCooking(){
+  if(!activeRecipe)return;
+  cmSteps=activeRecipe.steps||[];cmIdx=0;
+  document.getElementById('cmName').textContent=activeRecipe.recipeName||'요리';
+  renderCmStep('in');
+  document.getElementById('cookingMode').classList.add('open');
+}
+function closeCooking(){document.getElementById('cookingMode').classList.remove('open');}
+function renderCmStep(dir){
+  const total=cmSteps.length;
+  document.getElementById('cmBar').style.width=((cmIdx+1)/total*100)+'%';
+  document.getElementById('cmCounter').textContent=`${cmIdx+1} / ${total}`;
+  document.getElementById('cmLabel').textContent=`STEP ${cmIdx+1}`;
+  document.getElementById('cmBody').innerHTML=highlightTerms(cmSteps[cmIdx]);
+  const nb=document.getElementById('cmNextBtn');
+  nb.textContent=cmIdx===total-1?'완료 🎉':'다음 →';
+  nb.className='cm-btn-next'+(cmIdx===total-1?' done':'');
+  const c=document.getElementById('cmContent');
+  c.className='cm-content '+(dir==='in'?'cm-slide':'cm-slide-back');
+  setTimeout(()=>c.className='cm-content',250);
+  document.getElementById('cmDots').innerHTML=cmSteps.map((_,i)=>`<div class="cm-dot${i===cmIdx?' on':''}"></div>`).join('');
+}
+function cmNext(){if(cmIdx<cmSteps.length-1){cmIdx++;renderCmStep('in');}else closeCooking();}
+function cmPrev(){if(cmIdx>0){cmIdx--;renderCmStep('back');}}
+let tsX=0;
+document.getElementById('cookingMode').addEventListener('touchstart',e=>{tsX=e.touches[0].clientX;},{passive:true});
+document.getElementById('cookingMode').addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-tsX;if(Math.abs(dx)>50){dx<0?cmNext():cmPrev();}});
+
+// ── 설정 ──
+function openSettings(){
+  document.getElementById('groqKeyInput').value=localStorage.getItem('groq_api_key')||'';
+  document.getElementById('claudeKeyInput').value=localStorage.getItem('claude_api_key')||'';
+  document.getElementById('settingsModal').classList.add('open');
+}
+function saveSettings(){
+  localStorage.setItem('groq_api_key',document.getElementById('groqKeyInput').value.trim());
+  localStorage.setItem('claude_api_key',document.getElementById('claudeKeyInput').value.trim());
+  document.getElementById('settingsModal').classList.remove('open');
+}
+document.getElementById('settingsModal').addEventListener('click',e=>{if(e.target===e.currentTarget)e.currentTarget.classList.remove('open');});
+
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+renderGrid();
+</script>
+</body>
+</html>
