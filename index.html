@@ -237,10 +237,10 @@ body{font-family:'Noto Sans KR',sans-serif;background:#fff;color:#0a0a0a;min-hei
 <div class="modal" id="settingsModal">
   <div class="modal-sheet">
     <h2>⚙️ 설정</h2>
-    <div class="modal-desc">AssemblyAI: 음성변환 (무료 $50 크레딧)<br>Claude: AI분석 (더 정확 · 선택사항)</div>
+    <div class="modal-desc">AssemblyAI: 음성변환 (무료 $50 크레딧)<br>Claude: AI분석 더 정확 (선택사항)</div>
     <label>AssemblyAI API Key (필수)</label>
     <input type="password" id="assemblyKeyInput" placeholder="어셈블리AI 키...">
-    <label>Claude API Key (선택 · 더 정확)</label>
+    <label>Claude API Key (선택)</label>
     <input type="password" id="claudeKeyInput" placeholder="sk-ant-... (없으면 비워두세요)">
     <button class="modal-save" onclick="saveSettings()">저장</button>
     <button class="reset-btn" onclick="resetData()">저장된 레시피 전체 삭제</button>
@@ -275,59 +275,61 @@ const TERM_DICT={
   "치킨스톡":{cat:"스톡",desc:"닭 뼈와 채소를 오래 끓여 만든 기본 육수.",tip:"찬물에서 시작해야 잡내 없이 맑은 스톡이 됩니다."},
   "브라운스톡":{cat:"스톡",desc:"뼈를 오븐에 구운 후 끓여 만든 진한 갈색 육수.",tip:"뼈를 220도에서 충분히 구워야 색과 깊은 맛이 납니다."}
 };
-
 const FOOD_EMOJIS=['🥘','🍲','🥗','🍝','🥩','🍗','🍛','🫕','🍜','🍱','🥞','🫔'];
 
-// ── AssemblyAI STT ──
+// ── AssemblyAI STT (v3 API) ──
 async function transcribeWithAssembly(file, ak, onProg) {
-  onProg('파일 업로드 중...');
+  onProg('파일 업로드 중... (35MB = 약 1분 소요)');
 
-  // 1. 파일 업로드
+  // 1단계: 파일 업로드
   const uploadRes = await fetch('https://api.assemblyai.com/v2/upload', {
     method: 'POST',
-    headers: { 'authorization': ak },
+    headers: { 'authorization': ak, 'content-type': 'application/octet-stream' },
     body: file
   });
   if (!uploadRes.ok) {
-    const e = await uploadRes.json();
-    throw new Error('업로드 실패: ' + (e.error || uploadRes.status));
+    const e = await uploadRes.text();
+    throw new Error('업로드 실패: ' + e);
   }
   const { upload_url } = await uploadRes.json();
 
   onProg('음성 변환 요청 중...');
 
-  // 2. 변환 요청
+  // 2단계: 변환 요청 (한국어, speech_model 없이)
+  const reqBody = {
+    audio_url: upload_url,
+    language_code: 'ko',
+    punctuate: true,
+    format_text: true
+  };
+
   const transcriptRes = await fetch('https://api.assemblyai.com/v2/transcript', {
     method: 'POST',
     headers: { 'authorization': ak, 'content-type': 'application/json' },
-    body: JSON.stringify({
-      audio_url: upload_url,
-      language_code: 'ko'
-    })
+    body: JSON.stringify(reqBody)
   });
   if (!transcriptRes.ok) {
-    const e = await transcriptRes.json();
-    throw new Error('변환 요청 실패: ' + (e.error || transcriptRes.status));
+    const e = await transcriptRes.text();
+    throw new Error('변환 요청 실패: ' + e);
   }
   const { id } = await transcriptRes.json();
 
-  // 3. 완료 대기 (폴링)
+  // 3단계: 완료 대기
   let elapsed = 0;
   while (true) {
-    await sleep(3000);
-    elapsed += 3;
-    onProg(`음성 변환 중... (약 ${elapsed}초 경과, 60분 파일은 3-5분 소요)`);
+    await sleep(4000);
+    elapsed += 4;
+    const min = Math.floor(elapsed / 60);
+    const sec = elapsed % 60;
+    onProg(`음성 변환 중... (${min > 0 ? min + '분 ' : ''}${sec}초 경과)`);
 
     const pollRes = await fetch(`https://api.assemblyai.com/v2/transcript/${id}`, {
       headers: { 'authorization': ak }
     });
     const data = await pollRes.json();
 
-    if (data.status === 'completed') {
-      return data.text;
-    } else if (data.status === 'error') {
-      throw new Error('변환 실패: ' + data.error);
-    }
+    if (data.status === 'completed') return data.text || '';
+    if (data.status === 'error') throw new Error('변환 실패: ' + data.error);
   }
 }
 
@@ -352,16 +354,15 @@ async function callClaude(ck, prompt) {
   return (await r.json()).content[0].text;
 }
 
-// Claude 없을 때 AssemblyAI LeMUR 사용 (같은 키로 AI 분석 가능)
-async function callLeMUR(ak, transcript, prompt) {
+// AssemblyAI LeMUR - Claude 없을 때 사용
+async function callLeMUR(ak, transcript, question) {
   const r = await fetch('https://api.assemblyai.com/lemur/v3/task', {
     method: 'POST',
     headers: { 'authorization': ak, 'content-type': 'application/json' },
     body: JSON.stringify({
-      transcript_ids: [],
       input_text: transcript,
-      prompt: prompt,
-      final_model: 'anthropic/claude-3-5-sonnet'
+      prompt: question,
+      final_model: 'default'
     })
   });
   if (!r.ok) { const e = await r.json(); throw new Error('LeMUR 실패: ' + (e.error || r.status)); }
@@ -370,11 +371,9 @@ async function callLeMUR(ak, transcript, prompt) {
 
 async function callLLM(ak, ck, transcript, prompt) {
   if (ck) {
-    try { return await callClaude(ck, prompt); } catch(e) { console.log('Claude 실패:', e); }
+    try { return await callClaude(ck, prompt); } catch(e) { console.warn('Claude 실패, LeMUR 사용:', e.message); }
   }
-  // Claude 없으면 AssemblyAI LeMUR 사용
-  try { return await callLeMUR(ak, transcript, prompt); } catch(e) { console.log('LeMUR 실패:', e); }
-  throw new Error('AI 분석 실패. Claude API 키를 설정해주세요.');
+  return await callLeMUR(ak, transcript, prompt);
 }
 
 async function extractContent(transcript, ak, ck, onProg) {
@@ -400,30 +399,30 @@ async function extractContent(transcript, ak, ck, onProg) {
     onProg(`2단계: ${t.name || t.type} 추출 중... (${i + 1}/${tasks.length})`);
 
     if (t.type === 'recipe') {
-      const prompt = `다음 요리 수업 녹음에서 "${t.name}" 레시피만 추출하세요. 여러 요리가 동시에 진행되므로 "${t.name}"과 관련된 내용만 골라내세요. 다른 요리 내용이 섞이지 않게 주의하세요.
+      const p = `다음 요리 수업 녹음에서 "${t.name}" 레시피만 추출하세요. 여러 요리가 동시에 진행되므로 "${t.name}"과 관련된 내용만 골라내세요.
 마크다운 없이 순수 JSON만 한국어로: {"recipeName":"이름","ingredients":["재료명 분량"],"steps":["상세한 조리 단계"],"tips":["셰프 팁"]}
 텍스트: ${transcript}`;
-      try { const r = parseJSON(await callLLM(ak, ck, transcript, prompt)); if (r.steps?.length > 0) result.recipes.push(r); } catch(e) {}
+      try { const r = parseJSON(await callLLM(ak, ck, transcript, p)); if (r.steps?.length > 0) result.recipes.push(r); } catch(e) {}
     } else if (t.type === 'exam') {
-      const prompt = `다음 요리 수업 녹음에서 시험/평가 관련 내용을 모두 추출하세요.
+      const p = `다음 요리 수업 녹음에서 시험/평가 관련 내용을 모두 추출하세요.
 마크다운 없이 순수 JSON만 한국어로: [{"title":"제목","content":"상세 내용"}]
 텍스트: ${transcript}`;
-      try { const items = parseJSON(await callLLM(ak, ck, transcript, prompt)); if (Array.isArray(items)) result.exam = items; } catch(e) {}
+      try { const items = parseJSON(await callLLM(ak, ck, transcript, p)); if (Array.isArray(items)) result.exam = items; } catch(e) {}
     } else if (t.type === 'theory') {
-      const prompt = `다음 요리 수업 녹음에서 "${t.name}"에 관한 이론 내용을 추출하세요.
+      const p = `다음 요리 수업 녹음에서 "${t.name}"에 관한 이론 내용을 추출하세요.
 마크다운 없이 순수 JSON만 한국어로: {"title":"${t.name}","content":"상세 내용"}
 텍스트: ${transcript}`;
-      try { const item = parseJSON(await callLLM(ak, ck, transcript, prompt)); if (item.content) result.theory.push(item); } catch(e) {}
+      try { const item = parseJSON(await callLLM(ak, ck, transcript, p)); if (item.content) result.theory.push(item); } catch(e) {}
     } else if (t.type === 'tips') {
-      const prompt = `다음 요리 수업 녹음에서 교수님/셰프님의 특별 팁과 주의사항을 추출하세요.
+      const p = `다음 요리 수업 녹음에서 교수님/셰프님의 특별 팁과 주의사항을 추출하세요.
 마크다운 없이 순수 JSON만 한국어로: [{"title":"팁 제목","content":"내용"}]
 텍스트: ${transcript}`;
-      try { const items = parseJSON(await callLLM(ak, ck, transcript, prompt)); if (Array.isArray(items)) result.tips = items; } catch(e) {}
+      try { const items = parseJSON(await callLLM(ak, ck, transcript, p)); if (Array.isArray(items)) result.tips = items; } catch(e) {}
     } else if (t.type === 'assignment') {
-      const prompt = `다음 요리 수업 녹음에서 과제, 준비물, 제출물 관련 내용을 추출하세요.
+      const p = `다음 요리 수업 녹음에서 과제, 준비물, 제출물 관련 내용을 추출하세요.
 마크다운 없이 순수 JSON만 한국어로: [{"title":"제목","content":"내용"}]
 텍스트: ${transcript}`;
-      try { const items = parseJSON(await callLLM(ak, ck, transcript, prompt)); if (Array.isArray(items)) result.assignment = items; } catch(e) {}
+      try { const items = parseJSON(await callLLM(ak, ck, transcript, p)); if (Array.isArray(items)) result.assignment = items; } catch(e) {}
     }
     if (i < tasks.length - 1) await sleep(1000);
   }
