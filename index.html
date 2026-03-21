@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -280,6 +280,8 @@ const TERM_DICT={
 const FOOD_EMOJIS=['🥘','🍲','🥗','🍝','🥩','🍗','🍛','🫕','🍜','🍱','🥞','🫔'];
 const TARGET_SR=8000;
 const CHUNK_SEC=20*60;
+// LLM에 보낼 최대 글자수 (약 3000 토큰)
+const MAX_TRANSCRIPT_CHARS=6000;
 
 function toWav(buffer){
   const data=buffer.getChannelData(0),dl=data.length*2;
@@ -327,22 +329,44 @@ async function processAudio(file,gk,onProg){
   return txt.trim();
 }
 
-async function callLLM(gk,ck,prompt){
+// 텍스트가 너무 길면 앞뒤 부분만 추출
+function trimTranscript(t){
+  if(t.length<=MAX_TRANSCRIPT_CHARS) return t;
+  const half=Math.floor(MAX_TRANSCRIPT_CHARS/2);
+  return t.slice(0,half)+'\n...(중략)...\n'+t.slice(-half);
+}
+
+// 자동 재시도 포함 LLM 호출
+async function callLLM(gk,ck,prompt,retries=3){
   if(ck){
-    const r=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'x-api-key':ck,'anthropic-version':'2023-06-01','content-type':'application/json'},
-      body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:4000,messages:[{role:'user',content:prompt}]})
-    });
-    if(r.ok){const d=await r.json();return d.content[0].text;}
+    try{
+      const r=await fetch('https://api.anthropic.com/v1/messages',{
+        method:'POST',
+        headers:{'x-api-key':ck,'anthropic-version':'2023-06-01','content-type':'application/json'},
+        body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:4000,messages:[{role:'user',content:prompt}]})
+      });
+      if(r.ok){const d=await r.json();return d.content[0].text;}
+    }catch(e){}
   }
-  const r=await fetch('https://api.groq.com/openai/v1/chat/completions',{
-    method:'POST',
-    headers:{'Authorization':'Bearer '+gk,'Content-Type':'application/json'},
-    body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'user',content:prompt}],temperature:0.2})
-  });
-  if(!r.ok){const er=await r.json();throw new Error('AI 실패: '+(er.error?.message||r.status));}
-  return(await r.json()).choices[0].message.content;
+  for(let attempt=0;attempt<retries;attempt++){
+    const r=await fetch('https://api.groq.com/openai/v1/chat/completions',{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+gk,'Content-Type':'application/json'},
+      body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'user',content:prompt}],temperature:0.2,max_tokens:2000})
+    });
+    if(r.ok) return (await r.json()).choices[0].message.content;
+    const er=await r.json();
+    const msg=er.error?.message||'';
+    // 한도 초과면 잠깐 기다렸다가 재시도
+    const waitMatch=msg.match(/try again in ([\d.]+)s/);
+    if(waitMatch&&attempt<retries-1){
+      const waitSec=Math.ceil(parseFloat(waitMatch[1]))+1;
+      await sleep(waitSec*1000);
+      continue;
+    }
+    throw new Error('AI 실패: '+msg);
+  }
+  throw new Error('AI 재시도 횟수 초과');
 }
 
 function parseJSON(text){
@@ -351,14 +375,15 @@ function parseJSON(text){
 }
 
 async function extractContent(transcript,gk,ck,onProg){
+  const short=trimTranscript(transcript);
   onProg('1단계: 수업 주제 파악 중...');
   const p1=`다음 요리 수업 녹음에서 다루는 모든 주제를 파악하세요. 여러 요리를 동시에 진행하는 경우 각 요리를 모두 파악하세요.
 JSON만 응답: {"recipes":["요리명1","요리명2"],"exam":true또는false,"theory":["이론주제1"],"tips":true또는false,"assignment":true또는false}
-텍스트 앞: ${transcript.slice(0,3000)}
-텍스트 뒤: ${transcript.slice(-2000)}`;
+텍스트: ${short}`;
   let topics;
   try{topics=parseJSON(await callLLM(gk,ck,p1));}
   catch{topics={recipes:[],exam:false,theory:[],tips:false,assignment:false};}
+
   const result={recipes:[],exam:[],theory:[],tips:[],assignment:[]};
   const tasks=[];
   (topics.recipes||[]).forEach(r=>tasks.push({type:'recipe',name:r}));
@@ -366,35 +391,40 @@ JSON만 응답: {"recipes":["요리명1","요리명2"],"exam":true또는false,"t
   (topics.theory||[]).forEach(t=>tasks.push({type:'theory',name:t}));
   if(topics.tips)tasks.push({type:'tips'});
   if(topics.assignment)tasks.push({type:'assignment'});
+
   for(let i=0;i<tasks.length;i++){
     const t=tasks[i];
     onProg(`2단계: ${t.name||t.type} 추출 중... (${i+1}/${tasks.length})`);
+    // 각 추출마다 텍스트 길이 제한
+    const tx=trimTranscript(transcript);
     if(t.type==='recipe'){
       const raw=await callLLM(gk,ck,`다음 요리 수업 녹음에서 "${t.name}" 레시피만 추출하세요. 여러 요리가 동시에 진행되므로 "${t.name}"과 관련된 내용만 골라내세요. 다른 요리 내용이 섞이지 않게 주의하세요.
 JSON만 한국어로: {"recipeName":"이름","ingredients":["재료명 분량"],"steps":["상세한 조리 단계"],"tips":["셰프 팁"]}
-텍스트: ${transcript}`);
+텍스트: ${tx}`);
       try{const r=parseJSON(raw);if(r.steps?.length>0)result.recipes.push(r);}catch(e){}
     }else if(t.type==='exam'){
       const raw=await callLLM(gk,ck,`다음 요리 수업 녹음에서 시험/평가 관련 내용을 모두 추출하세요.
 JSON만 한국어로: [{"title":"제목","content":"상세 내용"}]
-텍스트: ${transcript}`);
+텍스트: ${tx}`);
       try{const items=parseJSON(raw);if(Array.isArray(items))result.exam=items;}catch(e){}
     }else if(t.type==='theory'){
       const raw=await callLLM(gk,ck,`다음 요리 수업 녹음에서 "${t.name}"에 관한 이론 내용을 추출하세요.
 JSON만 한국어로: {"title":"${t.name}","content":"상세 내용"}
-텍스트: ${transcript}`);
+텍스트: ${tx}`);
       try{const item=parseJSON(raw);if(item.content)result.theory.push(item);}catch(e){}
     }else if(t.type==='tips'){
       const raw=await callLLM(gk,ck,`다음 요리 수업 녹음에서 교수님/셰프님의 특별 팁과 주의사항을 추출하세요.
 JSON만 한국어로: [{"title":"팁 제목","content":"내용"}]
-텍스트: ${transcript}`);
+텍스트: ${tx}`);
       try{const items=parseJSON(raw);if(Array.isArray(items))result.tips=items;}catch(e){}
     }else if(t.type==='assignment'){
       const raw=await callLLM(gk,ck,`다음 요리 수업 녹음에서 과제, 준비물, 제출물 관련 내용을 추출하세요.
 JSON만 한국어로: [{"title":"제목","content":"내용"}]
-텍스트: ${transcript}`);
+텍스트: ${tx}`);
       try{const items=parseJSON(raw);if(Array.isArray(items))result.assignment=items;}catch(e){}
     }
+    // 각 LLM 호출 사이에 3초 대기 (TPM 한도 방지)
+    if(i<tasks.length-1) await sleep(3000);
   }
   return result;
 }
@@ -484,7 +514,7 @@ function renderGrid(){
   const sessions=JSON.parse(localStorage.getItem('chefnote_sessions')||'[]');
   if(!sessions.length){document.getElementById('uploadPrompt').style.display='block';document.getElementById('collectionView').style.display='none';return;}
   document.getElementById('uploadPrompt').style.display='none';document.getElementById('collectionView').style.display='block';
-  allRecipes=[];allExam=[];allTheory=[];allTips=[]; allAssign=[];
+  allRecipes=[];allExam=[];allTheory=[];allTips=[];allAssign=[];
   sessions.forEach(s=>{
     (s.recipes||[]).forEach(r=>allRecipes.push({item:r,date:s.date}));
     (s.exam||[]).forEach(n=>allExam.push({item:n,date:s.date}));
