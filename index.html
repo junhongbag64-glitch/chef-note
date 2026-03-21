@@ -133,7 +133,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:#fff;color:#0a0a0a;min-hei
 .modal-sheet input{width:100%;padding:14px;border:1.5px solid #e8e8e8;border-radius:12px;font-size:14px;outline:none;margin-bottom:16px;font-family:'Noto Sans KR',sans-serif}
 .modal-sheet input:focus{border-color:#0a0a0a}
 .modal-save{width:100%;padding:15px;background:#0a0a0a;color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif}
-.reset-btn{width:100%;padding:12px;background:none;color:#dc2626;border:1px solid #fecaca;border-radius:14px;font-size:13px;font-weight:500;cursor:pointer;font-family:'Noto Sans KR',sans-serif;margin-top:8px}
+.reset-btn{width:100%;padding:12px;background:none;color:#dc2626;border:1px solid #fecaca;border-radius:14px;font-size:13px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;margin-top:8px}
 </style>
 </head>
 <body>
@@ -237,9 +237,9 @@ body{font-family:'Noto Sans KR',sans-serif;background:#fff;color:#0a0a0a;min-hei
 <div class="modal" id="settingsModal">
   <div class="modal-sheet">
     <h2>⚙️ 설정</h2>
-    <div class="modal-desc">Groq: 음성변환 (무료) · Claude: AI분석 (고품질)</div>
-    <label>Groq API Key (필수 · 무료)</label>
-    <input type="password" id="groqKeyInput" placeholder="gsk_...">
+    <div class="modal-desc">AssemblyAI: 음성변환 (무료 $50 크레딧)<br>Claude: AI분석 (더 정확 · 선택사항)</div>
+    <label>AssemblyAI API Key (필수)</label>
+    <input type="password" id="assemblyKeyInput" placeholder="어셈블리AI 키...">
     <label>Claude API Key (선택 · 더 정확)</label>
     <input type="password" id="claudeKeyInput" placeholder="sk-ant-... (없으면 비워두세요)">
     <button class="modal-save" onclick="saveSettings()">저장</button>
@@ -248,15 +248,12 @@ body{font-family:'Noto Sans KR',sans-serif;background:#fff;color:#0a0a0a;min-hei
 </div>
 
 <script>
-const WHISPER_HINT=`미르포아,사세데피스,부케가르니,줄리엔,브뤼누아즈,콩카세,루,베샤멜,벨루테,에스파뇰,올랑데즈,데글라세,블랑시르,소테,브레제,포셰,플람베,치킨스톡,비프스톡,브라운스톡,데미글라스,콩소메,트뤼프,푸아그라,리조또,뇨끼,갈랑틴,테린,파테,콩피,캐러멜라이징,블랜칭,마리네이팅,미소,다시,미림,사케,쯔유,데리야끼,가쓰오부시,곤부,와사비,시소,가라아게,돈카츠,야키토리,차완무시,두반장,춘장,화자오,마파두부,볼로네제,카르보나라,페스토,비네그레트`;
-
 const TERM_DICT={
   "미르포아":{cat:"양식 기본기법",desc:"양파, 당근, 셀러리를 2:1:1로 굵게 썬 향 베이스 채소 믹스.",ing:"양파, 당근, 셀러리",tip:"낮은 불에서 천천히 볶아야 색 없이 향만 납니다."},
   "사세데피스":{cat:"양식 기본기법",desc:"파슬리 줄기, 타임, 베이리프, 통후추, 정향을 셀러리로 감싼 향신료 다발.",tip:"너무 오래 두면 쓴맛이 납니다."},
   "부케가르니":{cat:"양식 기본기법",desc:"타임, 베이리프, 파슬리 줄기를 묶은 허브 다발.",tip:"실로 단단히 묶어야 조리 중 풀리지 않습니다."},
-  "줄리엔":{cat:"칼질 기법",desc:"채소를 성냥개비 모양(5cm×3mm×3mm)으로 가늘게 써는 방법.",tip:"먼저 슬라이스 후 겹쳐서 채 썰면 균일합니다."},
+  "줄리엔":{cat:"칼질 기법",desc:"채소를 성냥개비 모양으로 가늘게 써는 방법.",tip:"먼저 슬라이스 후 겹쳐서 채 썰면 균일합니다."},
   "브뤼누아즈":{cat:"칼질 기법",desc:"채소를 3mm 정육면체로 아주 작게 써는 방법.",tip:"줄리엔을 먼저 만든 후 90도 돌려 썰면 됩니다."},
-  "콩카세":{cat:"칼질 기법",desc:"토마토 껍질·씨 제거 후 굵게 다지는 방법.",tip:"끓는 물에 10초 데친 후 얼음물에 담그면 껍질이 쉽게 벗겨집니다."},
   "루":{cat:"소스 농후제",desc:"밀가루와 버터를 동량으로 볶아 만든 소스 농후제.",ing:"버터, 밀가루 (1:1)",tip:"따뜻한 액체를 조금씩 넣으며 저어야 덩어리가 없습니다."},
   "베샤멜":{cat:"모체소스",desc:"화이트루에 우유를 넣어 만든 화이트소스.",ing:"버터, 밀가루, 우유, 소금, 넛메그",tip:"우유를 미리 데워서 넣으면 덩어리가 생기지 않습니다."},
   "데미글라스":{cat:"소스",desc:"에스파뇰 소스를 농축한 진한 갈색 소스.",tip:"원래 부피의 절반이 될 때까지 졸여야 풍미가 납니다."},
@@ -280,352 +277,346 @@ const TERM_DICT={
 };
 
 const FOOD_EMOJIS=['🥘','🍲','🥗','🍝','🥩','🍗','🍛','🫕','🍜','🍱','🥞','🫔'];
-const TARGET_SR=8000;
-const CHUNK_SEC=20*60;
 
-function toWav(buffer){
-  const data=buffer.getChannelData(0),dl=data.length*2;
-  const ab=new ArrayBuffer(44+dl),v=new DataView(ab);
-  const ws=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i))};
-  ws(0,'RIFF');v.setUint32(4,36+dl,true);ws(8,'WAVE');ws(12,'fmt ');
-  v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);
-  v.setUint32(24,TARGET_SR,true);v.setUint32(28,TARGET_SR*2,true);
-  v.setUint16(32,2,true);v.setUint16(34,16,true);ws(36,'data');v.setUint32(40,dl,true);
-  let o=44;
-  for(let i=0;i<data.length;i++){const s=Math.max(-1,Math.min(1,data[i]));v.setInt16(o,s<0?s*0x8000:s*0x7FFF,true);o+=2;}
-  return new Blob([ab],{type:'audio/wav'});
-}
+// ── AssemblyAI STT ──
+async function transcribeWithAssembly(file, ak, onProg) {
+  onProg('파일 업로드 중...');
 
-async function processAudio(file,gk,onProg){
-  onProg('오디오 압축 중...');
-  const ab=await file.arrayBuffer();
-  const ctx=new(window.AudioContext||window.webkitAudioContext)({sampleRate:TARGET_SR});
-  let buf;
-  try{buf=await ctx.decodeAudioData(ab);}
-  catch(e){throw new Error('오디오 파일을 읽을 수 없습니다.');}
-  await ctx.close();
-  const dur=buf.duration,chunks=Math.ceil(dur/CHUNK_SEC);
-  let txt='';
-  for(let i=0;i<chunks;i++){
-    onProg(`음성 변환 중... (${i+1}/${chunks} 파트 · 총 ${Math.round(dur/60)}분)`);
-    const s=Math.round(i*CHUNK_SEC*TARGET_SR),e=Math.min(Math.round((i+1)*CHUNK_SEC*TARGET_SR),buf.length),len=e-s;
-    const oc=new OfflineAudioContext(1,len,TARGET_SR),src=oc.createBufferSource();
-    const cb=new AudioBuffer({length:len,sampleRate:TARGET_SR,numberOfChannels:1}),cd=new Float32Array(len);
-    const id=buf.getChannelData(0);
-    if(buf.numberOfChannels>1){const c2=buf.getChannelData(1);for(let j=0;j<len;j++)cd[j]=(id[s+j]+c2[s+j])/2;}
-    else{for(let j=0;j<len;j++)cd[j]=id[s+j];}
-    cb.copyToChannel(cd,0);src.buffer=cb;src.connect(oc.destination);src.start();
-    const rendered=await oc.startRendering();
-    const wf=new File([toWav(rendered)],`c${i}.wav`,{type:'audio/wav'});
-    const fd=new FormData();
-    fd.append('file',wf);fd.append('model','whisper-large-v3');
-    fd.append('language','ko');fd.append('prompt',WHISPER_HINT);
-    const res=await fetch('https://api.groq.com/openai/v1/audio/transcriptions',{
-      method:'POST',headers:{'Authorization':'Bearer '+gk},body:fd
-    });
-    if(!res.ok){const er=await res.json();throw new Error('STT 실패: '+(er.error?.message||res.status));}
-    txt+=(await res.json()).text+' ';
+  // 1. 파일 업로드
+  const uploadRes = await fetch('https://api.assemblyai.com/v2/upload', {
+    method: 'POST',
+    headers: { 'authorization': ak },
+    body: file
+  });
+  if (!uploadRes.ok) {
+    const e = await uploadRes.json();
+    throw new Error('업로드 실패: ' + (e.error || uploadRes.status));
   }
-  return txt.trim();
+  const { upload_url } = await uploadRes.json();
+
+  onProg('음성 변환 요청 중...');
+
+  // 2. 변환 요청
+  const transcriptRes = await fetch('https://api.assemblyai.com/v2/transcript', {
+    method: 'POST',
+    headers: { 'authorization': ak, 'content-type': 'application/json' },
+    body: JSON.stringify({
+      audio_url: upload_url,
+      language_code: 'ko'
+    })
+  });
+  if (!transcriptRes.ok) {
+    const e = await transcriptRes.json();
+    throw new Error('변환 요청 실패: ' + (e.error || transcriptRes.status));
+  }
+  const { id } = await transcriptRes.json();
+
+  // 3. 완료 대기 (폴링)
+  let elapsed = 0;
+  while (true) {
+    await sleep(3000);
+    elapsed += 3;
+    onProg(`음성 변환 중... (약 ${elapsed}초 경과, 60분 파일은 3-5분 소요)`);
+
+    const pollRes = await fetch(`https://api.assemblyai.com/v2/transcript/${id}`, {
+      headers: { 'authorization': ak }
+    });
+    const data = await pollRes.json();
+
+    if (data.status === 'completed') {
+      return data.text;
+    } else if (data.status === 'error') {
+      throw new Error('변환 실패: ' + data.error);
+    }
+  }
 }
 
-// JSON 파싱 - 마크다운 코드블록 포함 처리
-function parseJSON(text){
-  // 마크다운 코드블록 제거
-  let t=text.replace(/```json\n?/gi,'').replace(/```\n?/g,'').trim();
-  try{return JSON.parse(t);}
-  catch{
-    const m=t.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
-    if(m){try{return JSON.parse(m[0]);}catch{}}
+// ── LLM ──
+function parseJSON(text) {
+  let t = text.replace(/```json\n?/gi, '').replace(/```\n?/g, '').trim();
+  try { return JSON.parse(t); }
+  catch {
+    const m = t.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+    if (m) try { return JSON.parse(m[0]); } catch {}
     throw new Error('파싱 실패');
   }
 }
 
-// Claude API 호출 (긴 텍스트 OK)
-async function callClaude(ck,prompt){
-  const r=await fetch('https://api.anthropic.com/v1/messages',{
-    method:'POST',
-    headers:{'x-api-key':ck,'anthropic-version':'2023-06-01','content-type':'application/json'},
-    body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:4000,messages:[{role:'user',content:prompt}]})
+async function callClaude(ck, prompt) {
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'x-api-key': ck, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+    body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 4000, messages: [{ role: 'user', content: prompt }] })
   });
-  if(!r.ok){const er=await r.json();throw new Error('Claude 실패: '+(er.error?.message||r.status));}
-  return(await r.json()).content[0].text;
+  if (!r.ok) { const e = await r.json(); throw new Error('Claude 실패: ' + (e.error?.message || r.status)); }
+  return (await r.json()).content[0].text;
 }
 
-// Groq API 호출 (텍스트 8000자 제한 + 재시도)
-async function callGroq(gk,prompt,retries=3){
-  for(let i=0;i<retries;i++){
-    const r=await fetch('https://api.groq.com/openai/v1/chat/completions',{
-      method:'POST',
-      headers:{'Authorization':'Bearer '+gk,'Content-Type':'application/json'},
-      body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'user',content:prompt}],temperature:0.2,max_tokens:2000})
-    });
-    if(r.ok)return(await r.json()).choices[0].message.content;
-    const er=await r.json();
-    const msg=er.error?.message||'';
-    const wm=msg.match(/try again in ([\d.]+)s/);
-    if(wm&&i<retries-1){await sleep((Math.ceil(parseFloat(wm[1]))+1)*1000);continue;}
-    throw new Error('Groq 실패: '+msg);
+// Claude 없을 때 AssemblyAI LeMUR 사용 (같은 키로 AI 분석 가능)
+async function callLeMUR(ak, transcript, prompt) {
+  const r = await fetch('https://api.assemblyai.com/lemur/v3/task', {
+    method: 'POST',
+    headers: { 'authorization': ak, 'content-type': 'application/json' },
+    body: JSON.stringify({
+      transcript_ids: [],
+      input_text: transcript,
+      prompt: prompt,
+      final_model: 'anthropic/claude-3-5-sonnet'
+    })
+  });
+  if (!r.ok) { const e = await r.json(); throw new Error('LeMUR 실패: ' + (e.error || r.status)); }
+  return (await r.json()).response;
+}
+
+async function callLLM(ak, ck, transcript, prompt) {
+  if (ck) {
+    try { return await callClaude(ck, prompt); } catch(e) { console.log('Claude 실패:', e); }
   }
+  // Claude 없으면 AssemblyAI LeMUR 사용
+  try { return await callLeMUR(ak, transcript, prompt); } catch(e) { console.log('LeMUR 실패:', e); }
+  throw new Error('AI 분석 실패. Claude API 키를 설정해주세요.');
 }
 
-// Groq용 텍스트 압축 (8000자)
-function trimForGroq(t){
-  const MAX=8000;
-  if(t.length<=MAX)return t;
-  const half=Math.floor(MAX/2);
-  return t.slice(0,half)+'\n...(중략)...\n'+t.slice(-half);
-}
-
-async function callLLM(gk,ck,prompt,fullTranscript){
-  // Claude가 있으면 전체 텍스트로 Claude 사용
-  if(ck){
-    try{return await callClaude(ck,prompt);}
-    catch(e){console.log('Claude 실패, Groq로 fallback:',e);}
-  }
-  // Groq는 텍스트 압축해서 사용
-  return await callGroq(gk,prompt);
-}
-
-async function extractContent(transcript,gk,ck,onProg){
+async function extractContent(transcript, ak, ck, onProg) {
   onProg('1단계: 수업 주제 파악 중...');
-
-  // Claude는 전체 텍스트, Groq는 압축 텍스트
-  const tx4topics = ck ? transcript : trimForGroq(transcript);
-  const p1=`다음 요리 수업 녹음에서 다루는 모든 주제를 파악하세요. 여러 요리를 동시에 진행하는 경우 각 요리를 모두 파악하세요.
+  const p1 = `다음 요리 수업 녹음에서 다루는 모든 주제를 파악하세요. 여러 요리를 동시에 진행하는 경우 각 요리를 모두 파악하세요.
 마크다운 없이 순수 JSON만 응답: {"recipes":["요리명1","요리명2"],"exam":true또는false,"theory":["이론주제1"],"tips":true또는false,"assignment":true또는false}
-텍스트: ${tx4topics}`;
+텍스트: ${transcript}`;
 
   let topics;
-  try{topics=parseJSON(await callLLM(gk,ck,p1));}
-  catch{topics={recipes:[],exam:false,theory:[],tips:false,assignment:false};}
+  try { topics = parseJSON(await callLLM(ak, ck, transcript, p1)); }
+  catch { topics = { recipes: [], exam: false, theory: [], tips: false, assignment: false }; }
 
-  const result={recipes:[],exam:[],theory:[],tips:[],assignment:[]};
-  const tasks=[];
-  (topics.recipes||[]).forEach(r=>tasks.push({type:'recipe',name:r}));
-  if(topics.exam)tasks.push({type:'exam'});
-  (topics.theory||[]).forEach(t=>tasks.push({type:'theory',name:t}));
-  if(topics.tips)tasks.push({type:'tips'});
-  if(topics.assignment)tasks.push({type:'assignment'});
+  const result = { recipes: [], exam: [], theory: [], tips: [], assignment: [] };
+  const tasks = [];
+  (topics.recipes || []).forEach(r => tasks.push({ type: 'recipe', name: r }));
+  if (topics.exam) tasks.push({ type: 'exam' });
+  (topics.theory || []).forEach(t => tasks.push({ type: 'theory', name: t }));
+  if (topics.tips) tasks.push({ type: 'tips' });
+  if (topics.assignment) tasks.push({ type: 'assignment' });
 
-  for(let i=0;i<tasks.length;i++){
-    const t=tasks[i];
-    onProg(`2단계: ${t.name||t.type} 추출 중... (${i+1}/${tasks.length})`);
-    const tx = ck ? transcript : trimForGroq(transcript);
+  for (let i = 0; i < tasks.length; i++) {
+    const t = tasks[i];
+    onProg(`2단계: ${t.name || t.type} 추출 중... (${i + 1}/${tasks.length})`);
 
-    if(t.type==='recipe'){
-      const raw=await callLLM(gk,ck,`다음 요리 수업 녹음에서 "${t.name}" 레시피만 추출하세요. 여러 요리가 동시에 진행되므로 "${t.name}"과 관련된 내용만 골라내세요. 다른 요리 내용이 섞이지 않게 주의하세요.
+    if (t.type === 'recipe') {
+      const prompt = `다음 요리 수업 녹음에서 "${t.name}" 레시피만 추출하세요. 여러 요리가 동시에 진행되므로 "${t.name}"과 관련된 내용만 골라내세요. 다른 요리 내용이 섞이지 않게 주의하세요.
 마크다운 없이 순수 JSON만 한국어로: {"recipeName":"이름","ingredients":["재료명 분량"],"steps":["상세한 조리 단계"],"tips":["셰프 팁"]}
-텍스트: ${tx}`);
-      try{const r=parseJSON(raw);if(r.steps?.length>0)result.recipes.push(r);}catch(e){console.log('레시피 파싱 실패:',e,raw);}
-    }else if(t.type==='exam'){
-      const raw=await callLLM(gk,ck,`다음 요리 수업 녹음에서 시험/평가 관련 내용을 모두 추출하세요.
+텍스트: ${transcript}`;
+      try { const r = parseJSON(await callLLM(ak, ck, transcript, prompt)); if (r.steps?.length > 0) result.recipes.push(r); } catch(e) {}
+    } else if (t.type === 'exam') {
+      const prompt = `다음 요리 수업 녹음에서 시험/평가 관련 내용을 모두 추출하세요.
 마크다운 없이 순수 JSON만 한국어로: [{"title":"제목","content":"상세 내용"}]
-텍스트: ${tx}`);
-      try{const items=parseJSON(raw);if(Array.isArray(items))result.exam=items;}catch(e){}
-    }else if(t.type==='theory'){
-      const raw=await callLLM(gk,ck,`다음 요리 수업 녹음에서 "${t.name}"에 관한 이론 내용을 추출하세요.
+텍스트: ${transcript}`;
+      try { const items = parseJSON(await callLLM(ak, ck, transcript, prompt)); if (Array.isArray(items)) result.exam = items; } catch(e) {}
+    } else if (t.type === 'theory') {
+      const prompt = `다음 요리 수업 녹음에서 "${t.name}"에 관한 이론 내용을 추출하세요.
 마크다운 없이 순수 JSON만 한국어로: {"title":"${t.name}","content":"상세 내용"}
-텍스트: ${tx}`);
-      try{const item=parseJSON(raw);if(item.content)result.theory.push(item);}catch(e){}
-    }else if(t.type==='tips'){
-      const raw=await callLLM(gk,ck,`다음 요리 수업 녹음에서 교수님/셰프님의 특별 팁과 주의사항을 추출하세요.
+텍스트: ${transcript}`;
+      try { const item = parseJSON(await callLLM(ak, ck, transcript, prompt)); if (item.content) result.theory.push(item); } catch(e) {}
+    } else if (t.type === 'tips') {
+      const prompt = `다음 요리 수업 녹음에서 교수님/셰프님의 특별 팁과 주의사항을 추출하세요.
 마크다운 없이 순수 JSON만 한국어로: [{"title":"팁 제목","content":"내용"}]
-텍스트: ${tx}`);
-      try{const items=parseJSON(raw);if(Array.isArray(items))result.tips=items;}catch(e){}
-    }else if(t.type==='assignment'){
-      const raw=await callLLM(gk,ck,`다음 요리 수업 녹음에서 과제, 준비물, 제출물 관련 내용을 추출하세요.
+텍스트: ${transcript}`;
+      try { const items = parseJSON(await callLLM(ak, ck, transcript, prompt)); if (Array.isArray(items)) result.tips = items; } catch(e) {}
+    } else if (t.type === 'assignment') {
+      const prompt = `다음 요리 수업 녹음에서 과제, 준비물, 제출물 관련 내용을 추출하세요.
 마크다운 없이 순수 JSON만 한국어로: [{"title":"제목","content":"내용"}]
-텍스트: ${tx}`);
-      try{const items=parseJSON(raw);if(Array.isArray(items))result.assignment=items;}catch(e){}
+텍스트: ${transcript}`;
+      try { const items = parseJSON(await callLLM(ak, ck, transcript, prompt)); if (Array.isArray(items)) result.assignment = items; } catch(e) {}
     }
-    if(i<tasks.length-1)await sleep(2000);
+    if (i < tasks.length - 1) await sleep(1000);
   }
   return result;
 }
 
-function highlightTerms(txt){
-  const terms=Object.keys(TERM_DICT).sort((a,b)=>b.length-a.length);
-  let parts=[{t:'text',v:txt}];
-  terms.forEach(term=>{
-    const next=[];
-    parts.forEach(p=>{
-      if(p.t!=='text'){next.push(p);return;}
-      const sp=p.v.split(term);
-      sp.forEach((chunk,i)=>{if(chunk)next.push({t:'text',v:chunk});if(i<sp.length-1)next.push({t:'term',v:term});});
+function highlightTerms(txt) {
+  const terms = Object.keys(TERM_DICT).sort((a, b) => b.length - a.length);
+  let parts = [{ t: 'text', v: txt }];
+  terms.forEach(term => {
+    const next = [];
+    parts.forEach(p => {
+      if (p.t !== 'text') { next.push(p); return; }
+      const sp = p.v.split(term);
+      sp.forEach((chunk, i) => { if (chunk) next.push({ t: 'text', v: chunk }); if (i < sp.length - 1) next.push({ t: 'term', v: term }); });
     });
-    parts=next;
+    parts = next;
   });
-  return parts.map(p=>p.t==='term'?`<span class="culinary-term" onclick="showTerm('${p.v}')">${p.v}</span>`:p.v).join('');
+  return parts.map(p => p.t === 'term' ? `<span class="culinary-term" onclick="showTerm('${p.v}')">${p.v}</span>` : p.v).join('');
 }
-function showTerm(term){
-  const d=TERM_DICT[term];if(!d)return;
-  document.getElementById('tWord').textContent=term;
-  document.getElementById('tCat').textContent=d.cat;
-  document.getElementById('tDesc').textContent=d.desc;
-  const ib=document.getElementById('tIngBlock'),tb=document.getElementById('tTipBlock');
-  if(d.ing){document.getElementById('tIng').textContent=d.ing;ib.style.display='block';}else ib.style.display='none';
-  if(d.tip){document.getElementById('tTip').textContent=d.tip;tb.style.display='block';}else tb.style.display='none';
+function showTerm(term) {
+  const d = TERM_DICT[term]; if (!d) return;
+  document.getElementById('tWord').textContent = term;
+  document.getElementById('tCat').textContent = d.cat;
+  document.getElementById('tDesc').textContent = d.desc;
+  const ib = document.getElementById('tIngBlock'), tb = document.getElementById('tTipBlock');
+  if (d.ing) { document.getElementById('tIng').textContent = d.ing; ib.style.display = 'block'; } else ib.style.display = 'none';
+  if (d.tip) { document.getElementById('tTip').textContent = d.tip; tb.style.display = 'block'; } else tb.style.display = 'none';
   document.getElementById('termOverlay').classList.add('open');
 }
-function closeTerm(){document.getElementById('termOverlay').classList.remove('open');}
-document.getElementById('termOverlay').addEventListener('click',e=>{if(e.target===e.currentTarget)closeTerm();});
+function closeTerm() { document.getElementById('termOverlay').classList.remove('open'); }
+document.getElementById('termOverlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeTerm(); });
 
-let selectedFile=null;
-function handleFile(input){
-  const file=input.files[0];if(!file)return;
-  selectedFile=file;
-  const mb=(file.size/1024/1024).toFixed(1);
-  document.getElementById('filePill').style.display='block';
-  document.getElementById('filePill').innerHTML=`<div class="file-pill"><span style="font-size:20px">🎵</span><div class="file-pill-name">${file.name}</div><div class="file-pill-size">${mb}MB</div></div>`;
-  document.getElementById('convertBtn').style.display='block';
-  document.getElementById('errorBox').style.display='none';
+let selectedFile = null;
+function handleFile(input) {
+  const file = input.files[0]; if (!file) return;
+  selectedFile = file;
+  const mb = (file.size / 1024 / 1024).toFixed(1);
+  document.getElementById('filePill').style.display = 'block';
+  document.getElementById('filePill').innerHTML = `<div class="file-pill"><span style="font-size:20px">🎵</span><div class="file-pill-name">${file.name}</div><div class="file-pill-size">${mb}MB</div></div>`;
+  document.getElementById('convertBtn').style.display = 'block';
+  document.getElementById('errorBox').style.display = 'none';
 }
-function showError(msg){const b=document.getElementById('errorBox');b.textContent=msg;b.style.display='block';}
-function setStep(n,status,msg){
-  const el=document.getElementById('step'+n);
-  if(status==='active')el.className='p-step active',el.innerHTML=`<div class="spinner"></div>&nbsp;${msg}`;
-  else if(status==='done')el.className='p-step done',el.innerHTML=`✅&nbsp;${msg}`;
-  else el.className='p-step',el.innerHTML=`⏳&nbsp;${msg}`;
+function showError(msg) { const b = document.getElementById('errorBox'); b.textContent = msg; b.style.display = 'block'; }
+function setStep(n, status, msg) {
+  const el = document.getElementById('step' + n);
+  if (status === 'active') el.className = 'p-step active', el.innerHTML = `<div class="spinner"></div>&nbsp;${msg}`;
+  else if (status === 'done') el.className = 'p-step done', el.innerHTML = `✅&nbsp;${msg}`;
+  else el.className = 'p-step', el.innerHTML = `⏳&nbsp;${msg}`;
 }
 
-async function startConvert(){
-  const gk=localStorage.getItem('groq_api_key');
-  const ck=localStorage.getItem('claude_api_key')||'';
-  if(!gk){openSettings();return;}
-  if(!selectedFile)return;
-  document.getElementById('convertBtn').disabled=true;
-  document.getElementById('progressBox').style.display='block';
-  document.getElementById('errorBox').style.display='none';
-  setStep(1,'active','파일 확인 중...');
-  await sleep(300);setStep(1,'done','파일 확인 완료');
-  try{
-    setStep(2,'active','오디오 압축 중...');
-    const transcript=await processAudio(selectedFile,gk,msg=>setStep(2,'active',msg));
-    setStep(2,'done','음성 변환 완료');
-    setStep(3,'active','수업 주제 파악 중...');
-    const result=await extractContent(transcript,gk,ck,msg=>{
-      if(msg.includes('1단계'))setStep(3,'active',msg);
-      else{setStep(3,'done','주제 파악 완료');setStep(4,'active',msg);}
+async function startConvert() {
+  const ak = localStorage.getItem('assembly_api_key');
+  const ck = localStorage.getItem('claude_api_key') || '';
+  if (!ak) { openSettings(); return; }
+  if (!selectedFile) return;
+
+  document.getElementById('convertBtn').disabled = true;
+  document.getElementById('progressBox').style.display = 'block';
+  document.getElementById('errorBox').style.display = 'none';
+  setStep(1, 'active', '파일 확인 중...');
+  await sleep(300); setStep(1, 'done', '파일 확인 완료');
+
+  try {
+    setStep(2, 'active', '파일 업로드 중...');
+    const transcript = await transcribeWithAssembly(selectedFile, ak, msg => setStep(2, 'active', msg));
+    setStep(2, 'done', '음성 변환 완료');
+    setStep(3, 'active', '수업 주제 파악 중...');
+
+    const result = await extractContent(transcript, ak, ck, msg => {
+      if (msg.includes('1단계')) setStep(3, 'active', msg);
+      else { setStep(3, 'done', '주제 파악 완료'); setStep(4, 'active', msg); }
     });
-    setStep(4,'done','내용 추출 완료');
-    const date=new Date().toLocaleDateString('ko-KR');
-    const sessions=JSON.parse(localStorage.getItem('chefnote_sessions')||'[]');
-    sessions.unshift({date,fileName:selectedFile.name,...result});
-    localStorage.setItem('chefnote_sessions',JSON.stringify(sessions));
-    document.getElementById('progressBox').style.display='none';
-    document.getElementById('filePill').style.display='none';
-    document.getElementById('convertBtn').style.display='none';
+    setStep(4, 'done', '내용 추출 완료');
+
+    const date = new Date().toLocaleDateString('ko-KR');
+    const sessions = JSON.parse(localStorage.getItem('chefnote_sessions') || '[]');
+    sessions.unshift({ date, fileName: selectedFile.name, ...result });
+    localStorage.setItem('chefnote_sessions', JSON.stringify(sessions));
+
+    document.getElementById('progressBox').style.display = 'none';
+    document.getElementById('filePill').style.display = 'none';
+    document.getElementById('convertBtn').style.display = 'none';
     renderGrid();
-  }catch(e){
-    showError('오류: '+e.message);
-    document.getElementById('progressBox').style.display='none';
+  } catch(e) {
+    showError('오류: ' + e.message);
+    document.getElementById('progressBox').style.display = 'none';
   }
-  document.getElementById('convertBtn').disabled=false;
+  document.getElementById('convertBtn').disabled = false;
 }
 
-let allRecipes=[],allExam=[],allTheory=[],allTips=[],allAssign=[];
-function renderGrid(){
-  const sessions=JSON.parse(localStorage.getItem('chefnote_sessions')||'[]');
-  if(!sessions.length){document.getElementById('uploadPrompt').style.display='block';document.getElementById('collectionView').style.display='none';return;}
-  document.getElementById('uploadPrompt').style.display='none';document.getElementById('collectionView').style.display='block';
-  allRecipes=[];allExam=[];allTheory=[];allTips=[];allAssign=[];
-  sessions.forEach(s=>{
-    (s.recipes||[]).forEach(r=>allRecipes.push({item:r,date:s.date}));
-    (s.exam||[]).forEach(n=>allExam.push({item:n,date:s.date}));
-    (s.theory||[]).forEach(n=>allTheory.push({item:n,date:s.date}));
-    (s.tips||[]).forEach(n=>allTips.push({item:n,date:s.date}));
-    (s.assignment||[]).forEach(n=>allAssign.push({item:n,date:s.date}));
+let allRecipes = [], allExam = [], allTheory = [], allTips = [], allAssign = [];
+function renderGrid() {
+  const sessions = JSON.parse(localStorage.getItem('chefnote_sessions') || '[]');
+  if (!sessions.length) { document.getElementById('uploadPrompt').style.display = 'block'; document.getElementById('collectionView').style.display = 'none'; return; }
+  document.getElementById('uploadPrompt').style.display = 'none'; document.getElementById('collectionView').style.display = 'block';
+  allRecipes = []; allExam = []; allTheory = []; allTips = []; allAssign = [];
+  sessions.forEach(s => {
+    (s.recipes || []).forEach(r => allRecipes.push({ item: r, date: s.date }));
+    (s.exam || []).forEach(n => allExam.push({ item: n, date: s.date }));
+    (s.theory || []).forEach(n => allTheory.push({ item: n, date: s.date }));
+    (s.tips || []).forEach(n => allTips.push({ item: n, date: s.date }));
+    (s.assignment || []).forEach(n => allAssign.push({ item: n, date: s.date }));
   });
-  const rs=(sid,lid,items,bc,bl,off)=>{
-    const sec=document.getElementById(sid);
-    if(!items.length){sec.style.display='none';return;}
-    sec.style.display='block';
-    document.getElementById(lid).innerHTML=items.map(({item},i)=>`<div class="note-card" onclick="openNoteDetail(${i+off})"><span class="note-card-badge ${bc}">${bl}</span><div class="note-card-title">${item.title||'노트'}</div><div class="note-card-preview">${(item.content||'').slice(0,80)}...</div></div>`).join('');
+  const rs = (sid, lid, items, bc, bl, off) => {
+    const sec = document.getElementById(sid);
+    if (!items.length) { sec.style.display = 'none'; return; }
+    sec.style.display = 'block';
+    document.getElementById(lid).innerHTML = items.map(({ item }, i) => `<div class="note-card" onclick="openNoteDetail(${i + off})"><span class="note-card-badge ${bc}">${bl}</span><div class="note-card-title">${item.title || '노트'}</div><div class="note-card-preview">${(item.content || '').slice(0, 80)}...</div></div>`).join('');
   };
-  rs('examSection','examList',allExam,'badge-exam','시험',0);
-  rs('theorySection','theoryList',allTheory,'badge-theory','이론',allExam.length);
-  rs('tipsSection','tipsList',allTips,'badge-tip','팁',allExam.length+allTheory.length);
-  rs('assignSection','assignList',allAssign,'badge-assignment','과제',allExam.length+allTheory.length+allTips.length);
-  document.getElementById('recipeCount').textContent=`${allRecipes.length}개`;
-  document.getElementById('recipeGrid').innerHTML=allRecipes.map(({item:r,date},i)=>`<div class="recipe-card" onclick="openDetail(${i})"><div class="recipe-card-img">${FOOD_EMOJIS[i%FOOD_EMOJIS.length]}</div><div class="recipe-card-body"><div class="recipe-card-name">${r.recipeName||'레시피'}</div><div class="recipe-card-tags"><div class="recipe-tag">⏱ ${r.steps?.length||0}단계</div><div class="recipe-tag">📅 ${date}</div></div></div></div>`).join('');
+  rs('examSection', 'examList', allExam, 'badge-exam', '시험', 0);
+  rs('theorySection', 'theoryList', allTheory, 'badge-theory', '이론', allExam.length);
+  rs('tipsSection', 'tipsList', allTips, 'badge-tip', '팁', allExam.length + allTheory.length);
+  rs('assignSection', 'assignList', allAssign, 'badge-assignment', '과제', allExam.length + allTheory.length + allTips.length);
+  document.getElementById('recipeCount').textContent = `${allRecipes.length}개`;
+  document.getElementById('recipeGrid').innerHTML = allRecipes.map(({ item: r, date }, i) => `<div class="recipe-card" onclick="openDetail(${i})"><div class="recipe-card-img">${FOOD_EMOJIS[i % FOOD_EMOJIS.length]}</div><div class="recipe-card-body"><div class="recipe-card-name">${r.recipeName || '레시피'}</div><div class="recipe-card-tags"><div class="recipe-tag">⏱ ${r.steps?.length || 0}단계</div><div class="recipe-tag">📅 ${date}</div></div></div></div>`).join('');
 }
 
-function openNoteDetail(idx){
-  const all=[...allExam,...allTheory,...allTips,...allAssign];
-  const{item}=all[idx]||{};if(!item)return;
-  document.getElementById('ndTitle').textContent=item.title||'노트';
-  document.getElementById('ndContent').textContent=item.content||'내용 없음';
+function openNoteDetail(idx) {
+  const all = [...allExam, ...allTheory, ...allTips, ...allAssign];
+  const { item } = all[idx] || {}; if (!item) return;
+  document.getElementById('ndTitle').textContent = item.title || '노트';
+  document.getElementById('ndContent').textContent = item.content || '내용 없음';
   document.getElementById('noteDetail').classList.add('open');
 }
-function closeNoteDetail(){document.getElementById('noteDetail').classList.remove('open');}
+function closeNoteDetail() { document.getElementById('noteDetail').classList.remove('open'); }
 
-let activeRecipe=null;
-function openDetail(idx){
-  const{item:r,date}=allRecipes[idx];activeRecipe=r;
-  const hero=document.getElementById('rdHero');
-  hero.querySelectorAll('.em').forEach(e=>e.remove());
-  hero.insertAdjacentHTML('afterbegin',`<span class="em" style="font-size:80px;z-index:1">${FOOD_EMOJIS[idx%FOOD_EMOJIS.length]}</span>`);
-  document.getElementById('rdName').textContent=r.recipeName||'레시피';
-  document.getElementById('rdDate').textContent=date;
-  document.getElementById('rdIngs').innerHTML=(r.ingredients||[]).map(i=>{const m=i.match(/^(.+?)\s+([\d약적소정당]+.*)$/);const n=m?m[1]:i,a=m?m[2]:'';return`<div class="rd-ing-chip"><div class="rd-ing-name">${highlightTerms(n)}</div>${a?`<div class="rd-ing-amt">${a}</div>`:''}</div>`;}).join('');
-  document.getElementById('rdSteps').innerHTML=(r.steps||[]).map((s,i)=>`<div class="rd-step"><div class="rd-step-num">${i+1}</div><div class="rd-step-text">${highlightTerms(s)}</div></div>`).join('');
-  document.getElementById('rdTips').innerHTML=(r.tips||[]).map(t=>`<div class="rd-tip">${highlightTerms(t)}</div>`).join('');
+let activeRecipe = null;
+function openDetail(idx) {
+  const { item: r, date } = allRecipes[idx]; activeRecipe = r;
+  const hero = document.getElementById('rdHero');
+  hero.querySelectorAll('.em').forEach(e => e.remove());
+  hero.insertAdjacentHTML('afterbegin', `<span class="em" style="font-size:80px;z-index:1">${FOOD_EMOJIS[idx % FOOD_EMOJIS.length]}</span>`);
+  document.getElementById('rdName').textContent = r.recipeName || '레시피';
+  document.getElementById('rdDate').textContent = date;
+  document.getElementById('rdIngs').innerHTML = (r.ingredients || []).map(i => { const m = i.match(/^(.+?)\s+([\d약적소정당]+.*)$/); const n = m ? m[1] : i, a = m ? m[2] : ''; return `<div class="rd-ing-chip"><div class="rd-ing-name">${highlightTerms(n)}</div>${a ? `<div class="rd-ing-amt">${a}</div>` : ''}</div>`; }).join('');
+  document.getElementById('rdSteps').innerHTML = (r.steps || []).map((s, i) => `<div class="rd-step"><div class="rd-step-num">${i + 1}</div><div class="rd-step-text">${highlightTerms(s)}</div></div>`).join('');
+  document.getElementById('rdTips').innerHTML = (r.tips || []).map(t => `<div class="rd-tip">${highlightTerms(t)}</div>`).join('');
   document.getElementById('recipeDetail').classList.add('open');
-  document.getElementById('recipeDetail').scrollTop=0;
+  document.getElementById('recipeDetail').scrollTop = 0;
 }
-function closeDetail(){document.getElementById('recipeDetail').classList.remove('open');}
+function closeDetail() { document.getElementById('recipeDetail').classList.remove('open'); }
 
-let cmSteps=[],cmIdx=0;
-function startCooking(){
-  if(!activeRecipe)return;
-  cmSteps=activeRecipe.steps||[];cmIdx=0;
-  document.getElementById('cmName').textContent=activeRecipe.recipeName||'요리';
-  renderCm('in');document.getElementById('cookingMode').classList.add('open');
+let cmSteps = [], cmIdx = 0;
+function startCooking() {
+  if (!activeRecipe) return;
+  cmSteps = activeRecipe.steps || []; cmIdx = 0;
+  document.getElementById('cmName').textContent = activeRecipe.recipeName || '요리';
+  renderCm('in'); document.getElementById('cookingMode').classList.add('open');
 }
-function closeCooking(){document.getElementById('cookingMode').classList.remove('open');}
-function renderCm(dir){
-  const total=cmSteps.length;
-  document.getElementById('cmBar').style.width=((cmIdx+1)/total*100)+'%';
-  document.getElementById('cmCounter').textContent=`${cmIdx+1} / ${total}`;
-  document.getElementById('cmLabel').textContent=`STEP ${cmIdx+1}`;
-  document.getElementById('cmBody').innerHTML=highlightTerms(cmSteps[cmIdx]);
-  const nb=document.getElementById('cmNextBtn');
-  nb.textContent=cmIdx===total-1?'완료 🎉':'다음 →';
-  nb.className='cm-btn-next'+(cmIdx===total-1?' done':'');
-  const c=document.getElementById('cmContent');
-  c.className='cm-content '+(dir==='in'?'cm-slide':'cm-slide-back');
-  setTimeout(()=>c.className='cm-content',250);
-  document.getElementById('cmDots').innerHTML=cmSteps.map((_,i)=>`<div class="cm-dot${i===cmIdx?' on':''}"></div>`).join('');
+function closeCooking() { document.getElementById('cookingMode').classList.remove('open'); }
+function renderCm(dir) {
+  const total = cmSteps.length;
+  document.getElementById('cmBar').style.width = ((cmIdx + 1) / total * 100) + '%';
+  document.getElementById('cmCounter').textContent = `${cmIdx + 1} / ${total}`;
+  document.getElementById('cmLabel').textContent = `STEP ${cmIdx + 1}`;
+  document.getElementById('cmBody').innerHTML = highlightTerms(cmSteps[cmIdx]);
+  const nb = document.getElementById('cmNextBtn');
+  nb.textContent = cmIdx === total - 1 ? '완료 🎉' : '다음 →';
+  nb.className = 'cm-btn-next' + (cmIdx === total - 1 ? ' done' : '');
+  const c = document.getElementById('cmContent');
+  c.className = 'cm-content ' + (dir === 'in' ? 'cm-slide' : 'cm-slide-back');
+  setTimeout(() => c.className = 'cm-content', 250);
+  document.getElementById('cmDots').innerHTML = cmSteps.map((_, i) => `<div class="cm-dot${i === cmIdx ? ' on' : ''}"></div>`).join('');
 }
-function cmNext(){if(cmIdx<cmSteps.length-1){cmIdx++;renderCm('in');}else closeCooking();}
-function cmPrev(){if(cmIdx>0){cmIdx--;renderCm('back');}}
-let tsX=0;
-document.getElementById('cookingMode').addEventListener('touchstart',e=>{tsX=e.touches[0].clientX;},{passive:true});
-document.getElementById('cookingMode').addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-tsX;if(Math.abs(dx)>50){dx<0?cmNext():cmPrev();}});
+function cmNext() { if (cmIdx < cmSteps.length - 1) { cmIdx++; renderCm('in'); } else closeCooking(); }
+function cmPrev() { if (cmIdx > 0) { cmIdx--; renderCm('back'); } }
+let tsX = 0;
+document.getElementById('cookingMode').addEventListener('touchstart', e => { tsX = e.touches[0].clientX; }, { passive: true });
+document.getElementById('cookingMode').addEventListener('touchend', e => { const dx = e.changedTouches[0].clientX - tsX; if (Math.abs(dx) > 50) { dx < 0 ? cmNext() : cmPrev(); } });
 
-function openSettings(){
-  document.getElementById('groqKeyInput').value=localStorage.getItem('groq_api_key')||'';
-  document.getElementById('claudeKeyInput').value=localStorage.getItem('claude_api_key')||'';
+function openSettings() {
+  document.getElementById('assemblyKeyInput').value = localStorage.getItem('assembly_api_key') || '';
+  document.getElementById('claudeKeyInput').value = localStorage.getItem('claude_api_key') || '';
   document.getElementById('settingsModal').classList.add('open');
 }
-function saveSettings(){
-  localStorage.setItem('groq_api_key',document.getElementById('groqKeyInput').value.trim());
-  const ck=document.getElementById('claudeKeyInput').value.trim();
-  if(ck)localStorage.setItem('claude_api_key',ck);
+function saveSettings() {
+  localStorage.setItem('assembly_api_key', document.getElementById('assemblyKeyInput').value.trim());
+  const ck = document.getElementById('claudeKeyInput').value.trim();
+  if (ck) localStorage.setItem('claude_api_key', ck);
   else localStorage.removeItem('claude_api_key');
   document.getElementById('settingsModal').classList.remove('open');
 }
-function resetData(){
-  if(confirm('저장된 레시피를 모두 삭제할까요?')){
+function resetData() {
+  if (confirm('저장된 레시피를 모두 삭제할까요?')) {
     localStorage.removeItem('chefnote_sessions');
     document.getElementById('settingsModal').classList.remove('open');
     renderGrid();
   }
 }
-document.getElementById('settingsModal').addEventListener('click',e=>{if(e.target===e.currentTarget)e.currentTarget.classList.remove('open');});
+document.getElementById('settingsModal').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('open'); });
 
-function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 renderGrid();
 </script>
 </body>
