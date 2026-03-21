@@ -290,7 +290,7 @@ async function transcribeWithAssembly(file, ak, onProg) {
   const transcriptRes = await fetch('https://api.assemblyai.com/v2/transcript', {
     method: 'POST',
     headers: { 'authorization': ak, 'content-type': 'application/json' },
-    body: JSON.stringify({ audio_url: upload_url, speech_model: 'universal-2', language_code: 'ko' })
+    body: JSON.stringify({ audio_url: upload_url, speech_models: ['universal-2'], language_code: 'ko' })
   });
   if (!transcriptRes.ok) throw new Error('변환 요청 실패: ' + await transcriptRes.text());
   const { id } = await transcriptRes.json();
