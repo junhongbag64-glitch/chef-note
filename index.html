@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -237,9 +237,11 @@ body{font-family:'Noto Sans KR',sans-serif;background:#fff;color:#0a0a0a;min-hei
 <div class="modal" id="settingsModal">
   <div class="modal-sheet">
     <h2>⚙️ 설정</h2>
-    <div class="modal-desc">AssemblyAI: 음성변환 (무료)<br>Claude: AI분석 (필수)</div>
+    <div class="modal-desc">AssemblyAI: 음성변환 · Claude Worker URL: AI분석</div>
     <label>AssemblyAI API Key (필수)</label>
     <input type="password" id="assemblyKeyInput" placeholder="어셈블리AI 키...">
+    <label>Claude Worker URL (필수)</label>
+    <input type="text" id="workerUrlInput" placeholder="https://xxx.workers.dev">
     <label>Claude API Key (필수)</label>
     <input type="password" id="claudeKeyInput" placeholder="sk-ant-...">
     <button class="modal-save" onclick="saveSettings()">저장</button>
@@ -253,11 +255,11 @@ const FOOD_EMOJIS=['🥘','🍲','🥗','🍝','🥩','🍗','🍛','🫕','🍜
 async function transcribeWithAssembly(file,ak,onProg){
   onProg('파일 업로드 중...');
   const up=await fetch('https://api.assemblyai.com/v2/upload',{method:'POST',headers:{'authorization':ak,'content-type':'application/octet-stream'},body:file});
-  if(!up.ok){const t=await up.text();throw new Error('업로드 실패('+up.status+'): '+t);}
+  if(!up.ok)throw new Error('업로드 실패('+up.status+'): '+await up.text());
   const {upload_url}=await up.json();
   onProg('음성 변환 요청 중...');
   const tr=await fetch('https://api.assemblyai.com/v2/transcript',{method:'POST',headers:{'authorization':ak,'content-type':'application/json'},body:JSON.stringify({audio_url:upload_url,speech_model:'nano',language_code:'ko'})});
-  if(!tr.ok){const t=await tr.text();throw new Error('변환요청 실패('+tr.status+'): '+t);}
+  if(!tr.ok)throw new Error('변환요청 실패('+tr.status+'): '+await tr.text());
   const {id}=await tr.json();
   let elapsed=0;
   while(true){
@@ -267,35 +269,35 @@ async function transcribeWithAssembly(file,ak,onProg){
     const poll=await fetch('https://api.assemblyai.com/v2/transcript/'+id,{headers:{'authorization':ak}});
     const data=await poll.json();
     if(data.status==='completed')return data.text||'';
-    if(data.status==='error')throw new Error('AssemblyAI 변환 실패: '+data.error);
+    if(data.status==='error')throw new Error('AssemblyAI 실패: '+data.error);
   }
 }
 
 function parseJSON(text){
   let t=text.replace(/```json\n?/gi,'').replace(/```\n?/g,'').trim();
   try{return JSON.parse(t);}
-  catch{const m=t.match(/\{[\s\S]*\}|\[[\s\S]*\]/);if(m)try{return JSON.parse(m[0]);}catch{}throw new Error('JSON 파싱 실패. AI 응답: '+t.slice(0,200));}
+  catch{const m=t.match(/\{[\s\S]*\}|\[[\s\S]*\]/);if(m)try{return JSON.parse(m[0]);}catch{}throw new Error('파싱실패: '+t.slice(0,100));}
 }
 
-async function callClaude(ck,prompt){
-  const r=await fetch('https://api.anthropic.com/v1/messages',{
+async function callClaude(workerUrl,ck,prompt){
+  const r=await fetch(workerUrl,{
     method:'POST',
-    headers:{'x-api-key':ck,'anthropic-version':'2023-06-01','content-type':'application/json'},
+    headers:{'content-type':'application/json','x-claude-key':ck},
     body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:4000,messages:[{role:'user',content:prompt}]})
   });
   const body=await r.json();
-  if(!r.ok)throw new Error('Claude API 실패('+r.status+'): '+(body.error?.message||JSON.stringify(body)));
+  if(!r.ok)throw new Error('Claude 실패('+r.status+'): '+JSON.stringify(body).slice(0,200));
   return body.content[0].text;
 }
 
-async function extractContent(transcript,ck,onProg){
+async function extractContent(transcript,workerUrl,ck,onProg){
   onProg('1단계: 수업 주제 파악 중...');
-  const raw1=await callClaude(ck,`다음 요리 수업 녹음에서 다루는 모든 주제를 파악하세요.
+  const raw1=await callClaude(workerUrl,ck,`다음 요리 수업 녹음에서 다루는 모든 주제를 파악하세요.
 마크다운 없이 순수 JSON만: {"recipes":["요리명"],"exam":true,"theory":["주제"],"tips":true,"assignment":false}
 텍스트: ${transcript}`);
   let topics;
   try{topics=parseJSON(raw1);}
-  catch(e){throw new Error('주제파악 파싱실패: '+e.message);}
+  catch(e){throw new Error('주제파악 실패: '+e.message);}
 
   const result={recipes:[],exam:[],theory:[],tips:[],assignment:[]};
   const tasks=[];
@@ -310,27 +312,27 @@ async function extractContent(transcript,ck,onProg){
     onProg(`2단계: ${t.name||t.type} 추출 중... (${i+1}/${tasks.length})`);
     try{
       if(t.type==='recipe'){
-        const raw=await callClaude(ck,`"${t.name}" 레시피만 추출. 다른 요리 섞지 말것.
+        const raw=await callClaude(workerUrl,ck,`"${t.name}" 레시피만 추출. 다른 요리 섞지 말것.
 JSON만: {"recipeName":"","ingredients":["재료 분량"],"steps":["단계"],"tips":["팁"]}
 텍스트: ${transcript}`);
         const r=parseJSON(raw);if(r.steps?.length>0)result.recipes.push(r);
       }else if(t.type==='exam'){
-        const raw=await callClaude(ck,`시험/평가 관련 내용 전부 추출.
+        const raw=await callClaude(workerUrl,ck,`시험/평가 관련 내용 전부 추출.
 JSON만: [{"title":"","content":""}]
 텍스트: ${transcript}`);
         const items=parseJSON(raw);if(Array.isArray(items))result.exam=items;
       }else if(t.type==='theory'){
-        const raw=await callClaude(ck,`"${t.name}" 이론 내용 추출.
+        const raw=await callClaude(workerUrl,ck,`"${t.name}" 이론 내용 추출.
 JSON만: {"title":"${t.name}","content":""}
 텍스트: ${transcript}`);
         const item=parseJSON(raw);if(item.content)result.theory.push(item);
       }else if(t.type==='tips'){
-        const raw=await callClaude(ck,`교수님 특별 팁/주의사항 추출.
+        const raw=await callClaude(workerUrl,ck,`교수님 특별 팁/주의사항 추출.
 JSON만: [{"title":"","content":""}]
 텍스트: ${transcript}`);
         const items=parseJSON(raw);if(Array.isArray(items))result.tips=items;
       }else if(t.type==='assignment'){
-        const raw=await callClaude(ck,`과제/준비물/제출물 추출.
+        const raw=await callClaude(workerUrl,ck,`과제/준비물/제출물 추출.
 JSON만: [{"title":"","content":""}]
 텍스트: ${transcript}`);
         const items=parseJSON(raw);if(Array.isArray(items))result.assignment=items;
@@ -367,10 +369,7 @@ function handleFile(input){
   document.getElementById('convertBtn').style.display='block';document.getElementById('errorBox').style.display='none';
 }
 function showError(msg){
-  const b=document.getElementById('errorBox');
-  b.innerHTML=msg.replace(/\n/g,'<br>');
-  b.style.display='block';
-  window.scrollTo(0,0);
+  const b=document.getElementById('errorBox');b.innerHTML=msg;b.style.display='block';window.scrollTo(0,0);
 }
 function setStep(n,status,msg){
   const el=document.getElementById('step'+n);
@@ -382,10 +381,8 @@ function setStep(n,status,msg){
 async function startConvert(){
   const ak=localStorage.getItem('assembly_api_key');
   const ck=localStorage.getItem('claude_api_key')||'';
-  if(!ak||!ck){
-    showError('⚙️ 설정에서 AssemblyAI 키와 Claude 키를 모두 입력해주세요.');
-    openSettings();return;
-  }
+  const wu=localStorage.getItem('worker_url')||'';
+  if(!ak||!ck||!wu){showError('⚙️ 설정에서 모든 키를 입력해주세요.');openSettings();return;}
   if(!selectedFile)return;
   document.getElementById('convertBtn').disabled=true;
   document.getElementById('progressBox').style.display='block';
@@ -396,23 +393,22 @@ async function startConvert(){
     const transcript=await transcribeWithAssembly(selectedFile,ak,msg=>setStep(2,'active',msg));
     setStep(2,'done','음성 변환 완료 ('+transcript.length+'자)');
     setStep(3,'active','수업 주제 파악 중...');
-    const result=await extractContent(transcript,ck,msg=>{
+    const result=await extractContent(transcript,wu,ck,msg=>{
       if(msg.includes('1단계'))setStep(3,'active',msg);
       else{setStep(3,'done','주제 파악 완료');setStep(4,'active',msg);}
     });
-    setStep(4,'done','완료! 레시피 '+result.recipes.length+'개 추출');
+    setStep(4,'done','완료! 레시피 '+result.recipes.length+'개');
     const date=new Date().toLocaleDateString('ko-KR');
     const sessions=JSON.parse(localStorage.getItem('chefnote_sessions')||'[]');
     sessions.unshift({date,fileName:selectedFile.name,...result});
     localStorage.setItem('chefnote_sessions',JSON.stringify(sessions));
-    await sleep(1000);
+    await sleep(800);
     document.getElementById('progressBox').style.display='none';
     document.getElementById('filePill').style.display='none';
     document.getElementById('convertBtn').style.display='none';
     renderGrid();
   }catch(e){
-    console.error('변환 실패:', e);
-    showError('❌ 오류: '+e.message);
+    showError('❌ '+e.message);
     document.getElementById('progressBox').style.display='none';
   }
   document.getElementById('convertBtn').disabled=false;
@@ -456,8 +452,8 @@ function cmPrev(){if(cmIdx>0){cmIdx--;renderCm('back');}}
 let tsX=0;
 document.getElementById('cookingMode').addEventListener('touchstart',e=>{tsX=e.touches[0].clientX;},{passive:true});
 document.getElementById('cookingMode').addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-tsX;if(Math.abs(dx)>50){dx<0?cmNext():cmPrev();}});
-function openSettings(){document.getElementById('assemblyKeyInput').value=localStorage.getItem('assembly_api_key')||'';document.getElementById('claudeKeyInput').value=localStorage.getItem('claude_api_key')||'';document.getElementById('settingsModal').classList.add('open');}
-function saveSettings(){localStorage.setItem('assembly_api_key',document.getElementById('assemblyKeyInput').value.trim());const ck=document.getElementById('claudeKeyInput').value.trim();if(ck)localStorage.setItem('claude_api_key',ck);else localStorage.removeItem('claude_api_key');document.getElementById('settingsModal').classList.remove('open');}
+function openSettings(){document.getElementById('assemblyKeyInput').value=localStorage.getItem('assembly_api_key')||'';document.getElementById('claudeKeyInput').value=localStorage.getItem('claude_api_key')||'';document.getElementById('workerUrlInput').value=localStorage.getItem('worker_url')||'';document.getElementById('settingsModal').classList.add('open');}
+function saveSettings(){localStorage.setItem('assembly_api_key',document.getElementById('assemblyKeyInput').value.trim());const ck=document.getElementById('claudeKeyInput').value.trim();if(ck)localStorage.setItem('claude_api_key',ck);else localStorage.removeItem('claude_api_key');const wu=document.getElementById('workerUrlInput').value.trim();if(wu)localStorage.setItem('worker_url',wu);else localStorage.removeItem('worker_url');document.getElementById('settingsModal').classList.remove('open');}
 function resetData(){if(confirm('저장된 레시피를 모두 삭제할까요?')){localStorage.removeItem('chefnote_sessions');document.getElementById('settingsModal').classList.remove('open');renderGrid();}}
 document.getElementById('settingsModal').addEventListener('click',e=>{if(e.target===e.currentTarget)e.currentTarget.classList.remove('open');});
 function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
