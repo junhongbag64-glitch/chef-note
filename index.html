@@ -258,7 +258,7 @@ async function transcribeWithAssembly(file,ak,onProg){
   if(!up.ok)throw new Error('업로드 실패('+up.status+'): '+await up.text());
   const {upload_url}=await up.json();
   onProg('음성 변환 요청 중...');
-  const tr=await fetch('https://api.assemblyai.com/v2/transcript',{method:'POST',headers:{'authorization':ak,'content-type':'application/json'},body:JSON.stringify({audio_url:upload_url,speech_models:['nano'],language_code:'ko'})});
+  const tr=await fetch('https://api.assemblyai.com/v2/transcript',{method:'POST',headers:{'authorization':ak,'content-type':'application/json'},body:JSON.stringify({audio_url:upload_url,speech_models:['universal-2'],language_code:'ko'})});
   if(!tr.ok)throw new Error('변환요청 실패('+tr.status+'): '+await tr.text());
   const {id}=await tr.json();
   let elapsed=0;
