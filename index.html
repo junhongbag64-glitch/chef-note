@@ -31,7 +31,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:#fff;color:#0a0a0a;min-hei
 .p-step.done{color:#22c55e;font-weight:500}
 .spinner{width:14px;height:14px;border:2px solid #0a0a0a;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0}
 @keyframes spin{to{transform:rotate(360deg)}}
-.error-msg{margin:0 16px 16px;background:#fff5f5;border:1px solid #fecaca;border-radius:12px;padding:13px 16px;font-size:13px;color:#dc2626;line-height:1.6}
+.error-msg{margin:0 16px 16px;background:#fff5f5;border:1px solid #fecaca;border-radius:12px;padding:13px 16px;font-size:13px;color:#dc2626;line-height:1.8;word-break:break-all}
 .section-hd{padding:8px 16px 16px;display:flex;align-items:baseline;justify-content:space-between}
 .section-hd-title{font-size:20px;font-weight:900;letter-spacing:-0.8px}
 .section-hd-count{font-size:12px;color:#aaa;font-weight:300}
@@ -237,151 +237,106 @@ body{font-family:'Noto Sans KR',sans-serif;background:#fff;color:#0a0a0a;min-hei
 <div class="modal" id="settingsModal">
   <div class="modal-sheet">
     <h2>⚙️ 설정</h2>
-    <div class="modal-desc">AssemblyAI: 음성변환 (무료 $50 크레딧)<br>Claude: AI분석 더 정확 (선택)</div>
+    <div class="modal-desc">AssemblyAI: 음성변환 (무료)<br>Claude: AI분석 (필수)</div>
     <label>AssemblyAI API Key (필수)</label>
     <input type="password" id="assemblyKeyInput" placeholder="어셈블리AI 키...">
-    <label>Claude API Key (선택)</label>
-    <input type="password" id="claudeKeyInput" placeholder="sk-ant-... (없으면 비워두세요)">
+    <label>Claude API Key (필수)</label>
+    <input type="password" id="claudeKeyInput" placeholder="sk-ant-...">
     <button class="modal-save" onclick="saveSettings()">저장</button>
     <button class="reset-btn" onclick="resetData()">저장된 레시피 전체 삭제</button>
   </div>
 </div>
-
 <script>
-const TERM_DICT={
-  "미르포아":{cat:"양식 기본기법",desc:"양파, 당근, 셀러리를 2:1:1로 굵게 썬 향 베이스 채소 믹스.",ing:"양파, 당근, 셀러리",tip:"낮은 불에서 천천히 볶아야 색 없이 향만 납니다."},
-  "사세데피스":{cat:"양식 기본기법",desc:"파슬리 줄기, 타임, 베이리프, 통후추, 정향을 셀러리로 감싼 향신료 다발.",tip:"너무 오래 두면 쓴맛이 납니다."},
-  "부케가르니":{cat:"양식 기본기법",desc:"타임, 베이리프, 파슬리 줄기를 묶은 허브 다발.",tip:"실로 단단히 묶어야 조리 중 풀리지 않습니다."},
-  "줄리엔":{cat:"칼질 기법",desc:"채소를 성냥개비 모양으로 가늘게 써는 방법.",tip:"먼저 슬라이스 후 겹쳐서 채 썰면 균일합니다."},
-  "브뤼누아즈":{cat:"칼질 기법",desc:"채소를 3mm 정육면체로 아주 작게 써는 방법.",tip:"줄리엔을 먼저 만든 후 90도 돌려 썰면 됩니다."},
-  "루":{cat:"소스 농후제",desc:"밀가루와 버터를 동량으로 볶아 만든 소스 농후제.",ing:"버터, 밀가루 (1:1)",tip:"따뜻한 액체를 조금씩 넣으며 저어야 덩어리가 없습니다."},
-  "베샤멜":{cat:"모체소스",desc:"화이트루에 우유를 넣어 만든 화이트소스.",ing:"버터, 밀가루, 우유, 소금, 넛메그",tip:"우유를 미리 데워서 넣으면 덩어리가 생기지 않습니다."},
-  "데미글라스":{cat:"소스",desc:"에스파뇰 소스를 농축한 진한 갈색 소스.",tip:"원래 부피의 절반이 될 때까지 졸여야 풍미가 납니다."},
-  "데글라세":{cat:"조리기법",desc:"팬에 눌어붙은 육즙에 와인이나 스톡을 넣어 긁어내는 기법.",tip:"팬이 뜨거울 때 바로 해야 잘 녹아납니다."},
-  "블랑시르":{cat:"조리기법",desc:"끓는 물에 짧게 데친 후 얼음물에 담가 색과 식감을 살리는 기법.",tip:"얼음물에 충분히 담가야 조리가 완전히 멈춥니다."},
-  "소테":{cat:"조리기법",desc:"소량의 기름으로 강한 불에서 빠르게 볶는 조리법.",tip:"팬을 충분히 달군 후 재료를 넣어야 눌어붙지 않습니다."},
-  "콩피":{cat:"조리기법",desc:"기름에 완전히 잠기게 하여 80도 이하로 천천히 익히는 기법.",tip:"오리 다리는 90분 이상 해야 완벽한 질감이 나옵니다."},
-  "캐러멜라이징":{cat:"조리기법",desc:"당분을 열로 갈색화시키는 기법.",tip:"양파는 40분 이상 낮은 불에서 볶아야 진짜 캐러멜라이징이 됩니다."},
-  "미소":{cat:"일식 기본",desc:"콩을 발효시켜 만든 일본식 된장.",tip:"불을 끈 후 풀어야 향이 살아납니다."},
-  "다시":{cat:"일식 기본",desc:"가쓰오부시와 곤부로 만든 일본 기본 육수.",ing:"가쓰오부시, 곤부, 물",tip:"곤부는 60도에서 우려야 쓴맛이 없습니다."},
-  "데리야끼":{cat:"일식 기법",desc:"간장, 미림, 설탕 소스를 발라가며 구워 윤기를 내는 조리법.",tip:"여러 번 나눠 발라야 윤기 있는 코팅이 됩니다."},
-  "두반장":{cat:"중식 기본",desc:"고추와 누에콩을 발효시킨 중국식 매운 장.",tip:"기름에 먼저 볶아야 색과 향이 제대로 납니다."},
-  "화자오":{cat:"중식 향신료",desc:"쓰촨 후추. 얼얼한 마비감이 특징.",tip:"기름에 먼저 우려내면 향이 훨씬 잘 퍼집니다."},
-  "볼로네제":{cat:"이탈리안 소스",desc:"다진 소고기와 토마토로 만든 미트소스.",tip:"최소 2시간 낮은 불에서 끓여야 깊은 맛이 납니다."},
-  "카르보나라":{cat:"이탈리안 소스",desc:"판체타, 달걀, 파르미지아노로 만든 로마식 파스타 소스.",tip:"불을 끈 상태에서 달걀을 넣어야 스크램블이 되지 않습니다."},
-  "페스토":{cat:"이탈리안 소스",desc:"바질, 잣, 파르미지아노, 올리브오일로 만든 제노바식 소스.",tip:"바질을 블랜치하면 색이 오래 유지됩니다."},
-  "리조또":{cat:"이탈리안 요리",desc:"아르보리오 쌀을 스톡으로 조금씩 부어가며 저어서 만드는 쌀 요리.",tip:"스톡을 조금씩 부어가며 전분을 뽑아내세요."},
-  "비네그레트":{cat:"드레싱",desc:"오일과 식초를 3:1로 유화시킨 기본 드레싱.",tip:"머스타드를 유화제로 쓰면 분리되지 않습니다."},
-  "치킨스톡":{cat:"스톡",desc:"닭 뼈와 채소를 오래 끓여 만든 기본 육수.",tip:"찬물에서 시작해야 잡내 없이 맑은 스톡이 됩니다."},
-  "브라운스톡":{cat:"스톡",desc:"뼈를 오븐에 구운 후 끓여 만든 진한 갈색 육수.",tip:"뼈를 220도에서 충분히 구워야 색과 깊은 맛이 납니다."}
-};
+const TERM_DICT={"미르포아":{cat:"양식 기본기법",desc:"양파, 당근, 셀러리를 2:1:1로 굵게 썬 향 베이스 채소 믹스.",ing:"양파, 당근, 셀러리",tip:"낮은 불에서 천천히 볶아야 색 없이 향만 납니다."},"사세데피스":{cat:"양식 기본기법",desc:"파슬리 줄기, 타임, 베이리프, 통후추, 정향을 셀러리로 감싼 향신료 다발.",tip:"너무 오래 두면 쓴맛이 납니다."},"부케가르니":{cat:"양식 기본기법",desc:"타임, 베이리프, 파슬리 줄기를 묶은 허브 다발.",tip:"실로 단단히 묶어야 조리 중 풀리지 않습니다."},"줄리엔":{cat:"칼질 기법",desc:"채소를 성냥개비 모양으로 가늘게 써는 방법.",tip:"먼저 슬라이스 후 겹쳐서 채 썰면 균일합니다."},"브뤼누아즈":{cat:"칼질 기법",desc:"채소를 3mm 정육면체로 아주 작게 써는 방법.",tip:"줄리엔을 먼저 만든 후 90도 돌려 썰면 됩니다."},"루":{cat:"소스 농후제",desc:"밀가루와 버터를 동량으로 볶아 만든 소스 농후제.",ing:"버터, 밀가루 (1:1)",tip:"따뜻한 액체를 조금씩 넣으며 저어야 덩어리가 없습니다."},"베샤멜":{cat:"모체소스",desc:"화이트루에 우유를 넣어 만든 화이트소스.",ing:"버터, 밀가루, 우유, 소금, 넛메그",tip:"우유를 미리 데워서 넣으면 덩어리가 생기지 않습니다."},"데미글라스":{cat:"소스",desc:"에스파뇰 소스를 농축한 진한 갈색 소스.",tip:"원래 부피의 절반이 될 때까지 졸여야 풍미가 납니다."},"데글라세":{cat:"조리기법",desc:"팬에 눌어붙은 육즙에 와인이나 스톡을 넣어 긁어내는 기법.",tip:"팬이 뜨거울 때 바로 해야 잘 녹아납니다."},"블랑시르":{cat:"조리기법",desc:"끓는 물에 짧게 데친 후 얼음물에 담가 색과 식감을 살리는 기법.",tip:"얼음물에 충분히 담가야 조리가 완전히 멈춥니다."},"소테":{cat:"조리기법",desc:"소량의 기름으로 강한 불에서 빠르게 볶는 조리법.",tip:"팬을 충분히 달군 후 재료를 넣어야 눌어붙지 않습니다."},"콩피":{cat:"조리기법",desc:"기름에 완전히 잠기게 하여 80도 이하로 천천히 익히는 기법.",tip:"오리 다리는 90분 이상 해야 완벽한 질감이 나옵니다."},"캐러멜라이징":{cat:"조리기법",desc:"당분을 열로 갈색화시키는 기법.",tip:"양파는 40분 이상 낮은 불에서 볶아야 진짜 캐러멜라이징이 됩니다."},"미소":{cat:"일식 기본",desc:"콩을 발효시켜 만든 일본식 된장.",tip:"불을 끈 후 풀어야 향이 살아납니다."},"다시":{cat:"일식 기본",desc:"가쓰오부시와 곤부로 만든 일본 기본 육수.",ing:"가쓰오부시, 곤부, 물",tip:"곤부는 60도에서 우려야 쓴맛이 없습니다."},"데리야끼":{cat:"일식 기법",desc:"간장, 미림, 설탕 소스를 발라가며 구워 윤기를 내는 조리법.",tip:"여러 번 나눠 발라야 윤기 있는 코팅이 됩니다."},"두반장":{cat:"중식 기본",desc:"고추와 누에콩을 발효시킨 중국식 매운 장.",tip:"기름에 먼저 볶아야 색과 향이 제대로 납니다."},"화자오":{cat:"중식 향신료",desc:"쓰촨 후추. 얼얼한 마비감이 특징.",tip:"기름에 먼저 우려내면 향이 훨씬 잘 퍼집니다."},"볼로네제":{cat:"이탈리안 소스",desc:"다진 소고기와 토마토로 만든 미트소스.",tip:"최소 2시간 낮은 불에서 끓여야 깊은 맛이 납니다."},"카르보나라":{cat:"이탈리안 소스",desc:"판체타, 달걀, 파르미지아노로 만든 로마식 파스타 소스.",tip:"불을 끈 상태에서 달걀을 넣어야 스크램블이 되지 않습니다."},"페스토":{cat:"이탈리안 소스",desc:"바질, 잣, 파르미지아노, 올리브오일로 만든 제노바식 소스.",tip:"바질을 블랜치하면 색이 오래 유지됩니다."},"리조또":{cat:"이탈리안 요리",desc:"아르보리오 쌀을 스톡으로 조금씩 부어가며 저어서 만드는 쌀 요리.",tip:"스톡을 조금씩 부어가며 전분을 뽑아내세요."},"비네그레트":{cat:"드레싱",desc:"오일과 식초를 3:1로 유화시킨 기본 드레싱.",tip:"머스타드를 유화제로 쓰면 분리되지 않습니다."},"치킨스톡":{cat:"스톡",desc:"닭 뼈와 채소를 오래 끓여 만든 기본 육수.",tip:"찬물에서 시작해야 잡내 없이 맑은 스톡이 됩니다."},"브라운스톡":{cat:"스톡",desc:"뼈를 오븐에 구운 후 끓여 만든 진한 갈색 육수.",tip:"뼈를 220도에서 충분히 구워야 색과 깊은 맛이 납니다."}};
 const FOOD_EMOJIS=['🥘','🍲','🥗','🍝','🥩','🍗','🍛','🫕','🍜','🍱','🥞','🫔'];
 
-async function transcribeWithAssembly(file, ak, onProg) {
+async function transcribeWithAssembly(file,ak,onProg){
   onProg('파일 업로드 중...');
-  const uploadRes = await fetch('https://api.assemblyai.com/v2/upload', {
-    method: 'POST',
-    headers: { 'authorization': ak, 'content-type': 'application/octet-stream' },
-    body: file
-  });
-  if (!uploadRes.ok) throw new Error('업로드 실패: ' + await uploadRes.text());
-  const { upload_url } = await uploadRes.json();
+  const up=await fetch('https://api.assemblyai.com/v2/upload',{method:'POST',headers:{'authorization':ak,'content-type':'application/octet-stream'},body:file});
+  if(!up.ok){const t=await up.text();throw new Error('업로드 실패('+up.status+'): '+t);}
+  const {upload_url}=await up.json();
   onProg('음성 변환 요청 중...');
-  const transcriptRes = await fetch('https://api.assemblyai.com/v2/transcript', {
-    method: 'POST',
-    headers: { 'authorization': ak, 'content-type': 'application/json' },
-    body: JSON.stringify({ audio_url: upload_url, speech_models: ['universal-2'], language_code: 'ko' })
-  });
-  if (!transcriptRes.ok) throw new Error('변환 요청 실패: ' + await transcriptRes.text());
-  const { id } = await transcriptRes.json();
-  let elapsed = 0;
-  while (true) {
-    await sleep(4000); elapsed += 4;
-    const min = Math.floor(elapsed/60), sec = elapsed%60;
-    onProg(`음성 변환 중... (${min>0?min+'분 ':''}${sec}초 경과)`);
-    const pollRes = await fetch(`https://api.assemblyai.com/v2/transcript/${id}`, { headers: { 'authorization': ak } });
-    const data = await pollRes.json();
-    if (data.status === 'completed') return data.text || '';
-    if (data.status === 'error') throw new Error('변환 실패: ' + data.error);
+  const tr=await fetch('https://api.assemblyai.com/v2/transcript',{method:'POST',headers:{'authorization':ak,'content-type':'application/json'},body:JSON.stringify({audio_url:upload_url,speech_model:'nano',language_code:'ko'})});
+  if(!tr.ok){const t=await tr.text();throw new Error('변환요청 실패('+tr.status+'): '+t);}
+  const {id}=await tr.json();
+  let elapsed=0;
+  while(true){
+    await sleep(4000);elapsed+=4;
+    const min=Math.floor(elapsed/60),sec=elapsed%60;
+    onProg(`음성 변환 중... (${min>0?min+'분 ':''}${sec}초)`);
+    const poll=await fetch('https://api.assemblyai.com/v2/transcript/'+id,{headers:{'authorization':ak}});
+    const data=await poll.json();
+    if(data.status==='completed')return data.text||'';
+    if(data.status==='error')throw new Error('AssemblyAI 변환 실패: '+data.error);
   }
 }
 
-function parseJSON(text) {
-  let t = text.replace(/```json\n?/gi,'').replace(/```\n?/g,'').trim();
-  try { return JSON.parse(t); }
-  catch { const m=t.match(/\{[\s\S]*\}|\[[\s\S]*\]/); if(m) try{return JSON.parse(m[0]);}catch{} throw new Error('파싱 실패'); }
+function parseJSON(text){
+  let t=text.replace(/```json\n?/gi,'').replace(/```\n?/g,'').trim();
+  try{return JSON.parse(t);}
+  catch{const m=t.match(/\{[\s\S]*\}|\[[\s\S]*\]/);if(m)try{return JSON.parse(m[0]);}catch{}throw new Error('JSON 파싱 실패. AI 응답: '+t.slice(0,200));}
 }
 
-async function callClaude(ck, prompt) {
-  const r = await fetch('https://api.anthropic.com/v1/messages', {
+async function callClaude(ck,prompt){
+  const r=await fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
     headers:{'x-api-key':ck,'anthropic-version':'2023-06-01','content-type':'application/json'},
     body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:4000,messages:[{role:'user',content:prompt}]})
   });
-  if (!r.ok) { const e=await r.json(); throw new Error('Claude 실패: '+(e.error?.message||r.status)); }
-  return (await r.json()).content[0].text;
+  const body=await r.json();
+  if(!r.ok)throw new Error('Claude API 실패('+r.status+'): '+(body.error?.message||JSON.stringify(body)));
+  return body.content[0].text;
 }
 
-async function callLeMUR(ak, transcript, prompt) {
-  const r = await fetch('https://api.assemblyai.com/lemur/v3/task', {
-    method:'POST',
-    headers:{'authorization':ak,'content-type':'application/json'},
-    body:JSON.stringify({ input_text: transcript, prompt: prompt, final_model: 'default' })
-  });
-  if (!r.ok) { const e=await r.json(); throw new Error('LeMUR 실패: '+(e.error||r.status)); }
-  return (await r.json()).response;
-}
-
-async function callLLM(ak, ck, transcript, prompt) {
-  if (ck) { try { return await callClaude(ck, prompt); } catch(e) { console.warn('Claude 실패:', e.message); } }
-  return await callLeMUR(ak, transcript, prompt);
-}
-
-async function extractContent(transcript, ak, ck, onProg) {
+async function extractContent(transcript,ck,onProg){
   onProg('1단계: 수업 주제 파악 중...');
-  const p1 = `다음 요리 수업 녹음에서 다루는 모든 주제를 파악하세요. 여러 요리를 동시에 진행하는 경우 각 요리를 모두 파악하세요.
-마크다운 없이 순수 JSON만 응답: {"recipes":["요리명1","요리명2"],"exam":true또는false,"theory":["이론주제1"],"tips":true또는false,"assignment":true또는false}
-텍스트: ${transcript}`;
+  const raw1=await callClaude(ck,`다음 요리 수업 녹음에서 다루는 모든 주제를 파악하세요.
+마크다운 없이 순수 JSON만: {"recipes":["요리명"],"exam":true,"theory":["주제"],"tips":true,"assignment":false}
+텍스트: ${transcript}`);
   let topics;
-  try { topics = parseJSON(await callLLM(ak, ck, transcript, p1)); }
-  catch { topics = {recipes:[],exam:false,theory:[],tips:false,assignment:false}; }
-  const result = {recipes:[],exam:[],theory:[],tips:[],assignment:[]};
-  const tasks = [];
+  try{topics=parseJSON(raw1);}
+  catch(e){throw new Error('주제파악 파싱실패: '+e.message);}
+
+  const result={recipes:[],exam:[],theory:[],tips:[],assignment:[]};
+  const tasks=[];
   (topics.recipes||[]).forEach(r=>tasks.push({type:'recipe',name:r}));
-  if(topics.exam) tasks.push({type:'exam'});
+  if(topics.exam)tasks.push({type:'exam'});
   (topics.theory||[]).forEach(t=>tasks.push({type:'theory',name:t}));
-  if(topics.tips) tasks.push({type:'tips'});
-  if(topics.assignment) tasks.push({type:'assignment'});
+  if(topics.tips)tasks.push({type:'tips'});
+  if(topics.assignment)tasks.push({type:'assignment'});
+
   for(let i=0;i<tasks.length;i++){
     const t=tasks[i];
     onProg(`2단계: ${t.name||t.type} 추출 중... (${i+1}/${tasks.length})`);
-    if(t.type==='recipe'){
-      const p=`다음 요리 수업 녹음에서 "${t.name}" 레시피만 추출하세요. 여러 요리가 동시에 진행되므로 "${t.name}"과 관련된 내용만 골라내세요.
-마크다운 없이 순수 JSON만 한국어로: {"recipeName":"이름","ingredients":["재료명 분량"],"steps":["상세한 조리 단계"],"tips":["셰프 팁"]}
-텍스트: ${transcript}`;
-      try{const r=parseJSON(await callLLM(ak,ck,transcript,p));if(r.steps?.length>0)result.recipes.push(r);}catch(e){}
-    }else if(t.type==='exam'){
-      const p=`다음 요리 수업 녹음에서 시험/평가 관련 내용을 모두 추출하세요.
-마크다운 없이 순수 JSON만 한국어로: [{"title":"제목","content":"상세 내용"}]
-텍스트: ${transcript}`;
-      try{const items=parseJSON(await callLLM(ak,ck,transcript,p));if(Array.isArray(items))result.exam=items;}catch(e){}
-    }else if(t.type==='theory'){
-      const p=`다음 요리 수업 녹음에서 "${t.name}"에 관한 이론 내용을 추출하세요.
-마크다운 없이 순수 JSON만 한국어로: {"title":"${t.name}","content":"상세 내용"}
-텍스트: ${transcript}`;
-      try{const item=parseJSON(await callLLM(ak,ck,transcript,p));if(item.content)result.theory.push(item);}catch(e){}
-    }else if(t.type==='tips'){
-      const p=`다음 요리 수업 녹음에서 교수님 특별 팁과 주의사항을 추출하세요.
-마크다운 없이 순수 JSON만 한국어로: [{"title":"팁 제목","content":"내용"}]
-텍스트: ${transcript}`;
-      try{const items=parseJSON(await callLLM(ak,ck,transcript,p));if(Array.isArray(items))result.tips=items;}catch(e){}
-    }else if(t.type==='assignment'){
-      const p=`다음 요리 수업 녹음에서 과제, 준비물, 제출물 관련 내용을 추출하세요.
-마크다운 없이 순수 JSON만 한국어로: [{"title":"제목","content":"내용"}]
-텍스트: ${transcript}`;
-      try{const items=parseJSON(await callLLM(ak,ck,transcript,p));if(Array.isArray(items))result.assignment=items;}catch(e){}
-    }
-    if(i<tasks.length-1) await sleep(1000);
+    try{
+      if(t.type==='recipe'){
+        const raw=await callClaude(ck,`"${t.name}" 레시피만 추출. 다른 요리 섞지 말것.
+JSON만: {"recipeName":"","ingredients":["재료 분량"],"steps":["단계"],"tips":["팁"]}
+텍스트: ${transcript}`);
+        const r=parseJSON(raw);if(r.steps?.length>0)result.recipes.push(r);
+      }else if(t.type==='exam'){
+        const raw=await callClaude(ck,`시험/평가 관련 내용 전부 추출.
+JSON만: [{"title":"","content":""}]
+텍스트: ${transcript}`);
+        const items=parseJSON(raw);if(Array.isArray(items))result.exam=items;
+      }else if(t.type==='theory'){
+        const raw=await callClaude(ck,`"${t.name}" 이론 내용 추출.
+JSON만: {"title":"${t.name}","content":""}
+텍스트: ${transcript}`);
+        const item=parseJSON(raw);if(item.content)result.theory.push(item);
+      }else if(t.type==='tips'){
+        const raw=await callClaude(ck,`교수님 특별 팁/주의사항 추출.
+JSON만: [{"title":"","content":""}]
+텍스트: ${transcript}`);
+        const items=parseJSON(raw);if(Array.isArray(items))result.tips=items;
+      }else if(t.type==='assignment'){
+        const raw=await callClaude(ck,`과제/준비물/제출물 추출.
+JSON만: [{"title":"","content":""}]
+텍스트: ${transcript}`);
+        const items=parseJSON(raw);if(Array.isArray(items))result.assignment=items;
+      }
+    }catch(e){console.error(t.name||t.type,'추출실패:',e.message);}
+    if(i<tasks.length-1)await sleep(500);
   }
   return result;
 }
@@ -389,7 +344,7 @@ async function extractContent(transcript, ak, ck, onProg) {
 function highlightTerms(txt){
   const terms=Object.keys(TERM_DICT).sort((a,b)=>b.length-a.length);
   let parts=[{t:'text',v:txt}];
-  terms.forEach(term=>{const next=[];parts.forEach(p=>{if(p.t!=='text'){next.push(p);return;}const sp=p.v.split(term);sp.forEach((chunk,i)=>{if(chunk)next.push({t:'text',v:chunk});if(i<sp.length-1)next.push({t:'term',v:term});});});parts=next;});
+  terms.forEach(term=>{const next=[];parts.forEach(p=>{if(p.t!=='text'){next.push(p);return;}const sp=p.v.split(term);sp.forEach((c,i)=>{if(c)next.push({t:'text',v:c});if(i<sp.length-1)next.push({t:'term',v:term});});});parts=next;});
   return parts.map(p=>p.t==='term'?`<span class="culinary-term" onclick="showTerm('${p.v}')">${p.v}</span>`:p.v).join('');
 }
 function showTerm(term){
@@ -411,7 +366,12 @@ function handleFile(input){
   document.getElementById('filePill').innerHTML=`<div class="file-pill"><span style="font-size:20px">🎵</span><div class="file-pill-name">${file.name}</div><div class="file-pill-size">${mb}MB</div></div>`;
   document.getElementById('convertBtn').style.display='block';document.getElementById('errorBox').style.display='none';
 }
-function showError(msg){const b=document.getElementById('errorBox');b.textContent=msg;b.style.display='block';}
+function showError(msg){
+  const b=document.getElementById('errorBox');
+  b.innerHTML=msg.replace(/\n/g,'<br>');
+  b.style.display='block';
+  window.scrollTo(0,0);
+}
 function setStep(n,status,msg){
   const el=document.getElementById('step'+n);
   if(status==='active')el.className='p-step active',el.innerHTML=`<div class="spinner"></div>&nbsp;${msg}`;
@@ -422,7 +382,11 @@ function setStep(n,status,msg){
 async function startConvert(){
   const ak=localStorage.getItem('assembly_api_key');
   const ck=localStorage.getItem('claude_api_key')||'';
-  if(!ak){openSettings();return;}if(!selectedFile)return;
+  if(!ak||!ck){
+    showError('⚙️ 설정에서 AssemblyAI 키와 Claude 키를 모두 입력해주세요.');
+    openSettings();return;
+  }
+  if(!selectedFile)return;
   document.getElementById('convertBtn').disabled=true;
   document.getElementById('progressBox').style.display='block';
   document.getElementById('errorBox').style.display='none';
@@ -430,21 +394,27 @@ async function startConvert(){
   try{
     setStep(2,'active','파일 업로드 중...');
     const transcript=await transcribeWithAssembly(selectedFile,ak,msg=>setStep(2,'active',msg));
-    setStep(2,'done','음성 변환 완료');setStep(3,'active','수업 주제 파악 중...');
-    const result=await extractContent(transcript,ak,ck,msg=>{
+    setStep(2,'done','음성 변환 완료 ('+transcript.length+'자)');
+    setStep(3,'active','수업 주제 파악 중...');
+    const result=await extractContent(transcript,ck,msg=>{
       if(msg.includes('1단계'))setStep(3,'active',msg);
       else{setStep(3,'done','주제 파악 완료');setStep(4,'active',msg);}
     });
-    setStep(4,'done','내용 추출 완료');
+    setStep(4,'done','완료! 레시피 '+result.recipes.length+'개 추출');
     const date=new Date().toLocaleDateString('ko-KR');
     const sessions=JSON.parse(localStorage.getItem('chefnote_sessions')||'[]');
     sessions.unshift({date,fileName:selectedFile.name,...result});
     localStorage.setItem('chefnote_sessions',JSON.stringify(sessions));
+    await sleep(1000);
     document.getElementById('progressBox').style.display='none';
     document.getElementById('filePill').style.display='none';
     document.getElementById('convertBtn').style.display='none';
     renderGrid();
-  }catch(e){showError('오류: '+e.message);document.getElementById('progressBox').style.display='none';}
+  }catch(e){
+    console.error('변환 실패:', e);
+    showError('❌ 오류: '+e.message);
+    document.getElementById('progressBox').style.display='none';
+  }
   document.getElementById('convertBtn').disabled=false;
 }
 
@@ -472,39 +442,15 @@ function renderGrid(){
   document.getElementById('recipeCount').textContent=`${allRecipes.length}개`;
   document.getElementById('recipeGrid').innerHTML=allRecipes.map(({item:r,date},i)=>`<div class="recipe-card" onclick="openDetail(${i})"><div class="recipe-card-img">${FOOD_EMOJIS[i%FOOD_EMOJIS.length]}</div><div class="recipe-card-body"><div class="recipe-card-name">${r.recipeName||'레시피'}</div><div class="recipe-card-tags"><div class="recipe-tag">⏱ ${r.steps?.length||0}단계</div><div class="recipe-tag">📅 ${date}</div></div></div></div>`).join('');
 }
-function openNoteDetail(idx){
-  const all=[...allExam,...allTheory,...allTips,...allAssign];
-  const{item}=all[idx]||{};if(!item)return;
-  document.getElementById('ndTitle').textContent=item.title||'노트';
-  document.getElementById('ndContent').textContent=item.content||'내용 없음';
-  document.getElementById('noteDetail').classList.add('open');
-}
+function openNoteDetail(idx){const all=[...allExam,...allTheory,...allTips,...allAssign];const{item}=all[idx]||{};if(!item)return;document.getElementById('ndTitle').textContent=item.title||'노트';document.getElementById('ndContent').textContent=item.content||'내용 없음';document.getElementById('noteDetail').classList.add('open');}
 function closeNoteDetail(){document.getElementById('noteDetail').classList.remove('open');}
 let activeRecipe=null;
-function openDetail(idx){
-  const{item:r,date}=allRecipes[idx];activeRecipe=r;
-  const hero=document.getElementById('rdHero');hero.querySelectorAll('.em').forEach(e=>e.remove());
-  hero.insertAdjacentHTML('afterbegin',`<span class="em" style="font-size:80px;z-index:1">${FOOD_EMOJIS[idx%FOOD_EMOJIS.length]}</span>`);
-  document.getElementById('rdName').textContent=r.recipeName||'레시피';document.getElementById('rdDate').textContent=date;
-  document.getElementById('rdIngs').innerHTML=(r.ingredients||[]).map(i=>{const m=i.match(/^(.+?)\s+([\d약적소정당]+.*)$/);const n=m?m[1]:i,a=m?m[2]:'';return`<div class="rd-ing-chip"><div class="rd-ing-name">${highlightTerms(n)}</div>${a?`<div class="rd-ing-amt">${a}</div>`:''}</div>`;}).join('');
-  document.getElementById('rdSteps').innerHTML=(r.steps||[]).map((s,i)=>`<div class="rd-step"><div class="rd-step-num">${i+1}</div><div class="rd-step-text">${highlightTerms(s)}</div></div>`).join('');
-  document.getElementById('rdTips').innerHTML=(r.tips||[]).map(t=>`<div class="rd-tip">${highlightTerms(t)}</div>`).join('');
-  document.getElementById('recipeDetail').classList.add('open');document.getElementById('recipeDetail').scrollTop=0;
-}
+function openDetail(idx){const{item:r,date}=allRecipes[idx];activeRecipe=r;const hero=document.getElementById('rdHero');hero.querySelectorAll('.em').forEach(e=>e.remove());hero.insertAdjacentHTML('afterbegin',`<span class="em" style="font-size:80px;z-index:1">${FOOD_EMOJIS[idx%FOOD_EMOJIS.length]}</span>`);document.getElementById('rdName').textContent=r.recipeName||'레시피';document.getElementById('rdDate').textContent=date;document.getElementById('rdIngs').innerHTML=(r.ingredients||[]).map(i=>{const m=i.match(/^(.+?)\s+([\d약적소정당]+.*)$/);const n=m?m[1]:i,a=m?m[2]:'';return`<div class="rd-ing-chip"><div class="rd-ing-name">${highlightTerms(n)}</div>${a?`<div class="rd-ing-amt">${a}</div>`:''}</div>`;}).join('');document.getElementById('rdSteps').innerHTML=(r.steps||[]).map((s,i)=>`<div class="rd-step"><div class="rd-step-num">${i+1}</div><div class="rd-step-text">${highlightTerms(s)}</div></div>`).join('');document.getElementById('rdTips').innerHTML=(r.tips||[]).map(t=>`<div class="rd-tip">${highlightTerms(t)}</div>`).join('');document.getElementById('recipeDetail').classList.add('open');document.getElementById('recipeDetail').scrollTop=0;}
 function closeDetail(){document.getElementById('recipeDetail').classList.remove('open');}
 let cmSteps=[],cmIdx=0;
 function startCooking(){if(!activeRecipe)return;cmSteps=activeRecipe.steps||[];cmIdx=0;document.getElementById('cmName').textContent=activeRecipe.recipeName||'요리';renderCm('in');document.getElementById('cookingMode').classList.add('open');}
 function closeCooking(){document.getElementById('cookingMode').classList.remove('open');}
-function renderCm(dir){
-  const total=cmSteps.length;
-  document.getElementById('cmBar').style.width=((cmIdx+1)/total*100)+'%';
-  document.getElementById('cmCounter').textContent=`${cmIdx+1} / ${total}`;
-  document.getElementById('cmLabel').textContent=`STEP ${cmIdx+1}`;
-  document.getElementById('cmBody').innerHTML=highlightTerms(cmSteps[cmIdx]);
-  const nb=document.getElementById('cmNextBtn');nb.textContent=cmIdx===total-1?'완료 🎉':'다음 →';nb.className='cm-btn-next'+(cmIdx===total-1?' done':'');
-  const c=document.getElementById('cmContent');c.className='cm-content '+(dir==='in'?'cm-slide':'cm-slide-back');setTimeout(()=>c.className='cm-content',250);
-  document.getElementById('cmDots').innerHTML=cmSteps.map((_,i)=>`<div class="cm-dot${i===cmIdx?' on':''}"></div>`).join('');
-}
+function renderCm(dir){const total=cmSteps.length;document.getElementById('cmBar').style.width=((cmIdx+1)/total*100)+'%';document.getElementById('cmCounter').textContent=`${cmIdx+1} / ${total}`;document.getElementById('cmLabel').textContent=`STEP ${cmIdx+1}`;document.getElementById('cmBody').innerHTML=highlightTerms(cmSteps[cmIdx]);const nb=document.getElementById('cmNextBtn');nb.textContent=cmIdx===total-1?'완료 🎉':'다음 →';nb.className='cm-btn-next'+(cmIdx===total-1?' done':'');const c=document.getElementById('cmContent');c.className='cm-content '+(dir==='in'?'cm-slide':'cm-slide-back');setTimeout(()=>c.className='cm-content',250);document.getElementById('cmDots').innerHTML=cmSteps.map((_,i)=>`<div class="cm-dot${i===cmIdx?' on':''}"></div>`).join('');}
 function cmNext(){if(cmIdx<cmSteps.length-1){cmIdx++;renderCm('in');}else closeCooking();}
 function cmPrev(){if(cmIdx>0){cmIdx--;renderCm('back');}}
 let tsX=0;
