@@ -1,4 +1,4 @@
-   <!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -283,7 +283,7 @@ async function callClaude(workerUrl,ck,prompt){
   const r=await fetch(workerUrl,{
     method:'POST',
     headers:{'content-type':'application/json','x-claude-key':ck},
-    body:JSON.stringify({model:'claude-opus-4-5',max_tokens:4000,messages:[{role:'user',content:prompt}]})
+    body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:4000,messages:[{role:'user',content:prompt}]})
   });
   const body=await r.json();
   if(!r.ok)throw new Error('Claude 실패('+r.status+'): '+JSON.stringify(body).slice(0,200));
