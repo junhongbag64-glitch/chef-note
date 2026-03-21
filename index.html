@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -236,9 +236,9 @@ body{font-family:'Noto Sans KR',sans-serif;background:#fff;color:#0a0a0a;min-hei
 <div class="modal" id="settingsModal">
   <div class="modal-sheet">
     <h2>⚙️ 설정</h2>
-    <div class="modal-desc">OpenAI API Key: 음성변환 + AI분석 모두 사용<br>Claude API Key: 더 정확한 AI분석 (선택)</div>
-    <label>OpenAI API Key (필수)</label>
-    <input type="password" id="openaiKeyInput" placeholder="sk-...">
+    <div class="modal-desc">Groq API 키만 있으면 사용 가능합니다. (무료)<br>console.groq.com 에서 발급받으세요.</div>
+    <label>Groq API Key (필수 · 무료)</label>
+    <input type="password" id="groqKeyInput" placeholder="gsk_...">
     <label>Claude API Key (선택 · 더 정확)</label>
     <input type="password" id="claudeKeyInput" placeholder="sk-ant-... (없으면 비워두세요)">
     <button class="modal-save" onclick="saveSettings()">저장</button>
@@ -294,13 +294,13 @@ function toWav(buffer){
   return new Blob([ab],{type:'audio/wav'});
 }
 
-async function processAudio(file,ok,onProg){
+async function processAudio(file,gk,onProg){
   onProg('오디오 압축 중...');
   const ab=await file.arrayBuffer();
   const ctx=new(window.AudioContext||window.webkitAudioContext)({sampleRate:TARGET_SR});
   let buf;
   try{buf=await ctx.decodeAudioData(ab);}
-  catch(e){throw new Error('오디오 파일을 읽을 수 없습니다.');}
+  catch(e){throw new Error('오디오 파일을 읽을 수 없습니다. mp3, m4a, wav 파일인지 확인해주세요.');}
   await ctx.close();
   const dur=buf.duration,chunks=Math.ceil(dur/CHUNK_SEC);
   let txt='';
@@ -316,10 +316,10 @@ async function processAudio(file,ok,onProg){
     const rendered=await oc.startRendering();
     const wf=new File([toWav(rendered)],`c${i}.wav`,{type:'audio/wav'});
     const fd=new FormData();
-    fd.append('file',wf);fd.append('model','whisper-1');
+    fd.append('file',wf);fd.append('model','whisper-large-v3');
     fd.append('language','ko');fd.append('prompt',WHISPER_HINT);
-    const res=await fetch('https://api.openai.com/v1/audio/transcriptions',{
-      method:'POST',headers:{'Authorization':'Bearer '+ok},body:fd
+    const res=await fetch('https://api.groq.com/openai/v1/audio/transcriptions',{
+      method:'POST',headers:{'Authorization':'Bearer '+gk},body:fd
     });
     if(!res.ok){const er=await res.json();throw new Error('STT 실패: '+(er.error?.message||res.status));}
     txt+=(await res.json()).text+' ';
@@ -327,7 +327,7 @@ async function processAudio(file,ok,onProg){
   return txt.trim();
 }
 
-async function callLLM(ok,ck,prompt){
+async function callLLM(gk,ck,prompt){
   if(ck){
     const r=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
@@ -336,10 +336,10 @@ async function callLLM(ok,ck,prompt){
     });
     if(r.ok){const d=await r.json();return d.content[0].text;}
   }
-  const r=await fetch('https://api.openai.com/v1/chat/completions',{
+  const r=await fetch('https://api.groq.com/openai/v1/chat/completions',{
     method:'POST',
-    headers:{'Authorization':'Bearer '+ok,'Content-Type':'application/json'},
-    body:JSON.stringify({model:'gpt-4o-mini',messages:[{role:'user',content:prompt}],temperature:0.2})
+    headers:{'Authorization':'Bearer '+gk,'Content-Type':'application/json'},
+    body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'user',content:prompt}],temperature:0.2})
   });
   if(!r.ok){const er=await r.json();throw new Error('AI 실패: '+(er.error?.message||r.status));}
   return(await r.json()).choices[0].message.content;
@@ -350,14 +350,14 @@ function parseJSON(text){
   catch{const m=text.match(/\{[\s\S]*\}|\[[\s\S]*\]/);if(m)return JSON.parse(m[0]);throw new Error('파싱 실패');}
 }
 
-async function extractContent(transcript,ok,ck,onProg){
+async function extractContent(transcript,gk,ck,onProg){
   onProg('1단계: 수업 주제 파악 중...');
   const p1=`다음 요리 수업 녹음에서 다루는 모든 주제를 파악하세요. 여러 요리를 동시에 진행하는 경우 각 요리를 모두 파악하세요.
 JSON만 응답: {"recipes":["요리명1","요리명2"],"exam":true또는false,"theory":["이론주제1"],"tips":true또는false,"assignment":true또는false}
 텍스트 앞: ${transcript.slice(0,3000)}
 텍스트 뒤: ${transcript.slice(-2000)}`;
   let topics;
-  try{topics=parseJSON(await callLLM(ok,ck,p1));}
+  try{topics=parseJSON(await callLLM(gk,ck,p1));}
   catch{topics={recipes:[],exam:false,theory:[],tips:false,assignment:false};}
   const result={recipes:[],exam:[],theory:[],tips:[],assignment:[]};
   const tasks=[];
@@ -370,27 +370,27 @@ JSON만 응답: {"recipes":["요리명1","요리명2"],"exam":true또는false,"t
     const t=tasks[i];
     onProg(`2단계: ${t.name||t.type} 추출 중... (${i+1}/${tasks.length})`);
     if(t.type==='recipe'){
-      const raw=await callLLM(ok,ck,`다음 요리 수업 녹음에서 "${t.name}" 레시피만 추출하세요. 여러 요리가 동시에 진행되므로 "${t.name}"과 관련된 내용만 골라내세요. 다른 요리 내용이 섞이지 않게 주의하세요.
+      const raw=await callLLM(gk,ck,`다음 요리 수업 녹음에서 "${t.name}" 레시피만 추출하세요. 여러 요리가 동시에 진행되므로 "${t.name}"과 관련된 내용만 골라내세요. 다른 요리 내용이 섞이지 않게 주의하세요.
 JSON만 한국어로: {"recipeName":"이름","ingredients":["재료명 분량"],"steps":["상세한 조리 단계"],"tips":["셰프 팁"]}
 텍스트: ${transcript}`);
       try{const r=parseJSON(raw);if(r.steps?.length>0)result.recipes.push(r);}catch(e){}
     }else if(t.type==='exam'){
-      const raw=await callLLM(ok,ck,`다음 요리 수업 녹음에서 시험/평가 관련 내용을 모두 추출하세요.
+      const raw=await callLLM(gk,ck,`다음 요리 수업 녹음에서 시험/평가 관련 내용을 모두 추출하세요.
 JSON만 한국어로: [{"title":"제목","content":"상세 내용"}]
 텍스트: ${transcript}`);
       try{const items=parseJSON(raw);if(Array.isArray(items))result.exam=items;}catch(e){}
     }else if(t.type==='theory'){
-      const raw=await callLLM(ok,ck,`다음 요리 수업 녹음에서 "${t.name}"에 관한 이론 내용을 추출하세요.
+      const raw=await callLLM(gk,ck,`다음 요리 수업 녹음에서 "${t.name}"에 관한 이론 내용을 추출하세요.
 JSON만 한국어로: {"title":"${t.name}","content":"상세 내용"}
 텍스트: ${transcript}`);
       try{const item=parseJSON(raw);if(item.content)result.theory.push(item);}catch(e){}
     }else if(t.type==='tips'){
-      const raw=await callLLM(ok,ck,`다음 요리 수업 녹음에서 교수님/셰프님의 특별 팁과 주의사항을 추출하세요.
+      const raw=await callLLM(gk,ck,`다음 요리 수업 녹음에서 교수님/셰프님의 특별 팁과 주의사항을 추출하세요.
 JSON만 한국어로: [{"title":"팁 제목","content":"내용"}]
 텍스트: ${transcript}`);
       try{const items=parseJSON(raw);if(Array.isArray(items))result.tips=items;}catch(e){}
     }else if(t.type==='assignment'){
-      const raw=await callLLM(ok,ck,`다음 요리 수업 녹음에서 과제, 준비물, 제출물 관련 내용을 추출하세요.
+      const raw=await callLLM(gk,ck,`다음 요리 수업 녹음에서 과제, 준비물, 제출물 관련 내용을 추출하세요.
 JSON만 한국어로: [{"title":"제목","content":"내용"}]
 텍스트: ${transcript}`);
       try{const items=parseJSON(raw);if(Array.isArray(items))result.assignment=items;}catch(e){}
@@ -445,9 +445,9 @@ function setStep(n,status,msg){
 }
 
 async function startConvert(){
-  const ok=localStorage.getItem('openai_api_key');
+  const gk=localStorage.getItem('groq_api_key');
   const ck=localStorage.getItem('claude_api_key')||'';
-  if(!ok){openSettings();return;}
+  if(!gk){openSettings();return;}
   if(!selectedFile)return;
   document.getElementById('convertBtn').disabled=true;
   document.getElementById('progressBox').style.display='block';
@@ -456,10 +456,10 @@ async function startConvert(){
   await sleep(300);setStep(1,'done','파일 확인 완료');
   try{
     setStep(2,'active','오디오 압축 중...');
-    const transcript=await processAudio(selectedFile,ok,msg=>setStep(2,'active',msg));
+    const transcript=await processAudio(selectedFile,gk,msg=>setStep(2,'active',msg));
     setStep(2,'done','음성 변환 완료');
     setStep(3,'active','수업 주제 파악 중...');
-    const result=await extractContent(transcript,ok,ck,msg=>{
+    const result=await extractContent(transcript,gk,ck,msg=>{
       if(msg.includes('1단계'))setStep(3,'active',msg);
       else{setStep(3,'done','주제 파악 완료');setStep(4,'active',msg);}
     });
@@ -484,7 +484,7 @@ function renderGrid(){
   const sessions=JSON.parse(localStorage.getItem('chefnote_sessions')||'[]');
   if(!sessions.length){document.getElementById('uploadPrompt').style.display='block';document.getElementById('collectionView').style.display='none';return;}
   document.getElementById('uploadPrompt').style.display='none';document.getElementById('collectionView').style.display='block';
-  allRecipes=[];allExam=[];allTheory=[];allTips=[];allAssign=[];
+  allRecipes=[];allExam=[];allTheory=[];allTips=[]; allAssign=[];
   sessions.forEach(s=>{
     (s.recipes||[]).forEach(r=>allRecipes.push({item:r,date:s.date}));
     (s.exam||[]).forEach(n=>allExam.push({item:n,date:s.date}));
@@ -560,12 +560,12 @@ document.getElementById('cookingMode').addEventListener('touchstart',e=>{tsX=e.t
 document.getElementById('cookingMode').addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-tsX;if(Math.abs(dx)>50){dx<0?cmNext():cmPrev();}});
 
 function openSettings(){
-  document.getElementById('openaiKeyInput').value=localStorage.getItem('openai_api_key')||'';
+  document.getElementById('groqKeyInput').value=localStorage.getItem('groq_api_key')||'';
   document.getElementById('claudeKeyInput').value=localStorage.getItem('claude_api_key')||'';
   document.getElementById('settingsModal').classList.add('open');
 }
 function saveSettings(){
-  localStorage.setItem('openai_api_key',document.getElementById('openaiKeyInput').value.trim());
+  localStorage.setItem('groq_api_key',document.getElementById('groqKeyInput').value.trim());
   const ck=document.getElementById('claudeKeyInput').value.trim();
   if(ck)localStorage.setItem('claude_api_key',ck);
   else localStorage.removeItem('claude_api_key');
