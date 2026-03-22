@@ -282,7 +282,7 @@ function parseJSON(text){
 async function callClaude(workerUrl,ck,prompt){
   const r=await fetch(workerUrl,{
     method:'POST',
-    headers:{'content-type':'application/json','x-claude-key':ck},
+    headers:{'content-type':'text/plain'},
     body:JSON.stringify({model:'claude-3-5-haiku-20241022',max_tokens:4000,messages:[{role:'user',content:prompt}]})
   });
   const body=await r.json();
