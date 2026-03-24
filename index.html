@@ -1741,12 +1741,75 @@ async function onRecordingDone() {
 /* ═══════════════════════════════════════════
    ASSEMBLYAI
 ═══════════════════════════════════════════ */
+/* ═══════════════════════════════════════════
+   AUDIO COMPRESSION
+═══════════════════════════════════════════ */
+async function compressAudio(blob) {
+  // Decode audio
+  const arrayBuf = await blob.arrayBuffer();
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+
+  let decoded;
+  try {
+    decoded = await audioCtx.decodeAudioData(arrayBuf);
+  } catch {
+    await audioCtx.close();
+    return blob; // fallback: return original
+  }
+
+  // Resample to 16kHz mono using OfflineAudioContext
+  const targetSampleRate = 16000;
+  const duration = decoded.duration;
+  const offlineCtx = new OfflineAudioContext(1, Math.ceil(targetSampleRate * duration), targetSampleRate);
+  const source = offlineCtx.createBufferSource();
+  source.buffer = decoded;
+  source.connect(offlineCtx.destination);
+  source.start(0);
+
+  const rendered = await offlineCtx.startRendering();
+  await audioCtx.close();
+
+  // Encode as WAV
+  const pcm = rendered.getChannelData(0);
+  const wavBuf = encodeWAV(pcm, targetSampleRate);
+  return new Blob([wavBuf], { type: 'audio/wav' });
+}
+
+function encodeWAV(samples, sampleRate) {
+  const buf = new ArrayBuffer(44 + samples.length * 2);
+  const view = new DataView(buf);
+  const write = (off, str) => { for (let i = 0; i < str.length; i++) view.setUint8(off + i, str.charCodeAt(i)); };
+  write(0, 'RIFF');
+  view.setUint32(4, 36 + samples.length * 2, true);
+  write(8, 'WAVE');
+  write(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);    // PCM
+  view.setUint16(22, 1, true);    // mono
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  write(36, 'data');
+  view.setUint32(40, samples.length * 2, true);
+  let off = 44;
+  for (let i = 0; i < samples.length; i++, off += 2) {
+    const s = Math.max(-1, Math.min(1, samples[i]));
+    view.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+  }
+  return buf;
+}
+
 async function transcribeAudio(blob) {
+  /* 0. Compress to 16kHz mono WAV to reduce file size */
+  updateProc?.('음성 압축 중...', '파일을 최적화하고 있어요...');
+  const compressed = await compressAudio(blob);
+
   /* 1. Upload */
   const upRes = await fetch(`${PROXY}/assemblyai/v2/upload`, {
     method: 'POST',
-    headers: { 'content-type': blob.type || 'audio/webm' },
-    body: blob,
+    headers: { 'content-type': 'audio/wav' },
+    body: compressed,
   });
   if (!upRes.ok) throw new Error(`Upload failed: ${upRes.status}`);
   const { upload_url } = await upRes.json();
