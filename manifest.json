@@ -1,0 +1,37 @@
+{
+  "name": "ChefNote",
+  "short_name": "ChefNote",
+  "description": "조리학과 수업 녹음 자동 정리 앱",
+  "start_url": "/chef-note/",
+  "scope": "/chef-note/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F8F7F4",
+  "theme_color": "#0E0E0C",
+  "lang": "ko",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='40' fill='%230E0E0C'/><text x='96' y='130' font-size='100' text-anchor='middle' fill='white'>🍳</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%230E0E0C'/><text x='256' y='340' font-size='280' text-anchor='middle' fill='white'>🍳</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["education", "productivity"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "새 녹음 시작",
+      "short_name": "녹음",
+      "description": "새 수업 녹음 시작",
+      "url": "/chef-note/#record",
+      "icons": [{ "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><circle cx='48' cy='48' r='48' fill='%234E6035'/><circle cx='48' cy='48' r='18' fill='white'/></svg>", "sizes": "96x96" }]
+    }
+  ]
+}
