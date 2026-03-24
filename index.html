@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
@@ -12,6 +12,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Noto+Serif+KR:wght@400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
   <style>
     /* ═══════════════════════════════════════════
@@ -803,9 +807,155 @@
       cursor: pointer; transition: background .15s;
     }
     .btn-primary:active { background: var(--accent-dk); }
+
+    /* ═══════════════════════════════════════════
+       AUTH SCREEN
+    ═══════════════════════════════════════════ */
+    #auth-screen {
+      position: fixed; inset: 0; z-index: 9999;
+      background: var(--bg);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 40px 32px;
+    }
+    #auth-screen.hidden { display: none; }
+
+    .auth-logo {
+      font-family: var(--f-display);
+      font-size: 36px; font-weight: 700;
+      color: var(--text-1);
+      margin-bottom: 6px;
+    }
+    .auth-sub {
+      font-size: 14px; color: var(--text-3);
+      margin-bottom: 48px; text-align: center;
+    }
+    .auth-tabs {
+      display: flex; gap: 0;
+      width: 100%; max-width: 360px;
+      background: var(--border-1);
+      border-radius: var(--r-md);
+      padding: 3px; margin-bottom: 28px;
+    }
+    .auth-tab {
+      flex: 1; padding: 9px;
+      border: none; background: none;
+      border-radius: 11px;
+      font-family: var(--f-sans); font-size: 14px; font-weight: 500;
+      color: var(--text-3); cursor: pointer; transition: all .2s;
+    }
+    .auth-tab.active {
+      background: var(--bg-card);
+      color: var(--text-1);
+      box-shadow: var(--sh-sm);
+    }
+    .auth-form {
+      width: 100%; max-width: 360px;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .auth-input {
+      width: 100%; padding: 14px 16px;
+      border: 1.5px solid var(--border-1);
+      border-radius: var(--r-md);
+      background: var(--bg-card);
+      font-family: var(--f-sans); font-size: 15px;
+      color: var(--text-1); outline: none;
+      transition: border-color .2s;
+    }
+    .auth-input:focus { border-color: var(--accent); }
+    .auth-btn {
+      width: 100%; padding: 15px;
+      background: var(--text-1); color: #fff;
+      border: none; border-radius: var(--r-md);
+      font-family: var(--f-sans); font-size: 15px; font-weight: 600;
+      cursor: pointer; transition: opacity .2s;
+      margin-top: 4px;
+    }
+    .auth-btn:active { opacity: 0.8; }
+    .auth-divider {
+      display: flex; align-items: center; gap: 12px;
+      color: var(--text-3); font-size: 13px;
+      margin: 4px 0;
+    }
+    .auth-divider::before, .auth-divider::after {
+      content: ''; flex: 1; height: 1px; background: var(--border-1);
+    }
+    .auth-google {
+      width: 100%; padding: 14px;
+      background: var(--bg-card);
+      border: 1.5px solid var(--border-1);
+      border-radius: var(--r-md);
+      font-family: var(--f-sans); font-size: 15px; font-weight: 500;
+      color: var(--text-1); cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      transition: background .15s;
+    }
+    .auth-google:active { background: var(--border-1); }
+    .auth-error {
+      font-size: 13px; color: var(--danger);
+      text-align: center; min-height: 18px;
+    }
+
+    /* Loading spinner */
+    #app-loading {
+      position: fixed; inset: 0; z-index: 10000;
+      background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+    }
+    #app-loading.hidden { display: none; }
+    .spinner {
+      width: 32px; height: 32px;
+      border: 3px solid var(--border-1);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
+
+<!-- Loading screen -->
+<div id="app-loading">
+  <div class="spinner"></div>
+</div>
+
+<!-- Auth screen -->
+<div id="auth-screen" class="hidden">
+  <div class="auth-logo">ChefNote</div>
+  <div class="auth-sub">조리학과 수업 노트 자동화</div>
+
+  <div class="auth-tabs" style="max-width:360px;width:100%">
+    <button class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">로그인</button>
+    <button class="auth-tab" id="tab-signup" onclick="switchAuthTab('signup')">회원가입</button>
+  </div>
+
+  <div class="auth-form" id="auth-form-login">
+    <input class="auth-input" id="login-email" type="email" placeholder="이메일" autocomplete="email">
+    <input class="auth-input" id="login-pw" type="password" placeholder="비밀번호" autocomplete="current-password">
+    <div class="auth-error" id="login-err"></div>
+    <button class="auth-btn" onclick="emailLogin()">로그인</button>
+    <div class="auth-divider">또는</div>
+    <button class="auth-google" onclick="googleLogin()">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.7 2.3 30.2 0 24 0 14.7 0 6.7 5.4 2.8 13.3l7.8 6C12.4 13.2 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.9 7.2l7.6 5.9c4.5-4.1 7.1-10.2 7.1-17.1z"/><path fill="#FBBC05" d="M10.6 28.7A14.6 14.6 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.8-6A23.9 23.9 0 0 0 0 24c0 3.9.9 7.5 2.6 10.7l8-6z"/><path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.6-5.9c-2 1.4-4.7 2.2-7.6 2.2-6.3 0-11.6-3.7-13.5-9l-8 6.1C6.7 42.6 14.7 48 24 48z"/></svg>
+      Google로 계속하기
+    </button>
+  </div>
+
+  <div class="auth-form hidden" id="auth-form-signup">
+    <input class="auth-input" id="signup-name" type="text" placeholder="이름" autocomplete="name">
+    <input class="auth-input" id="signup-email" type="email" placeholder="이메일" autocomplete="email">
+    <input class="auth-input" id="signup-pw" type="password" placeholder="비밀번호 (6자 이상)" autocomplete="new-password">
+    <div class="auth-error" id="signup-err"></div>
+    <button class="auth-btn" onclick="emailSignup()">회원가입</button>
+    <div class="auth-divider">또는</div>
+    <button class="auth-google" onclick="googleLogin()">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.7 2.3 30.2 0 24 0 14.7 0 6.7 5.4 2.8 13.3l7.8 6C12.4 13.2 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.9 7.2l7.6 5.9c4.5-4.1 7.1-10.2 7.1-17.1z"/><path fill="#FBBC05" d="M10.6 28.7A14.6 14.6 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.8-6A23.9 23.9 0 0 0 0 24c0 3.9.9 7.5 2.6 10.7l8-6z"/><path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.6-5.9c-2 1.4-4.7 2.2-7.6 2.2-6.3 0-11.6-3.7-13.5-9l-8 6.1C6.7 42.6 14.7 48 24 48z"/></svg>
+      Google로 계속하기
+    </button>
+  </div>
+</div>
+
 <div id="app">
 
   <!-- ═══════════════════ HOME ═══════════════════ -->
@@ -993,17 +1143,6 @@
 
     <div class="settings-section">
       <div class="settings-group">
-        <div class="settings-row" onclick="openApiModal()">
-          <div class="settings-ico" style="background:var(--accent-lt)">
-            <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8">
-              <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-              <path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
-            </svg>
-          </div>
-          <span class="settings-lbl">API 설정</span>
-          <span class="settings-val">AssemblyAI · Claude</span>
-          <div class="settings-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
-        </div>
         <div class="settings-row" onclick="showToast('준비 중입니다')">
           <div class="settings-ico" style="background:#F0EEE8">
             <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8">
@@ -1036,6 +1175,20 @@
             </svg>
           </div>
           <span class="settings-lbl" style="color:var(--danger)">모든 데이터 삭제</span>
+          <div class="settings-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <div class="settings-row" onclick="logout()">
+          <div class="settings-ico" style="background:var(--danger-lt)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="1.8">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+          </div>
+          <span class="settings-lbl" style="color:var(--danger)">로그아웃</span>
           <div class="settings-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
         </div>
       </div>
@@ -1181,26 +1334,6 @@
     </div>
   </div>
 
-  <!-- ═══════════════════ API MODAL ═══════════════════ -->
-  <div class="modal-bg center" id="apiModal">
-    <div class="modal-card">
-      <div class="modal-head">
-        <span class="modal-title">API 설정</span>
-        <button class="icon-btn" onclick="closeApiModal()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
-        </button>
-      </div>
-      <label class="modal-label">AssemblyAI API Key</label>
-      <input class="modal-input" id="asmKey" type="password" placeholder="your-assemblyai-key...">
-      <label class="modal-label">Claude API Key</label>
-      <input class="modal-input" id="clKey" type="password" placeholder="sk-ant-...">
-      <div class="modal-info">🔒 API 키는 이 기기에만 저장되며, Cloudflare Worker를 통해 안전하게 전송됩니다.</div>
-      <button class="btn-primary" onclick="saveApiKeys()">저장</button>
-    </div>
-  </div>
-
   <!-- Hidden inputs -->
   <input type="file" id="photoIn" accept="image/*" capture="environment" style="display:none" onchange="handlePhoto(this)">
   <input type="file" id="videoIn" accept="video/*" capture="environment" style="display:none" onchange="handleVideo(this)">
@@ -1211,6 +1344,20 @@
 ═══════════════════════════════════════════ -->
 <script>
 'use strict';
+
+/* ───────────────── FIREBASE INIT ───────────────── */
+const firebaseConfig = {
+  apiKey: "AIzaSyAXla8W0tWBLQV7D08YxPQmQKs6jPkcs4E",
+  authDomain: "chefnote-1833f.firebaseapp.com",
+  projectId: "chefnote-1833f",
+  storageBucket: "chefnote-1833f.firebasestorage.app",
+  messagingSenderId: "553773468055",
+  appId: "1:553773468055:web:0fbd68dc334899fc5f5cd2",
+  measurementId: "G-T4J7T6XMV4"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db   = firebase.firestore();
 
 /* ───────────────── CONFIG ───────────────── */
 const PROXY = 'https://empty-cherry-ab7c.junhongbag64.workers.dev';
@@ -1228,11 +1375,13 @@ const S = {
   stream:     null,
   wakeLock:   null,
   audioCtx:   null,
-  media:      [],   // {type, dataUrl}
+  media:      [],
   memos:      [],
   audio:      null,
   playing:    false,
-  profile:    { name:'김조리', dept:'조리학과', sem:'3학기' },
+  profile:    { name:'', dept:'조리학과', sem:'1학기' },
+  currentUser: null,
+
 };
 
 /* ───────────────── SERVICE WORKER ───────────────── */
@@ -1242,27 +1391,166 @@ if ('serviceWorker' in navigator) {
     .catch(e => console.warn('[SW] failed:', e));
 }
 
+/* ───────────────── AUTH UI ───────────────── */
+function switchAuthTab(tab) {
+  document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+  document.getElementById('tab-signup').classList.toggle('active', tab === 'signup');
+  document.getElementById('auth-form-login').classList.toggle('hidden', tab !== 'login');
+  document.getElementById('auth-form-signup').classList.toggle('hidden', tab !== 'signup');
+}
+
+async function emailLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pw    = document.getElementById('login-pw').value;
+  const errEl = document.getElementById('login-err');
+  errEl.textContent = '';
+  try {
+    await auth.signInWithEmailAndPassword(email, pw);
+  } catch(e) {
+    errEl.textContent = authErrMsg(e.code);
+  }
+}
+
+async function emailSignup() {
+  const name  = document.getElementById('signup-name').value.trim();
+  const email = document.getElementById('signup-email').value.trim();
+  const pw    = document.getElementById('signup-pw').value;
+  const errEl = document.getElementById('signup-err');
+  errEl.textContent = '';
+  if (!name) { errEl.textContent = '이름을 입력해주세요'; return; }
+  try {
+    const cred = await auth.createUserWithEmailAndPassword(email, pw);
+    await cred.user.updateProfile({ displayName: name });
+    // Save profile to Firestore
+    await db.collection('users').doc(cred.user.uid).set({
+      name, dept: '조리학과', sem: '1학기'
+    }, { merge: true });
+  } catch(e) {
+    errEl.textContent = authErrMsg(e.code);
+  }
+}
+
+async function googleLogin() {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  try {
+    await auth.signInWithPopup(provider);
+  } catch(e) {
+    showToast('Google 로그인 실패: ' + e.message);
+  }
+}
+
+async function logout() {
+  if (!confirm('로그아웃 하시겠어요?')) return;
+  await auth.signOut();
+}
+
+function authErrMsg(code) {
+  const map = {
+    'auth/invalid-email': '이메일 형식이 올바르지 않습니다',
+    'auth/user-not-found': '등록된 계정이 없습니다',
+    'auth/wrong-password': '비밀번호가 틀렸습니다',
+    'auth/email-already-in-use': '이미 사용 중인 이메일입니다',
+    'auth/weak-password': '비밀번호는 6자 이상이어야 합니다',
+    'auth/invalid-credential': '이메일 또는 비밀번호가 올바르지 않습니다',
+  };
+  return map[code] || '오류가 발생했습니다. 다시 시도해주세요';
+}
+
 /* ───────────────── INIT ───────────────── */
 document.addEventListener('DOMContentLoaded', () => {
-  loadStorage();
-  renderProfile();
-  renderNotes();
-  updateStats();
+  // Auth state observer
+  auth.onAuthStateChanged(async (user) => {
+    const loading = document.getElementById('app-loading');
+    const authScr = document.getElementById('auth-screen');
+    const appDiv  = document.getElementById('app');
+
+    if (user) {
+      S.currentUser = user;
+      // Load profile from Firestore
+      try {
+        const doc = await db.collection('users').doc(user.uid).get();
+        if (doc.exists) {
+          S.profile = { ...S.profile, ...doc.data() };
+        } else {
+          // First time Google login - save profile
+          S.profile.name = user.displayName || user.email.split('@')[0];
+          await db.collection('users').doc(user.uid).set({
+            name: S.profile.name, dept: S.profile.dept, sem: S.profile.sem
+          });
+        }
+      } catch {}
+      await loadNotesFromFirestore();
+      renderProfile();
+      renderNotes();
+      updateStats();
+      authScr.classList.add('hidden');
+      appDiv.style.display = '';
+      loading.classList.add('hidden');
+    } else {
+      S.currentUser = null;
+      S.notes = [];
+      appDiv.style.display = 'none';
+      authScr.classList.remove('hidden');
+      loading.classList.add('hidden');
+    }
+  });
 });
 
-/* ───────────────── STORAGE ───────────────── */
-function loadStorage() {
+/* ───────────────── FIRESTORE STORAGE ───────────────── */
+async function loadNotesFromFirestore() {
+  if (!S.currentUser) return;
   try {
-    const n = localStorage.getItem('cn_notes');
-    S.notes = n ? JSON.parse(n) : [];
-    const p = localStorage.getItem('cn_profile');
-    if (p) S.profile = JSON.parse(p);
-  } catch { S.notes = []; }
+    const snap = await db.collection('users').doc(S.currentUser.uid)
+      .collection('notes').orderBy('createdAt', 'desc').get();
+    S.notes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch(e) {
+    // Fallback to localStorage if offline
+    try {
+      const n = localStorage.getItem('cn_notes');
+      S.notes = n ? JSON.parse(n) : [];
+    } catch { S.notes = []; }
+  }
 }
 
-function saveStorage() {
-  localStorage.setItem('cn_notes', JSON.stringify(S.notes));
+async function saveNoteToFirestore(note) {
+  if (!S.currentUser) return;
+  try {
+    if (note.id && note.id.length > 10) {
+      // Existing Firestore doc
+      await db.collection('users').doc(S.currentUser.uid)
+        .collection('notes').doc(note.id).set(note);
+    } else {
+      // New note
+      const ref = await db.collection('users').doc(S.currentUser.uid)
+        .collection('notes').add({ ...note, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+      note.id = ref.id;
+    }
+    // Also cache locally
+    localStorage.setItem('cn_notes', JSON.stringify(S.notes));
+  } catch(e) {
+    // Offline: save to localStorage
+    localStorage.setItem('cn_notes', JSON.stringify(S.notes));
+  }
 }
+
+async function deleteNoteFromFirestore(noteId) {
+  if (!S.currentUser || !noteId) return;
+  try {
+    await db.collection('users').doc(S.currentUser.uid)
+      .collection('notes').doc(noteId).delete();
+  } catch {}
+}
+
+async function saveProfileToFirestore() {
+  if (!S.currentUser) return;
+  try {
+    await db.collection('users').doc(S.currentUser.uid).set(S.profile, { merge: true });
+  } catch {}
+}
+
+// Legacy compat
+function loadStorage() {}
+function saveStorage() { localStorage.setItem('cn_notes', JSON.stringify(S.notes)); }
 
 /* ───────────────── TAB NAV ───────────────── */
 function switchTab(tab) {
@@ -1427,7 +1715,7 @@ async function onRecordingDone() {
 
     S.notes.unshift(note);
     S.memos = [];
-    saveStorage();
+    await saveNoteToFirestore(note);
     renderNotes();
     updateStats();
 
@@ -1445,13 +1733,10 @@ async function onRecordingDone() {
    ASSEMBLYAI
 ═══════════════════════════════════════════ */
 async function transcribeAudio(blob) {
-  const key = localStorage.getItem('cn_asm_key');
-  if (!key) throw new Error('AssemblyAI API 키를 먼저 설정해주세요');
-
   /* 1. Upload */
   const upRes = await fetch(`${PROXY}/assemblyai/v2/upload`, {
     method: 'POST',
-    headers: { authorization: key, 'content-type': blob.type || 'audio/webm' },
+    headers: { 'content-type': blob.type || 'audio/webm' },
     body: blob,
   });
   if (!upRes.ok) throw new Error(`Upload failed: ${upRes.status}`);
@@ -1460,7 +1745,7 @@ async function transcribeAudio(blob) {
   /* 2. Request transcript */
   const trRes = await fetch(`${PROXY}/assemblyai/v2/transcript`, {
     method: 'POST',
-    headers: { authorization: key, 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ audio_url: upload_url, language_code: 'ko', punctuate: true, format_text: true }),
   });
   if (!trRes.ok) throw new Error(`Transcript request failed: ${trRes.status}`);
@@ -1469,9 +1754,7 @@ async function transcribeAudio(blob) {
   /* 3. Poll */
   for (let i = 0; i < 120; i++) {
     await sleep(2500);
-    const poll = await fetch(`${PROXY}/assemblyai/v2/transcript/${id}`, {
-      headers: { authorization: key },
-    });
+    const poll = await fetch(`${PROXY}/assemblyai/v2/transcript/${id}`);
     const result = await poll.json();
     if (result.status === 'completed') return result.text || '(내용 없음)';
     if (result.status === 'error') throw new Error('Transcription error: ' + result.error);
@@ -1483,8 +1766,6 @@ async function transcribeAudio(blob) {
    CLAUDE NOTE GENERATION
 ═══════════════════════════════════════════ */
 async function generateNote(transcript, dur) {
-  const key = localStorage.getItem('cn_cl_key');
-  if (!key) return fallbackNote(dur);
   if (!transcript || transcript.trim().length < 5) return fallbackNote(dur);
 
   const prompt = `다음은 조리학과 수업 녹음을 텍스트로 변환한 내용입니다.
@@ -1512,7 +1793,6 @@ ${transcript}
   const res = await fetch(`${PROXY}/anthropic/v1/messages`, {
     method: 'POST',
     headers: {
-      'x-api-key': key,
       'anthropic-version': '2023-06-01',
       'content-type': 'application/json',
     },
@@ -1816,7 +2096,7 @@ function toggleFav() {
   const n = S.notes.find(x => x.id === S.activeNote);
   if (!n) return;
   n.favorite = !n.favorite;
-  saveStorage();
+  saveNoteToFirestore(n);
   updateFavIcon(n.favorite);
   showToast(n.favorite ? '❤️ 즐겨찾기 추가' : '즐겨찾기 해제');
 }
@@ -1861,7 +2141,7 @@ function editProfile() {
     const dept = prompt('학과:', S.profile.dept) || S.profile.dept;
     const sem  = prompt('학기:', S.profile.sem)  || S.profile.sem;
     S.profile  = { name: name.trim(), dept, sem };
-    localStorage.setItem('cn_profile', JSON.stringify(S.profile));
+    saveProfileToFirestore();
     renderProfile();
   }
 }
@@ -1869,21 +2149,6 @@ function editProfile() {
 /* ═══════════════════════════════════════════
    SETTINGS
 ═══════════════════════════════════════════ */
-function openApiModal() {
-  document.getElementById('asmKey').value = localStorage.getItem('cn_asm_key') || '';
-  document.getElementById('clKey').value  = localStorage.getItem('cn_cl_key')  || '';
-  document.getElementById('apiModal').classList.add('on');
-}
-function closeApiModal() { document.getElementById('apiModal').classList.remove('on'); }
-function saveApiKeys() {
-  const a = document.getElementById('asmKey').value.trim();
-  const c = document.getElementById('clKey').value.trim();
-  if (a) localStorage.setItem('cn_asm_key', a);
-  if (c) localStorage.setItem('cn_cl_key',  c);
-  closeApiModal();
-  showToast('✅ API 키 저장됨');
-}
-
 function exportNotes() {
   const blob = new Blob([JSON.stringify(S.notes, null, 2)], { type: 'application/json' });
   const url  = URL.createObjectURL(blob);
@@ -1895,10 +2160,19 @@ function exportNotes() {
   showToast('📦 내보내기 완료');
 }
 
-function clearData() {
+async function clearData() {
   if (!confirm('모든 노트를 삭제할까요? 되돌릴 수 없습니다.')) return;
+  // Delete from Firestore
+  if (S.currentUser) {
+    try {
+      const snap = await db.collection('users').doc(S.currentUser.uid).collection('notes').get();
+      const batch = db.batch();
+      snap.docs.forEach(d => batch.delete(d.ref));
+      await batch.commit();
+    } catch {}
+  }
   S.notes = [];
-  saveStorage();
+  localStorage.removeItem('cn_notes');
   renderNotes();
   updateStats();
   showToast('🗑️ 삭제 완료');
