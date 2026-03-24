@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
@@ -1802,70 +1802,46 @@ function encodeWAV(samples, sampleRate) {
 }
 
 async function transcribeAudio(blob) {
-  const LARGE_FILE = 50 * 1024 * 1024; // 50MB 이상이면 직접 업로드
-  let upload_url;
+  // Worker에서 키 받아서 AssemblyAI 직접 호출 (파일 크기 제한 없음)
+  const keyRes = await fetch(`${PROXY}/get-asm-key`);
+  if (!keyRes.ok) throw new Error('API 키를 가져오지 못했습니다');
+  const { key } = await keyRes.json();
 
-  if (blob.size > LARGE_FILE) {
-    // 대용량: AssemblyAI에 직접 업로드 (Worker에서 키 받아서)
-    updateProc?.('음성 업로드 중...', `파일 크기: ${(blob.size/1024/1024).toFixed(0)}MB - 직접 업로드 중...`);
-    const keyRes = await fetch(`${PROXY}/get-asm-key`);
-    if (!keyRes.ok) throw new Error('API 키를 가져오지 못했습니다');
-    const { key } = await keyRes.json();
+  updateProc?.('음성 업로드 중...', `파일을 AssemblyAI에 업로드하고 있어요...`);
 
-    const upRes = await fetch(`${ASM_DIRECT}/v2/upload`, {
-      method: 'POST',
-      headers: { 'authorization': key, 'content-type': blob.type || 'audio/webm' },
-      body: blob,
+  /* 1. Upload 직접 */
+  const upRes = await fetch('https://api.assemblyai.com/v2/upload', {
+    method: 'POST',
+    headers: {
+      'authorization': key,
+      'content-type': blob.type || 'audio/webm',
+    },
+    body: blob,
+  });
+  if (!upRes.ok) throw new Error(`Upload failed: ${upRes.status}`);
+  const { upload_url } = await upRes.json();
+
+  /* 2. Transcript 요청 직접 */
+  const trRes = await fetch('https://api.assemblyai.com/v2/transcript', {
+    method: 'POST',
+    headers: { 'authorization': key, 'content-type': 'application/json' },
+    body: JSON.stringify({ audio_url: upload_url, language_code: 'ko', punctuate: true, format_text: true }),
+  });
+  if (!trRes.ok) throw new Error(`Transcript request failed: ${trRes.status}`);
+  const { id } = await trRes.json();
+
+  /* 3. Poll */
+  updateProc?.('음성 인식 중...', '변환 중이에요. 긴 파일은 시간이 걸릴 수 있어요...');
+  for (let i = 0; i < 300; i++) {
+    await sleep(3000);
+    const poll = await fetch(`https://api.assemblyai.com/v2/transcript/${id}`, {
+      headers: { 'authorization': key },
     });
-    if (!upRes.ok) throw new Error(`Upload failed: ${upRes.status}`);
-    ({ upload_url } = await upRes.json());
-
-    // transcript 요청도 직접
-    const trRes = await fetch(`${ASM_DIRECT}/v2/transcript`, {
-      method: 'POST',
-      headers: { 'authorization': key, 'content-type': 'application/json' },
-      body: JSON.stringify({ audio_url: upload_url, language_code: 'ko', punctuate: true, format_text: true }),
-    });
-    if (!trRes.ok) throw new Error(`Transcript request failed: ${trRes.status}`);
-    const { id } = await trRes.json();
-
-    updateProc?.('음성 인식 중...', '1시간 분량은 약 5~10분 소요돼요...');
-    for (let i = 0; i < 240; i++) {
-      await sleep(3000);
-      const poll = await fetch(`${ASM_DIRECT}/v2/transcript/${id}`, { headers: { 'authorization': key } });
-      const result = await poll.json();
-      if (result.status === 'completed') return result.text || '(내용 없음)';
-      if (result.status === 'error') throw new Error('Transcription error: ' + result.error);
-    }
-    throw new Error('Transcription timed out');
-
-  } else {
-    // 소용량: Worker 프록시 사용
-    const upRes = await fetch(`${PROXY}/assemblyai/v2/upload`, {
-      method: 'POST',
-      headers: { 'content-type': blob.type || 'audio/webm' },
-      body: blob,
-    });
-    if (!upRes.ok) throw new Error(`Upload failed: ${upRes.status}`);
-    ({ upload_url } = await upRes.json());
-
-    const trRes = await fetch(`${PROXY}/assemblyai/v2/transcript`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ audio_url: upload_url, language_code: 'ko', punctuate: true, format_text: true }),
-    });
-    if (!trRes.ok) throw new Error(`Transcript request failed: ${trRes.status}`);
-    const { id } = await trRes.json();
-
-    for (let i = 0; i < 120; i++) {
-      await sleep(2500);
-      const poll = await fetch(`${PROXY}/assemblyai/v2/transcript/${id}`);
-      const result = await poll.json();
-      if (result.status === 'completed') return result.text || '(내용 없음)';
-      if (result.status === 'error') throw new Error('Transcription error: ' + result.error);
-    }
-    throw new Error('Transcription timed out');
+    const result = await poll.json();
+    if (result.status === 'completed') return result.text || '(내용 없음)';
+    if (result.status === 'error') throw new Error('Transcription error: ' + result.error);
   }
+  throw new Error('Transcription timed out');
 }
 
 /* ═══════════════════════════════════════════
