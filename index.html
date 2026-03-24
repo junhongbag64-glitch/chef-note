@@ -1,466 +1,1956 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ChefNote</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
-<style>
-*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{font-family:'Noto Sans KR',sans-serif;background:#fff;color:#0a0a0a;min-height:100vh}
-.header{background:#fff;padding:18px 20px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #f0f0f0;position:sticky;top:0;z-index:100}
-.logo-main{font-size:22px;font-weight:900;letter-spacing:-1px}
-.logo-sub{font-size:11px;font-weight:300;color:#aaa;letter-spacing:1px;margin-left:6px}
-.header-actions{display:flex;gap:8px}
-.icon-btn{background:none;border:1px solid #e8e8e8;border-radius:10px;width:38px;height:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:17px}
-.upload-zone{margin:16px;border:1.5px dashed #d0d0d0;border-radius:20px;padding:28px 20px;text-align:center;cursor:pointer;transition:all 0.2s;background:#fafafa}
-.upload-zone:hover{border-color:#0a0a0a;background:#f5f5f5}
-.upload-zone h2{font-size:15px;font-weight:700;margin-bottom:4px}
-.upload-zone p{font-size:12px;color:#aaa;font-weight:300}
-.upload-zone-icon{font-size:32px;margin-bottom:10px}
-.file-input{display:none}
-.file-pill{margin:0 16px 14px;background:#f5f5f5;border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:12px}
-.file-pill-name{font-size:13px;font-weight:700;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.file-pill-size{font-size:12px;color:#aaa}
-.convert-btn{margin:0 16px 20px;width:calc(100% - 32px);padding:16px;background:#0a0a0a;color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif}
-.convert-btn:disabled{background:#ccc;cursor:not-allowed}
-.progress-wrap{margin:0 16px 20px;background:#f5f5f5;border-radius:16px;padding:18px}
-.progress-label{font-size:10px;font-weight:700;color:#aaa;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px}
-.p-step{display:flex;align-items:center;gap:10px;padding:7px 0;font-size:13px;color:#bbb}
-.p-step.active{color:#0a0a0a;font-weight:700}
-.p-step.done{color:#22c55e;font-weight:500}
-.spinner{width:14px;height:14px;border:2px solid #0a0a0a;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0}
-@keyframes spin{to{transform:rotate(360deg)}}
-.error-msg{margin:0 16px 16px;background:#fff5f5;border:1px solid #fecaca;border-radius:12px;padding:13px 16px;font-size:13px;color:#dc2626;line-height:1.8;word-break:break-all}
-.section-hd{padding:8px 16px 16px;display:flex;align-items:baseline;justify-content:space-between}
-.section-hd-title{font-size:20px;font-weight:900;letter-spacing:-0.8px}
-.section-hd-count{font-size:12px;color:#aaa;font-weight:300}
-.recipe-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 16px 32px}
-.recipe-card{background:#fff;border-radius:18px;overflow:hidden;border:1.5px solid #e8e8e8;box-shadow:0 4px 20px rgba(0,0,0,0.08);cursor:pointer;transition:all 0.2s}
-.recipe-card:hover{transform:translateY(-3px);box-shadow:0 8px 30px rgba(0,0,0,0.14)}
-.recipe-card-img{width:100%;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;font-size:52px;background:#f8f8f8}
-.recipe-card-body{padding:12px}
-.recipe-card-name{font-size:13px;font-weight:800;letter-spacing:-0.4px;margin-bottom:8px;line-height:1.3}
-.recipe-card-tags{display:flex;gap:5px;flex-wrap:wrap}
-.recipe-tag{font-size:10px;font-weight:500;color:#666;background:#f5f5f5;border-radius:6px;padding:3px 7px}
-.note-card{background:#f8f8f8;border-radius:14px;padding:14px 16px;margin:0 16px 8px;cursor:pointer;transition:all 0.2s;border:1px solid transparent}
-.note-card:hover{border-color:#0a0a0a}
-.note-card-badge{display:inline-block;font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;margin-bottom:6px}
-.badge-exam{background:#dbeafe;color:#1d4ed8}
-.badge-theory{background:#fef3c7;color:#92400e}
-.badge-tip{background:#dcfce7;color:#15803d}
-.badge-assignment{background:#fce7f3;color:#9d174d}
-.note-card-title{font-size:14px;font-weight:700;margin-bottom:4px}
-.note-card-preview{font-size:12px;color:#888;line-height:1.5;font-weight:300}
-.empty{text-align:center;padding:48px 20px}
-.empty-icon{font-size:48px;margin-bottom:12px}
-.empty-text{font-size:14px;color:#aaa;font-weight:300;line-height:1.6}
-#recipeDetail{display:none;position:fixed;inset:0;background:#fff;z-index:400;flex-direction:column;overflow-y:auto}
-#recipeDetail.open{display:flex}
-.rd-hero{position:relative;width:100%;aspect-ratio:4/3;background:#f5f5f5;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:80px}
-.rd-hero-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,0.15) 0%,transparent 40%,transparent 60%,rgba(0,0,0,0.55) 100%)}
-.rd-hero-back{position:absolute;top:16px;left:16px;background:rgba(255,255,255,0.9);border:none;border-radius:50%;width:40px;height:40px;font-size:20px;cursor:pointer;z-index:5}
-.rd-hero-title{position:absolute;bottom:20px;left:20px;right:20px;z-index:5}
-.rd-hero-title h1{font-size:26px;font-weight:900;color:#fff;letter-spacing:-0.8px;line-height:1.2}
-.rd-date{font-size:12px;color:rgba(255,255,255,0.7);margin-top:4px;font-weight:300}
-.rd-body{padding:24px 20px;flex:1}
-.rd-section-title{font-size:11px;font-weight:700;color:#aaa;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:14px}
-.rd-ing-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:28px}
-.rd-ing-chip{background:#f8f8f8;border-radius:10px;padding:10px 12px}
-.rd-ing-name{font-size:13px;font-weight:700}
-.rd-ing-amt{font-size:11px;color:#aaa;margin-top:2px}
-.rd-step{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid #f5f5f5;align-items:flex-start}
-.rd-step:last-child{border-bottom:none}
-.rd-step-num{width:30px;height:30px;background:#0a0a0a;color:#fff;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
-.rd-step-text{font-size:14px;color:#333;line-height:1.7;padding-top:5px}
-.rd-tip{background:#f8f8f8;border-radius:12px;padding:14px;margin-bottom:10px;font-size:13px;color:#555;line-height:1.6}
-.rd-tip::before{content:'💡 '}
-.rd-cook-btn{width:100%;padding:18px;background:#FF6B00;color:#fff;border:none;border-radius:16px;font-size:16px;font-weight:800;cursor:pointer;font-family:'Noto Sans KR',sans-serif;margin-top:24px;margin-bottom:32px}
-.culinary-term{color:#FF6B00;font-weight:800;cursor:pointer;border-bottom:2px dashed #FF6B00;display:inline}
-#noteDetail{display:none;position:fixed;inset:0;background:#fff;z-index:400;flex-direction:column;overflow-y:auto}
-#noteDetail.open{display:flex}
-.nd-header{padding:20px;display:flex;align-items:center;gap:14px;border-bottom:1px solid #f0f0f0;position:sticky;top:0;background:#fff;z-index:5}
-.nd-back{background:#f5f5f5;border:none;border-radius:50%;width:40px;height:40px;font-size:20px;cursor:pointer;flex-shrink:0}
-.nd-title{font-size:18px;font-weight:900;letter-spacing:-0.5px;flex:1}
-.nd-body{padding:20px}
-.nd-content{background:#f8f8f8;border-radius:14px;padding:16px;font-size:14px;color:#333;line-height:1.9;white-space:pre-wrap}
-#cookingMode{display:none;position:fixed;inset:0;background:#fff;z-index:500;flex-direction:column}
-#cookingMode.open{display:flex}
-.cm-top-bar{height:3px;background:#f0f0f0}
-.cm-progress{height:3px;background:#0a0a0a;transition:width 0.4s ease}
-.cm-nav{padding:14px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #f0f0f0}
-.cm-recipe-name{font-size:14px;font-weight:700;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.cm-counter{font-size:12px;color:#aaa}
-.cm-close{background:#f5f5f5;border:none;border-radius:50%;width:36px;height:36px;font-size:18px;cursor:pointer}
-.cm-stage{flex:1;display:flex;align-items:center;justify-content:center;padding:32px 40px;position:relative}
-.cm-tap{position:absolute;top:0;bottom:0;width:38%;z-index:10;display:flex;align-items:center;cursor:pointer}
-.cm-tap-l{left:0;justify-content:flex-start;padding-left:16px}
-.cm-tap-r{right:0;justify-content:flex-end;padding-right:16px}
-.cm-arrow{font-size:32px;color:#ccc}
-.cm-content{text-align:center;z-index:5;max-width:320px}
-.cm-step-label{font-size:11px;font-weight:700;color:#aaa;letter-spacing:2px;text-transform:uppercase;margin-bottom:24px}
-.cm-step-body{font-size:28px;font-weight:800;color:#0a0a0a;line-height:1.4;letter-spacing:-0.5px}
-.cm-footer{padding:20px;border-top:1px solid #f0f0f0;background:#fff}
-.cm-dots{display:flex;justify-content:center;gap:5px;margin-bottom:18px}
-.cm-dot{width:5px;height:5px;border-radius:50%;background:#e0e0e0;transition:all 0.3s}
-.cm-dot.on{background:#0a0a0a;width:18px;border-radius:3px}
-.cm-btns{display:flex;gap:10px}
-.cm-btn-prev{flex:1;padding:17px;background:#f5f5f5;color:#0a0a0a;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif}
-.cm-btn-next{flex:2;padding:17px;background:#0a0a0a;color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif}
-.cm-btn-next.done{background:#22c55e}
-.cm-slide{animation:cmIn 0.22s ease}
-.cm-slide-back{animation:cmInBack 0.22s ease}
-@keyframes cmIn{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:translateX(0)}}
-@keyframes cmInBack{from{opacity:0;transform:translateX(-30px)}to{opacity:1;transform:translateX(0)}}
-.term-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:600;align-items:flex-end}
-.term-overlay.open{display:flex}
-.term-sheet{background:#fff;border-radius:24px 24px 0 0;padding:24px 20px 48px;width:100%;animation:sheetUp 0.28s ease}
-@keyframes sheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
-.term-handle{width:36px;height:3px;background:#e0e0e0;border-radius:2px;margin:0 auto 20px}
-.term-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px}
-.term-word{font-size:26px;font-weight:900;letter-spacing:-0.8px}
-.term-cat{font-size:11px;color:#FF6B00;font-weight:700;margin-top:4px}
-.term-x{background:#f5f5f5;border:none;border-radius:50%;width:36px;height:36px;font-size:18px;cursor:pointer}
-.term-block{background:#f8f8f8;border-radius:14px;padding:14px 16px;margin-bottom:10px}
-.term-block-lbl{font-size:10px;font-weight:700;color:#aaa;letter-spacing:1.2px;text-transform:uppercase;margin-bottom:7px}
-.term-block-txt{font-size:14px;color:#333;line-height:1.7}
-.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:700;align-items:flex-end}
-.modal.open{display:flex}
-.modal-sheet{background:#fff;border-radius:24px 24px 0 0;padding:28px 20px 48px;width:100%}
-.modal-sheet h2{font-size:20px;font-weight:900;letter-spacing:-0.8px;margin-bottom:6px}
-.modal-desc{font-size:12px;color:#aaa;margin-bottom:20px;line-height:1.6}
-.modal-sheet label{font-size:10px;font-weight:700;color:#aaa;letter-spacing:1.2px;text-transform:uppercase;display:block;margin-bottom:8px}
-.modal-sheet input{width:100%;padding:14px;border:1.5px solid #e8e8e8;border-radius:12px;font-size:14px;outline:none;margin-bottom:16px;font-family:'Noto Sans KR',sans-serif}
-.modal-sheet input:focus{border-color:#0a0a0a}
-.modal-save{width:100%;padding:15px;background:#0a0a0a;color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif}
-.reset-btn{width:100%;padding:12px;background:none;color:#dc2626;border:1px solid #fecaca;border-radius:14px;font-size:13px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;margin-top:8px}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ChefNote</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#F8F7F4">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="ChefNote">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Noto+Serif+KR:wght@400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    /* ═══════════════════════════════════════════
+       DESIGN TOKENS
+    ═══════════════════════════════════════════ */
+    :root {
+      --bg:          #F8F7F4;
+      --bg-card:     #FFFFFF;
+      --bg-elevated: #FDFCF9;
+      --text-1:      #0E0E0C;
+      --text-2:      #6B6A67;
+      --text-3:      #AEACA7;
+      --border-1:    #E4E2DC;
+      --border-2:    #CCCAC4;
+      --accent:      #4E6035;
+      --accent-lt:   #EAF0E1;
+      --accent-dk:   #3A4A28;
+      --accent-mid:  #6E8A4E;
+      --rec-bg:      #0E0E0C;
+      --danger:      #C0392B;
+      --danger-lt:   #FDECEA;
+
+      --f-display: 'Playfair Display', 'Noto Serif KR', Georgia, serif;
+      --f-serif:   'Noto Serif KR', 'Playfair Display', Georgia, serif;
+      --f-sans:    'Noto Sans KR', -apple-system, sans-serif;
+
+      --r-xs:  6px;
+      --r-sm:  10px;
+      --r-md:  16px;
+      --r-lg:  20px;
+      --r-xl:  28px;
+      --r-full:999px;
+
+      --sh-sm: 0 1px 4px rgba(14,14,12,.07);
+      --sh-md: 0 4px 16px rgba(14,14,12,.10);
+      --sh-lg: 0 8px 32px rgba(14,14,12,.14);
+
+      --tab-h:      68px;
+      --safe-b:     env(safe-area-inset-bottom, 0px);
+      --safe-t:     env(safe-area-inset-top, 0px);
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box; margin: 0; padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      height: 100%; overflow: hidden;
+      background: var(--bg);
+      color: var(--text-1);
+      font-family: var(--f-sans);
+      -webkit-font-smoothing: antialiased;
+      -webkit-text-size-adjust: none;
+    }
+
+    #app {
+      position: relative;
+      height: 100%;
+      max-width: 430px;
+      margin: 0 auto;
+      background: var(--bg);
+      overflow: hidden;
+    }
+
+    /* ═══════════════════════════════════════════
+       SCREENS
+    ═══════════════════════════════════════════ */
+    .screen {
+      position: absolute;
+      inset: 0;
+      bottom: calc(var(--tab-h) + var(--safe-b));
+      overflow-y: auto;
+      overflow-x: hidden;
+      display: none;
+      flex-direction: column;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .screen::-webkit-scrollbar { display: none; }
+    .screen.active { display: flex; }
+
+    /* ═══════════════════════════════════════════
+       TAB BAR
+    ═══════════════════════════════════════════ */
+    #tab-bar {
+      position: fixed;
+      bottom: 0;
+      left: 50%; transform: translateX(-50%);
+      width: 100%; max-width: 430px;
+      height: calc(var(--tab-h) + var(--safe-b));
+      padding-bottom: var(--safe-b);
+      background: rgba(248,247,244,.94);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border-top: 1px solid var(--border-1);
+      display: flex;
+      align-items: flex-start;
+      padding-top: 10px;
+      z-index: 100;
+    }
+
+    .tab-item {
+      flex: 1;
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      padding: 2px 0;
+      cursor: pointer;
+      color: var(--text-3);
+      transition: color .2s ease;
+      position: relative;
+    }
+    .tab-item.active { color: var(--accent); }
+    .tab-item svg { width: 23px; height: 23px; transition: transform .2s; }
+    .tab-item.active svg { transform: scale(1.08); }
+    .tab-label { font-size: 10px; font-weight: 500; letter-spacing: .2px; }
+    .tab-dot {
+      position: absolute;
+      top: 0;
+      width: 18px; height: 2px;
+      background: var(--accent);
+      border-radius: 1px;
+      transform: scaleX(0);
+      transition: transform .3s cubic-bezier(.34,1.56,.64,1);
+    }
+    .tab-item.active .tab-dot { transform: scaleX(1); }
+
+    /* ═══════════════════════════════════════════
+       COMMON COMPONENTS
+    ═══════════════════════════════════════════ */
+    .sticky-header {
+      position: sticky; top: 0; z-index: 20;
+      background: rgba(248,247,244,.92);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    .icon-btn {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      background: none; border: none;
+      color: var(--text-2);
+      transition: background .15s;
+    }
+    .icon-btn:active { background: var(--border-1); }
+    .icon-btn svg { width: 21px; height: 21px; }
+
+    .badge {
+      display: inline-flex; align-items: center;
+      border-radius: var(--r-full);
+      font-size: 10px; font-weight: 700;
+      padding: 2px 8px;
+      letter-spacing: .4px;
+      text-transform: uppercase;
+    }
+    .badge-recipe { background: var(--accent-lt); color: var(--accent); }
+    .badge-theory { background: #F0EEE8; color: var(--text-2); }
+
+    /* Note card */
+    .note-card {
+      background: var(--bg-card);
+      border-radius: var(--r-md);
+      padding: 14px 15px;
+      display: flex; align-items: center; gap: 12px;
+      border: 1px solid var(--border-1);
+      box-shadow: var(--sh-sm);
+      cursor: pointer;
+      transition: transform .12s, box-shadow .12s;
+    }
+    .note-card:active { transform: scale(.985); box-shadow: none; }
+    .note-card-body { flex: 1; min-width: 0; }
+    .note-card-head { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; }
+    .note-card-title {
+      font-family: var(--f-serif);
+      font-size: 15px; font-weight: 600;
+      color: var(--text-1);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .note-card-date { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+    .note-card-thumb {
+      width: 52px; height: 52px;
+      border-radius: var(--r-sm);
+      overflow: hidden; flex-shrink: 0;
+      background: var(--border-1);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-3);
+    }
+    .note-card-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .note-card-thumb svg { width: 20px; height: 20px; }
+
+    /* Empty state */
+    .empty-state {
+      display: flex; flex-direction: column; align-items: center;
+      padding: 56px 32px;
+      gap: 10px; text-align: center;
+    }
+    .empty-icon { font-size: 38px; opacity: .25; }
+    .empty-title {
+      font-family: var(--f-serif);
+      font-size: 16px; font-weight: 600; color: var(--text-2);
+    }
+    .empty-desc { font-size: 13px; color: var(--text-3); line-height: 1.55; }
+
+    /* Section header */
+    .sec-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 18px;
+      margin-bottom: 10px;
+    }
+    .sec-title {
+      font-family: var(--f-serif);
+      font-size: 17px; font-weight: 600;
+      color: var(--text-1); letter-spacing: -.3px;
+    }
+    .sec-more { font-size: 12px; color: var(--accent); font-weight: 500; cursor: pointer; }
+
+    /* Note list */
+    .note-list {
+      padding: 0 14px;
+      display: flex; flex-direction: column; gap: 9px;
+    }
+
+    /* ═══════════════════════════════════════════
+       HOME
+    ═══════════════════════════════════════════ */
+    #home-header {
+      padding: 14px 18px 10px;
+    }
+    .logo-row {
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .logo {
+      display: flex; align-items: center; gap: 7px;
+    }
+    .logo-icon { width: 30px; height: 30px; }
+    .logo-text {
+      font-family: var(--f-display);
+      font-size: 22px; font-weight: 700;
+      letter-spacing: -.5px; color: var(--text-1);
+    }
+    .logo-text em { font-style: normal; color: var(--accent); }
+    .header-actions { display: flex; gap: 4px; }
+
+    /* Recording zone */
+    .rec-zone {
+      margin: 6px 14px 14px;
+      background: var(--rec-bg);
+      border-radius: var(--r-xl);
+      padding: 28px 22px 24px;
+      cursor: pointer;
+      position: relative; overflow: hidden;
+      user-select: none; -webkit-user-select: none;
+      min-height: 168px;
+      display: flex; align-items: center; justify-content: center;
+      transition: transform .1s;
+    }
+    .rec-zone:active { transform: scale(.985); }
+
+    /* Grain texture */
+    .rec-zone::after {
+      content: '';
+      position: absolute; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='.045'/%3E%3C/svg%3E");
+      pointer-events: none;
+    }
+
+    /* Idle state */
+    .rec-idle {
+      display: flex; flex-direction: column; align-items: center; gap: 18px;
+      width: 100%;
+    }
+    .rec-mic-ring {
+      width: 64px; height: 64px; border-radius: 50%;
+      background: rgba(255,255,255,.07);
+      border: 1.5px solid rgba(255,255,255,.12);
+      display: flex; align-items: center; justify-content: center;
+      color: white;
+      transition: transform .2s, background .2s;
+    }
+    .rec-zone:active .rec-mic-ring {
+      transform: scale(.92);
+      background: rgba(255,255,255,.12);
+    }
+    .rec-mic-ring svg { width: 26px; height: 26px; }
+    .rec-idle-text { text-align: center; }
+    .rec-idle-title {
+      font-family: var(--f-serif);
+      font-size: 18px; font-weight: 600; color: white;
+      letter-spacing: -.3px; margin-bottom: 5px;
+    }
+    .rec-idle-sub { font-size: 12px; color: rgba(255,255,255,.38); letter-spacing: .2px; }
+
+    /* Active state */
+    .rec-active {
+      display: none; flex-direction: column; align-items: center; gap: 14px;
+      width: 100%;
+    }
+    .rec-active.on { display: flex; }
+    .rec-idle.off { display: none; }
+
+    .rec-pill {
+      position: absolute; top: 16px; right: 16px;
+      display: flex; align-items: center; gap: 5px;
+      background: rgba(78,96,53,.28);
+      border: 1px solid rgba(110,138,78,.4);
+      border-radius: var(--r-full);
+      padding: 4px 10px;
+      font-size: 10px; font-weight: 700;
+      color: #9cc46b; letter-spacing: .6px;
+    }
+    .rec-pill-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: #9cc46b;
+      animation: blink 1.1s ease-in-out infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+
+    .rec-timer {
+      font-family: var(--f-display);
+      font-size: 46px; font-weight: 400;
+      color: white; letter-spacing: -2px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .rec-wave {
+      display: flex; align-items: center; gap: 3px; height: 30px;
+    }
+    .wave-b {
+      width: 3px; border-radius: 2px;
+      background: var(--accent-mid);
+      animation: wav 1.3s ease-in-out infinite;
+    }
+    .wave-b:nth-child(1){animation-delay:0s}
+    .wave-b:nth-child(2){animation-delay:.13s}
+    .wave-b:nth-child(3){animation-delay:.26s}
+    .wave-b:nth-child(4){animation-delay:.39s}
+    .wave-b:nth-child(5){animation-delay:.52s}
+    .wave-b:nth-child(6){animation-delay:.39s}
+    .wave-b:nth-child(7){animation-delay:.26s}
+    .wave-b:nth-child(8){animation-delay:.13s}
+    .wave-b:nth-child(9){animation-delay:0s}
+    @keyframes wav {
+      0%,100%{height:5px;opacity:.35}
+      50%{height:22px;opacity:1}
+    }
+
+    .rec-stop-hint {
+      font-size: 11px; color: rgba(255,255,255,.35);
+      letter-spacing: .8px; text-transform: uppercase;
+    }
+
+    /* Media actions */
+    .media-actions {
+      display: flex; gap: 9px;
+      padding: 0 14px; margin-bottom: 20px;
+    }
+    .media-btn {
+      flex: 1; height: 50px;
+      border-radius: var(--r-md);
+      border: 1.5px solid var(--border-1);
+      background: var(--bg-card);
+      display: flex; align-items: center; justify-content: center; gap: 7px;
+      font-size: 13px; font-weight: 500; color: var(--text-2);
+      cursor: pointer;
+      box-shadow: var(--sh-sm);
+      transition: all .12s;
+    }
+    .media-btn:active { background: var(--border-1); transform: scale(.97); }
+    .media-btn svg { width: 17px; height: 17px; }
+
+    /* Media strip */
+    .media-strip {
+      padding: 0 14px; margin-bottom: 22px; display: none;
+    }
+    .media-strip.on { display: block; }
+    .media-strip-scroll {
+      display: flex; gap: 8px;
+      overflow-x: auto; scrollbar-width: none;
+    }
+    .media-strip-scroll::-webkit-scrollbar { display: none; }
+    .media-thumb {
+      width: 70px; height: 70px; border-radius: var(--r-sm);
+      overflow: hidden; flex-shrink: 0;
+      background: var(--border-1);
+    }
+    .media-thumb img, .media-thumb video { width: 100%; height: 100%; object-fit: cover; }
+
+    /* ═══════════════════════════════════════════
+       ARCHIVE
+    ═══════════════════════════════════════════ */
+    #archive-header { padding: 16px 18px 0; }
+    .screen-title {
+      font-family: var(--f-serif);
+      font-size: 26px; font-weight: 700;
+      color: var(--text-1); letter-spacing: -.5px;
+      margin-bottom: 13px;
+    }
+
+    .search-bar {
+      display: flex; align-items: center; gap: 9px;
+      background: var(--bg-card);
+      border: 1.5px solid var(--border-1);
+      border-radius: var(--r-md);
+      padding: 10px 13px;
+      margin-bottom: 12px;
+    }
+    .search-bar svg { color: var(--text-3); width: 17px; height: 17px; flex-shrink: 0; }
+    .search-bar input {
+      flex: 1; border: none; background: none;
+      font-family: var(--f-sans); font-size: 14px; color: var(--text-1); outline: none;
+    }
+    .search-bar input::placeholder { color: var(--text-3); }
+
+    .filter-row {
+      display: flex; gap: 6px;
+      overflow-x: auto; scrollbar-width: none;
+      padding-bottom: 13px;
+    }
+    .filter-row::-webkit-scrollbar { display: none; }
+    .filter-chip {
+      flex-shrink: 0;
+      padding: 6px 14px; border-radius: var(--r-full);
+      font-size: 12px; font-weight: 500;
+      border: 1.5px solid var(--border-1);
+      background: var(--bg-card); color: var(--text-2);
+      cursor: pointer; transition: all .18s;
+    }
+    .filter-chip.active {
+      background: var(--accent); border-color: var(--accent); color: white;
+    }
+
+    /* ═══════════════════════════════════════════
+       SEARCH
+    ═══════════════════════════════════════════ */
+    #search-header { padding: 18px 18px 14px; }
+    .search-large {
+      display: flex; align-items: center; gap: 12px;
+      background: var(--bg-card);
+      border: 1.5px solid var(--border-2);
+      border-radius: var(--r-lg);
+      padding: 13px 16px;
+    }
+    .search-large svg { color: var(--text-3); width: 20px; height: 20px; flex-shrink: 0; }
+    .search-large input {
+      flex: 1; border: none; background: none;
+      font-family: var(--f-sans); font-size: 16px; color: var(--text-1); outline: none;
+    }
+    .search-large input::placeholder { color: var(--text-3); }
+    .search-placeholder {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      flex: 1; gap: 10px;
+      color: var(--text-3); padding: 40px 20px;
+    }
+    .search-placeholder svg { width: 44px; height: 44px; opacity: .2; }
+    .search-placeholder p { font-size: 14px; }
+
+    /* ═══════════════════════════════════════════
+       PROFILE
+    ═══════════════════════════════════════════ */
+    #profile-header { padding: 20px 18px 0; }
+    .profile-top {
+      display: flex; align-items: center; gap: 14px;
+      margin-bottom: 4px;
+    }
+    .avatar {
+      width: 64px; height: 64px; border-radius: 50%;
+      background: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--f-serif);
+      font-size: 26px; font-weight: 700; color: white;
+      flex-shrink: 0;
+    }
+    .profile-info { flex: 1; }
+    .profile-name {
+      font-family: var(--f-serif);
+      font-size: 20px; font-weight: 700; color: var(--text-1);
+      letter-spacing: -.3px;
+    }
+    .profile-sub { font-size: 13px; color: var(--text-2); margin-top: 3px; }
+
+    .stats-row {
+      display: flex; gap: 8px;
+      padding: 16px 14px 4px;
+    }
+    .stat-card {
+      flex: 1; background: var(--bg-card);
+      border-radius: var(--r-md); padding: 14px 10px;
+      text-align: center;
+      border: 1px solid var(--border-1);
+    }
+    .stat-num {
+      font-family: var(--f-display);
+      font-size: 26px; font-weight: 700; color: var(--text-1);
+    }
+    .stat-lbl { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+
+    .pro-card {
+      margin: 14px 14px 0;
+      background: var(--accent);
+      border-radius: var(--r-lg);
+      padding: 20px;
+      display: flex; align-items: center; gap: 16px;
+    }
+    .pro-text { flex: 1; }
+    .pro-eyebrow {
+      font-size: 9px; font-weight: 700;
+      color: rgba(255,255,255,.55); letter-spacing: 1.2px; text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .pro-title {
+      font-family: var(--f-serif);
+      font-size: 16px; font-weight: 700; color: white; margin-bottom: 3px;
+    }
+    .pro-sub { font-size: 12px; color: rgba(255,255,255,.6); }
+    .pro-btn {
+      background: white; color: var(--accent);
+      border: none; border-radius: var(--r-full);
+      padding: 9px 16px;
+      font-size: 13px; font-weight: 700;
+      cursor: pointer; white-space: nowrap;
+      font-family: var(--f-sans);
+    }
+
+    .settings-section { padding: 16px 14px 48px; }
+    .settings-group {
+      background: var(--bg-card);
+      border-radius: var(--r-md);
+      border: 1px solid var(--border-1);
+      overflow: hidden; margin-bottom: 12px;
+    }
+    .settings-row {
+      display: flex; align-items: center; gap: 13px;
+      padding: 15px 16px; cursor: pointer;
+      border-bottom: 1px solid var(--border-1);
+      transition: background .12s;
+    }
+    .settings-row:last-child { border-bottom: none; }
+    .settings-row:active { background: var(--border-1); }
+    .settings-ico {
+      width: 32px; height: 32px; border-radius: var(--r-xs);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .settings-ico svg { width: 17px; height: 17px; }
+    .settings-lbl { flex: 1; font-size: 15px; color: var(--text-1); }
+    .settings-val { font-size: 12px; color: var(--text-3); }
+    .settings-chev svg { width: 15px; height: 15px; color: var(--text-3); }
+
+    /* ═══════════════════════════════════════════
+       NOTE DETAIL (full screen overlay)
+    ═══════════════════════════════════════════ */
+    #screen-detail {
+      position: fixed; inset: 0;
+      background: var(--bg);
+      z-index: 200;
+      transform: translateY(100%);
+      transition: transform .4s cubic-bezier(.32,.72,0,1);
+      overflow-y: auto; overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      display: flex !important;
+      flex-direction: column;
+      bottom: 0;
+    }
+    #screen-detail.open { transform: translateY(0); }
+
+    .detail-nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 16px;
+      position: sticky; top: 0; z-index: 10;
+      background: rgba(248,247,244,.92);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+    .detail-nav-r { display: flex; gap: 2px; }
+
+    .detail-body { padding: 4px 20px 0; }
+
+    .detail-type-lbl {
+      font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .detail-type-lbl.recipe { color: var(--accent); }
+    .detail-type-lbl.theory { color: var(--text-2); }
+
+    .detail-title {
+      font-family: var(--f-serif);
+      font-size: 27px; font-weight: 700; color: var(--text-1);
+      letter-spacing: -.5px; line-height: 1.3;
+      margin-bottom: 14px;
+    }
+
+    .detail-meta {
+      display: flex; flex-wrap: wrap; gap: 7px;
+      margin-bottom: 20px;
+    }
+    .meta-chip {
+      display: flex; align-items: center; gap: 5px;
+      background: var(--border-1); border-radius: var(--r-full);
+      padding: 4px 10px;
+      font-size: 12px; color: var(--text-2);
+    }
+    .meta-chip svg { width: 12px; height: 12px; }
+
+    .audio-player {
+      background: var(--bg-card); border: 1px solid var(--border-1);
+      border-radius: var(--r-md);
+      padding: 14px 16px; margin-bottom: 22px;
+    }
+    .audio-ctrl {
+      display: flex; align-items: center; gap: 12px; margin-bottom: 10px;
+    }
+    .play-btn {
+      width: 38px; height: 38px; border-radius: 50%;
+      background: var(--accent); border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .play-btn svg { width: 17px; height: 17px; color: white; }
+    .audio-progress {
+      flex: 1; height: 3px; background: var(--border-1);
+      border-radius: 2px; cursor: pointer; position: relative;
+    }
+    .audio-fill {
+      height: 100%; background: var(--accent);
+      border-radius: 2px; width: 0%;
+      transition: width .1s linear;
+    }
+    .audio-time { font-size: 11px; color: var(--text-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+    .detail-content {
+      font-size: 15px; line-height: 1.82; color: var(--text-1);
+      margin-bottom: 24px;
+    }
+    .detail-content p { margin-bottom: 13px; }
+    .detail-content img { width: 100%; border-radius: var(--r-md); margin: 6px 0 13px; }
+
+    .ingredients-sec { margin-bottom: 24px; }
+    .block-title {
+      font-family: var(--f-serif);
+      font-size: 17px; font-weight: 700; color: var(--text-1);
+      letter-spacing: -.3px; margin-bottom: 13px;
+    }
+    .ing-pill {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: var(--accent-lt); color: var(--accent-dk);
+      border-radius: var(--r-full);
+      padding: 5px 12px;
+      font-size: 13px; font-weight: 500;
+      margin: 0 6px 8px 0;
+    }
+
+    .tips-sec { margin-bottom: 48px; }
+    .tip-item {
+      border-left: 3px solid var(--accent);
+      padding: 10px 14px;
+      margin-bottom: 9px;
+      background: var(--accent-lt);
+      border-radius: 0 var(--r-sm) var(--r-sm) 0;
+      font-size: 14px; color: var(--text-1); line-height: 1.6;
+    }
+
+    /* ═══════════════════════════════════════════
+       TOAST
+    ═══════════════════════════════════════════ */
+    .toast {
+      position: fixed;
+      bottom: calc(var(--tab-h) + var(--safe-b) + 14px);
+      left: 50%; transform: translateX(-50%) translateY(12px);
+      background: rgba(14,14,12,.9);
+      color: var(--bg); padding: 10px 18px;
+      border-radius: var(--r-full);
+      font-size: 13px; font-weight: 500;
+      opacity: 0; pointer-events: none;
+      transition: all .3s cubic-bezier(.34,1.56,.64,1);
+      z-index: 999; white-space: nowrap;
+      max-width: calc(100% - 36px);
+      backdrop-filter: blur(10px);
+    }
+    .toast.on {
+      opacity: 1; transform: translateX(-50%) translateY(0);
+    }
+
+    /* ═══════════════════════════════════════════
+       PROCESSING
+    ═══════════════════════════════════════════ */
+    .proc-overlay {
+      position: fixed; inset: 0;
+      background: rgba(14,14,12,.72);
+      backdrop-filter: blur(10px);
+      z-index: 500;
+      display: none;
+      align-items: center; justify-content: center;
+      padding: 24px;
+    }
+    .proc-overlay.on { display: flex; }
+    .proc-card {
+      background: var(--bg-card);
+      border-radius: var(--r-xl);
+      padding: 32px 26px;
+      width: 100%; max-width: 300px;
+      text-align: center;
+    }
+    .proc-spinner {
+      width: 46px; height: 46px;
+      border: 3px solid var(--border-1);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .75s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .proc-title {
+      font-family: var(--f-serif);
+      font-size: 17px; font-weight: 700; color: var(--text-1);
+      margin-bottom: 7px;
+    }
+    .proc-desc { font-size: 13px; color: var(--text-2); line-height: 1.55; }
+
+    /* ═══════════════════════════════════════════
+       MODALS
+    ═══════════════════════════════════════════ */
+    .modal-bg {
+      position: fixed; inset: 0;
+      background: rgba(14,14,12,.6);
+      backdrop-filter: blur(8px);
+      z-index: 400;
+      display: none;
+      align-items: flex-end; justify-content: center;
+    }
+    .modal-bg.center { align-items: center; }
+    .modal-bg.on { display: flex; }
+
+    .modal-sheet {
+      background: var(--bg);
+      border-radius: var(--r-xl) var(--r-xl) 0 0;
+      padding: 24px 18px calc(32px + var(--safe-b));
+      width: 100%; max-width: 430px;
+    }
+    .modal-card {
+      background: var(--bg);
+      border-radius: var(--r-xl);
+      padding: 24px 20px;
+      width: 100%; max-width: 390px;
+    }
+    .modal-head {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 18px;
+    }
+    .modal-title {
+      font-family: var(--f-serif);
+      font-size: 18px; font-weight: 700; color: var(--text-1);
+    }
+    .modal-label {
+      font-size: 11px; font-weight: 600; color: var(--text-2);
+      letter-spacing: .5px; text-transform: uppercase;
+      display: block; margin-bottom: 6px;
+    }
+    .modal-input {
+      width: 100%;
+      padding: 11px 13px;
+      border: 1.5px solid var(--border-1);
+      border-radius: var(--r-md);
+      font-family: var(--f-sans); font-size: 14px; color: var(--text-1);
+      background: var(--bg-card); outline: none;
+      margin-bottom: 14px;
+      transition: border-color .15s;
+    }
+    .modal-input:focus { border-color: var(--accent); }
+    .modal-textarea {
+      width: 100%; height: 110px;
+      padding: 11px 13px;
+      border: 1.5px solid var(--border-1);
+      border-radius: var(--r-md);
+      font-family: var(--f-sans); font-size: 15px; color: var(--text-1);
+      background: var(--bg-card); outline: none;
+      resize: none; margin-bottom: 12px;
+      transition: border-color .15s;
+    }
+    .modal-textarea:focus { border-color: var(--accent); }
+    .modal-info {
+      background: var(--accent-lt); border-radius: var(--r-sm);
+      padding: 12px 14px; margin-bottom: 16px;
+      font-size: 12px; color: var(--accent-dk); line-height: 1.5;
+    }
+    .btn-primary {
+      width: 100%; height: 50px;
+      background: var(--accent); color: white;
+      border: none; border-radius: var(--r-md);
+      font-family: var(--f-sans); font-size: 16px; font-weight: 600;
+      cursor: pointer; transition: background .15s;
+    }
+    .btn-primary:active { background: var(--accent-dk); }
+  </style>
 </head>
 <body>
-<div class="header">
-  <div><span class="logo-main">ChefNote</span><span class="logo-sub">by you</span></div>
-  <div class="header-actions">
-    <button class="icon-btn" onclick="document.getElementById('fileInput').click()">＋</button>
-    <button class="icon-btn" onclick="openSettings()">⚙️</button>
-  </div>
-</div>
-<input type="file" id="fileInput" class="file-input" accept=".mp3,.m4a,.wav,.mp4,.ogg,.webm,.aac" onchange="handleFile(this)">
-<div id="filePill" style="display:none"></div>
-<button id="convertBtn" class="convert-btn" style="display:none" onclick="startConvert()">레시피로 변환하기 →</button>
-<div id="progressBox" style="display:none" class="progress-wrap">
-  <div class="progress-label">변환 중</div>
-  <div class="p-step" id="step1">⏳ 파일 확인 중</div>
-  <div class="p-step" id="step2">⏳ 음성 변환 중</div>
-  <div class="p-step" id="step3">⏳ 수업 주제 파악 중</div>
-  <div class="p-step" id="step4">⏳ 내용 추출 중</div>
-</div>
-<div id="errorBox" style="display:none" class="error-msg"></div>
-<div id="uploadPrompt">
-  <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
-    <div class="upload-zone-icon">🎙️</div>
-    <h2>수업 녹음 업로드</h2>
-    <p>mp3 · m4a · wav · mp4 · 크기 제한 없음</p>
-  </div>
-  <div class="empty"><div class="empty-icon">📖</div><div class="empty-text">아직 저장된 내용이 없어요<br>수업 녹음을 업로드해보세요</div></div>
-</div>
-<div id="collectionView" style="display:none">
-  <div class="upload-zone" style="margin:16px 16px 8px" onclick="document.getElementById('fileInput').click()">
-    <div class="upload-zone-icon">🎙️</div>
-    <h2>새 수업 녹음 업로드</h2>
-    <p>크기 제한 없음 · 자동 처리</p>
-  </div>
-  <div id="examSection" style="display:none"><div class="section-hd"><span class="section-hd-title">📝 시험 정보</span></div><div id="examList"></div></div>
-  <div id="theorySection" style="display:none"><div class="section-hd"><span class="section-hd-title">📚 이론 & 지식</span></div><div id="theoryList"></div></div>
-  <div id="tipsSection" style="display:none"><div class="section-hd"><span class="section-hd-title">💡 수업 팁</span></div><div id="tipsList"></div></div>
-  <div id="assignSection" style="display:none"><div class="section-hd"><span class="section-hd-title">📋 과제 & 준비물</span></div><div id="assignList"></div></div>
-  <div class="section-hd"><span class="section-hd-title">🍳 레시피</span><span class="section-hd-count" id="recipeCount"></span></div>
-  <div class="recipe-grid" id="recipeGrid"></div>
-</div>
-<div id="recipeDetail">
-  <div class="rd-hero" id="rdHero">
-    <button class="rd-hero-back" onclick="closeDetail()">←</button>
-    <div class="rd-hero-overlay"></div>
-    <div class="rd-hero-title"><h1 id="rdName"></h1><div class="rd-date" id="rdDate"></div></div>
-  </div>
-  <div class="rd-body">
-    <div class="rd-section-title">재료</div>
-    <div class="rd-ing-grid" id="rdIngs"></div>
-    <div class="rd-section-title">조리 순서</div>
-    <div id="rdSteps"></div>
-    <div class="rd-section-title" style="margin-top:24px">셰프의 팁</div>
-    <div id="rdTips"></div>
-    <button class="rd-cook-btn" onclick="startCooking()">🍳 요리 모드로 시작하기</button>
-  </div>
-</div>
-<div id="noteDetail">
-  <div class="nd-header">
-    <button class="nd-back" onclick="closeNoteDetail()">←</button>
-    <div class="nd-title" id="ndTitle"></div>
-  </div>
-  <div class="nd-body"><div class="nd-content" id="ndContent"></div></div>
-</div>
-<div id="cookingMode">
-  <div class="cm-top-bar"><div class="cm-progress" id="cmBar"></div></div>
-  <div class="cm-nav">
-    <div class="cm-recipe-name" id="cmName"></div>
-    <div class="cm-counter" id="cmCounter"></div>
-    <button class="cm-close" onclick="closeCooking()">✕</button>
-  </div>
-  <div class="cm-stage">
-    <div class="cm-tap cm-tap-l" onclick="cmPrev()"><div class="cm-arrow">‹</div></div>
-    <div class="cm-content" id="cmContent">
-      <div class="cm-step-label" id="cmLabel"></div>
-      <div class="cm-step-body" id="cmBody"></div>
+<div id="app">
+
+  <!-- ═══════════════════ HOME ═══════════════════ -->
+  <div id="screen-home" class="screen active">
+
+    <div class="sticky-header" id="home-header">
+      <div class="logo-row">
+        <div class="logo">
+          <svg class="logo-icon" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M15 3C11.3 3 8.2 5.6 7.5 9.2C5.8 9.7 4.5 11.3 4.5 13.2C4.5 15.4 6.3 17.2 8.5 17.2H21.5C23.7 17.2 25.5 15.4 25.5 13.2C25.5 11.3 24.2 9.7 22.5 9.2C21.8 5.6 18.7 3 15 3Z" fill="#0E0E0C"/>
+            <path d="M8.5 19.5H21.5V25C21.5 25.6 21.1 26 20.5 26H9.5C8.9 26 8.5 25.6 8.5 25V19.5Z" fill="#4E6035"/>
+            <path d="M11.5 19.5H13.5V26H11.5V19.5ZM16.5 19.5H18.5V26H16.5V19.5Z" fill="rgba(255,255,255,0.18)"/>
+          </svg>
+          <div class="logo-text">Chef<em>Note</em></div>
+        </div>
+        <div class="header-actions">
+          <button class="icon-btn" onclick="showToast('알림 없음')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+          </button>
+          <button class="icon-btn" onclick="switchTab('profile')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+          </button>
+        </div>
+      </div>
     </div>
-    <div class="cm-tap cm-tap-r" onclick="cmNext()"><div class="cm-arrow">›</div></div>
-  </div>
-  <div class="cm-footer">
-    <div class="cm-dots" id="cmDots"></div>
-    <div class="cm-btns">
-      <button class="cm-btn-prev" onclick="cmPrev()">이전</button>
-      <button class="cm-btn-next" id="cmNextBtn" onclick="cmNext()">다음 →</button>
+
+    <!-- Recording Zone -->
+    <div class="rec-zone" id="recZone" onclick="toggleRecording()">
+      <div class="rec-idle" id="recIdle">
+        <div class="rec-mic-ring">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            <line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>
+          </svg>
+        </div>
+        <div class="rec-idle-text">
+          <div class="rec-idle-title">수업 녹음 시작</div>
+          <div class="rec-idle-sub">탭하여 녹음을 시작하세요</div>
+        </div>
+      </div>
+
+      <div class="rec-active" id="recActive">
+        <div class="rec-pill"><div class="rec-pill-dot"></div>REC</div>
+        <div class="rec-timer" id="recTimer">00:00</div>
+        <div class="rec-wave">
+          <div class="wave-b" style="height:6px"></div>
+          <div class="wave-b" style="height:12px"></div>
+          <div class="wave-b" style="height:20px"></div>
+          <div class="wave-b" style="height:15px"></div>
+          <div class="wave-b" style="height:24px"></div>
+          <div class="wave-b" style="height:15px"></div>
+          <div class="wave-b" style="height:20px"></div>
+          <div class="wave-b" style="height:12px"></div>
+          <div class="wave-b" style="height:6px"></div>
+        </div>
+        <div class="rec-stop-hint">탭하여 중지</div>
+      </div>
+    </div>
+
+    <!-- Media Actions -->
+    <div class="media-actions">
+      <button class="media-btn" onclick="capturePhoto()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+          <circle cx="12" cy="13" r="4"/>
+        </svg>사진
+      </button>
+      <button class="media-btn" onclick="captureVideo()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <polygon points="23 7 16 12 23 17 23 7"/>
+          <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+        </svg>영상
+      </button>
+      <button class="media-btn" onclick="openMemoModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+        </svg>메모
+      </button>
+    </div>
+
+    <!-- Media Strip -->
+    <div class="media-strip" id="mediaStrip">
+      <div class="media-strip-scroll" id="mediaScroll"></div>
+    </div>
+
+    <!-- Recent Notes -->
+    <div class="sec-header">
+      <span class="sec-title">최근 노트</span>
+      <span class="sec-more" onclick="switchTab('archive')">전체 보기</span>
+    </div>
+    <div class="note-list" id="homeList" style="padding-bottom:20px">
+      <div class="empty-state">
+        <div class="empty-icon">📓</div>
+        <div class="empty-title">아직 노트가 없어요</div>
+        <div class="empty-desc">위의 녹음 버튼을 눌러<br>수업을 녹음해보세요</div>
+      </div>
     </div>
   </div>
-</div>
-<div class="term-overlay" id="termOverlay">
-  <div class="term-sheet">
-    <div class="term-handle"></div>
-    <div class="term-header">
-      <div><div class="term-word" id="tWord"></div><div class="term-cat" id="tCat"></div></div>
-      <button class="term-x" onclick="closeTerm()">✕</button>
+
+  <!-- ═══════════════════ ARCHIVE ═══════════════════ -->
+  <div id="screen-archive" class="screen">
+    <div class="sticky-header" id="archive-header">
+      <div class="screen-title">보관함</div>
+      <div class="search-bar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" id="archiveQ" placeholder="노트 검색..." oninput="filterNotes()">
+      </div>
+      <div class="filter-row">
+        <div class="filter-chip active" data-f="all"    onclick="setFilter('all',this)">전체</div>
+        <div class="filter-chip"        data-f="recipe" onclick="setFilter('recipe',this)">레시피</div>
+        <div class="filter-chip"        data-f="theory" onclick="setFilter('theory',this)">이론</div>
+        <div class="filter-chip"        data-f="fav"    onclick="setFilter('fav',this)">즐겨찾기</div>
+      </div>
     </div>
-    <div class="term-block"><div class="term-block-lbl">뜻</div><div class="term-block-txt" id="tDesc"></div></div>
-    <div class="term-block" id="tIngBlock" style="display:none"><div class="term-block-lbl">관련 재료</div><div class="term-block-txt" id="tIng"></div></div>
-    <div class="term-block" id="tTipBlock" style="display:none"><div class="term-block-lbl">셰프의 킥</div><div class="term-block-txt" id="tTip"></div></div>
+    <div class="note-list" id="archiveList" style="padding-top:12px; padding-bottom:20px">
+      <div class="empty-state">
+        <div class="empty-icon">📚</div>
+        <div class="empty-title">저장된 노트가 없어요</div>
+        <div class="empty-desc">녹음을 시작하면<br>자동으로 노트가 생성됩니다</div>
+      </div>
+    </div>
   </div>
-</div>
-<div class="modal" id="settingsModal">
-  <div class="modal-sheet">
-    <h2>⚙️ 설정</h2>
-    <div class="modal-desc">AssemblyAI: 음성변환 · Claude Worker URL: AI분석</div>
-    <label>AssemblyAI API Key (필수)</label>
-    <input type="password" id="assemblyKeyInput" placeholder="어셈블리AI 키...">
-    <label>Claude Worker URL (필수)</label>
-    <input type="text" id="workerUrlInput" placeholder="https://xxx.workers.dev">
-    <label>Claude API Key (필수)</label>
-    <input type="password" id="claudeKeyInput" placeholder="sk-ant-...">
-    <button class="modal-save" onclick="saveSettings()">저장</button>
-    <button class="reset-btn" onclick="resetData()">저장된 레시피 전체 삭제</button>
+
+  <!-- ═══════════════════ SEARCH ═══════════════════ -->
+  <div id="screen-search" class="screen">
+    <div class="sticky-header" id="search-header">
+      <div class="screen-title">검색</div>
+      <div class="search-large">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" id="searchQ" placeholder="재료, 수업명, 노트 검색..." oninput="handleSearch(this.value)" autocomplete="off">
+      </div>
+    </div>
+    <div class="search-placeholder" id="searchEmpty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <p>검색어를 입력하세요</p>
+    </div>
+    <div class="note-list" id="searchResults" style="display:none; padding-top:6px; padding-bottom:20px"></div>
   </div>
+
+  <!-- ═══════════════════ PROFILE ═══════════════════ -->
+  <div id="screen-profile" class="screen">
+    <div class="sticky-header" id="profile-header">
+      <div class="profile-top">
+        <div class="avatar" id="profileAvatar">김</div>
+        <div class="profile-info">
+          <div class="profile-name" id="profileName">김조리</div>
+          <div class="profile-sub" id="profileSub">조리학과 · 3학기</div>
+        </div>
+        <button class="icon-btn" onclick="editProfile()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-num" id="sTot">0</div><div class="stat-lbl">전체 노트</div></div>
+      <div class="stat-card"><div class="stat-num" id="sRec">0</div><div class="stat-lbl">레시피</div></div>
+      <div class="stat-card"><div class="stat-num" id="sTh">0</div><div class="stat-lbl">이론</div></div>
+    </div>
+
+    <div class="pro-card">
+      <div class="pro-text">
+        <div class="pro-eyebrow">Pro 플랜</div>
+        <div class="pro-title">무제한 녹음 업그레이드</div>
+        <div class="pro-sub">AI 노트 자동화 · 무제한 저장</div>
+      </div>
+      <button class="pro-btn" onclick="showToast('준비 중입니다 😊')">업그레이드</button>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-group">
+        <div class="settings-row" onclick="openApiModal()">
+          <div class="settings-ico" style="background:var(--accent-lt)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8">
+              <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+              <path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+            </svg>
+          </div>
+          <span class="settings-lbl">API 설정</span>
+          <span class="settings-val">AssemblyAI · Claude</span>
+          <div class="settings-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+        <div class="settings-row" onclick="showToast('준비 중입니다')">
+          <div class="settings-ico" style="background:#F0EEE8">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+          </div>
+          <span class="settings-lbl">환경설정</span>
+          <div class="settings-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <div class="settings-row" onclick="exportNotes()">
+          <div class="settings-ico" style="background:#F0EEE8">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+          </div>
+          <span class="settings-lbl">노트 내보내기</span>
+          <div class="settings-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+        <div class="settings-row" onclick="clearData()">
+          <div class="settings-ico" style="background:var(--danger-lt)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="1.8">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+            </svg>
+          </div>
+          <span class="settings-lbl" style="color:var(--danger)">모든 데이터 삭제</span>
+          <div class="settings-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ DETAIL ═══════════════════ -->
+  <div id="screen-detail" class="screen">
+    <div class="detail-nav">
+      <button class="icon-btn" onclick="closeDetail()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+      </button>
+      <div class="detail-nav-r">
+        <button class="icon-btn" id="favBtn" onclick="toggleFav()">
+          <svg id="favIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+          </svg>
+        </button>
+        <button class="icon-btn" onclick="shareNote()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="detail-body">
+      <div class="detail-type-lbl" id="dtTypeLbl">레시피</div>
+      <div class="detail-title" id="dtTitle">노트 제목</div>
+      <div class="detail-meta">
+        <div class="meta-chip">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          <span id="dtDate">날짜</span>
+        </div>
+        <div class="meta-chip">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+          </svg>
+          <span id="dtDur">00:00</span>
+        </div>
+        <div class="meta-chip">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+          </svg>
+          <span id="dtClass">실습</span>
+        </div>
+      </div>
+
+      <!-- Audio Player -->
+      <div class="audio-player" id="audioSection" style="display:none">
+        <div class="audio-ctrl">
+          <button class="play-btn" onclick="togglePlay()">
+            <svg id="playIco" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          </button>
+          <div class="audio-progress" onclick="seekAudio(event)">
+            <div class="audio-fill" id="audioFill"></div>
+          </div>
+          <span class="audio-time" id="audioTime">0:00 / 0:00</span>
+        </div>
+      </div>
+
+      <div class="detail-content" id="dtContent"></div>
+
+      <div class="ingredients-sec" id="ingSection" style="display:none">
+        <div class="block-title">🥄 재료</div>
+        <div id="ingList"></div>
+      </div>
+
+      <div class="tips-sec" id="tipsSection" style="display:none">
+        <div class="block-title">💡 교수님 팁</div>
+        <div id="tipsList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ TAB BAR ═══════════════════ -->
+  <div id="tab-bar">
+    <div class="tab-item active" data-tab="home" onclick="switchTab('home')">
+      <div class="tab-dot"></div>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+        <polyline points="9 22 9 12 15 12 15 22"/>
+      </svg>
+      <span class="tab-label">홈</span>
+    </div>
+    <div class="tab-item" data-tab="archive" onclick="switchTab('archive')">
+      <div class="tab-dot"></div>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+      </svg>
+      <span class="tab-label">보관함</span>
+    </div>
+    <div class="tab-item" data-tab="search" onclick="switchTab('search')">
+      <div class="tab-dot"></div>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <span class="tab-label">검색</span>
+    </div>
+    <div class="tab-item" data-tab="profile" onclick="switchTab('profile')">
+      <div class="tab-dot"></div>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+        <circle cx="12" cy="7" r="4"/>
+      </svg>
+      <span class="tab-label">프로필</span>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ TOAST ═══════════════════ -->
+  <div class="toast" id="toast"></div>
+
+  <!-- ═══════════════════ PROCESSING ═══════════════════ -->
+  <div class="proc-overlay" id="procOverlay">
+    <div class="proc-card">
+      <div class="proc-spinner"></div>
+      <div class="proc-title" id="procTitle">노트 생성 중</div>
+      <div class="proc-desc" id="procDesc">수업 내용을 분석하고<br>노트를 정리하고 있어요...</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ MEMO MODAL ═══════════════════ -->
+  <div class="modal-bg" id="memoModal">
+    <div class="modal-sheet">
+      <div class="modal-head">
+        <span class="modal-title">메모 추가</span>
+        <button class="icon-btn" onclick="closeMemoModal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <textarea class="modal-textarea" id="memoTxt" placeholder="수업 메모를 입력하세요..."></textarea>
+      <button class="btn-primary" onclick="saveMemo()">저장</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ API MODAL ═══════════════════ -->
+  <div class="modal-bg center" id="apiModal">
+    <div class="modal-card">
+      <div class="modal-head">
+        <span class="modal-title">API 설정</span>
+        <button class="icon-btn" onclick="closeApiModal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <label class="modal-label">AssemblyAI API Key</label>
+      <input class="modal-input" id="asmKey" type="password" placeholder="your-assemblyai-key...">
+      <label class="modal-label">Claude API Key</label>
+      <input class="modal-input" id="clKey" type="password" placeholder="sk-ant-...">
+      <div class="modal-info">🔒 API 키는 이 기기에만 저장되며, Cloudflare Worker를 통해 안전하게 전송됩니다.</div>
+      <button class="btn-primary" onclick="saveApiKeys()">저장</button>
+    </div>
+  </div>
+
+  <!-- Hidden inputs -->
+  <input type="file" id="photoIn" accept="image/*" capture="environment" style="display:none" onchange="handlePhoto(this)">
+  <input type="file" id="videoIn" accept="video/*" capture="environment" style="display:none" onchange="handleVideo(this)">
 </div>
+
+<!-- ═══════════════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════════════ -->
 <script>
-const TERM_DICT={"미르포아":{cat:"양식 기본기법",desc:"양파, 당근, 셀러리를 2:1:1로 굵게 썬 향 베이스 채소 믹스.",ing:"양파, 당근, 셀러리",tip:"낮은 불에서 천천히 볶아야 색 없이 향만 납니다."},"사세데피스":{cat:"양식 기본기법",desc:"파슬리 줄기, 타임, 베이리프, 통후추, 정향을 셀러리로 감싼 향신료 다발.",tip:"너무 오래 두면 쓴맛이 납니다."},"부케가르니":{cat:"양식 기본기법",desc:"타임, 베이리프, 파슬리 줄기를 묶은 허브 다발.",tip:"실로 단단히 묶어야 조리 중 풀리지 않습니다."},"줄리엔":{cat:"칼질 기법",desc:"채소를 성냥개비 모양으로 가늘게 써는 방법.",tip:"먼저 슬라이스 후 겹쳐서 채 썰면 균일합니다."},"브뤼누아즈":{cat:"칼질 기법",desc:"채소를 3mm 정육면체로 아주 작게 써는 방법.",tip:"줄리엔을 먼저 만든 후 90도 돌려 썰면 됩니다."},"루":{cat:"소스 농후제",desc:"밀가루와 버터를 동량으로 볶아 만든 소스 농후제.",ing:"버터, 밀가루 (1:1)",tip:"따뜻한 액체를 조금씩 넣으며 저어야 덩어리가 없습니다."},"베샤멜":{cat:"모체소스",desc:"화이트루에 우유를 넣어 만든 화이트소스.",ing:"버터, 밀가루, 우유, 소금, 넛메그",tip:"우유를 미리 데워서 넣으면 덩어리가 생기지 않습니다."},"데미글라스":{cat:"소스",desc:"에스파뇰 소스를 농축한 진한 갈색 소스.",tip:"원래 부피의 절반이 될 때까지 졸여야 풍미가 납니다."},"데글라세":{cat:"조리기법",desc:"팬에 눌어붙은 육즙에 와인이나 스톡을 넣어 긁어내는 기법.",tip:"팬이 뜨거울 때 바로 해야 잘 녹아납니다."},"블랑시르":{cat:"조리기법",desc:"끓는 물에 짧게 데친 후 얼음물에 담가 색과 식감을 살리는 기법.",tip:"얼음물에 충분히 담가야 조리가 완전히 멈춥니다."},"소테":{cat:"조리기법",desc:"소량의 기름으로 강한 불에서 빠르게 볶는 조리법.",tip:"팬을 충분히 달군 후 재료를 넣어야 눌어붙지 않습니다."},"콩피":{cat:"조리기법",desc:"기름에 완전히 잠기게 하여 80도 이하로 천천히 익히는 기법.",tip:"오리 다리는 90분 이상 해야 완벽한 질감이 나옵니다."},"캐러멜라이징":{cat:"조리기법",desc:"당분을 열로 갈색화시키는 기법.",tip:"양파는 40분 이상 낮은 불에서 볶아야 진짜 캐러멜라이징이 됩니다."},"미소":{cat:"일식 기본",desc:"콩을 발효시켜 만든 일본식 된장.",tip:"불을 끈 후 풀어야 향이 살아납니다."},"다시":{cat:"일식 기본",desc:"가쓰오부시와 곤부로 만든 일본 기본 육수.",ing:"가쓰오부시, 곤부, 물",tip:"곤부는 60도에서 우려야 쓴맛이 없습니다."},"데리야끼":{cat:"일식 기법",desc:"간장, 미림, 설탕 소스를 발라가며 구워 윤기를 내는 조리법.",tip:"여러 번 나눠 발라야 윤기 있는 코팅이 됩니다."},"두반장":{cat:"중식 기본",desc:"고추와 누에콩을 발효시킨 중국식 매운 장.",tip:"기름에 먼저 볶아야 색과 향이 제대로 납니다."},"화자오":{cat:"중식 향신료",desc:"쓰촨 후추. 얼얼한 마비감이 특징.",tip:"기름에 먼저 우려내면 향이 훨씬 잘 퍼집니다."},"볼로네제":{cat:"이탈리안 소스",desc:"다진 소고기와 토마토로 만든 미트소스.",tip:"최소 2시간 낮은 불에서 끓여야 깊은 맛이 납니다."},"카르보나라":{cat:"이탈리안 소스",desc:"판체타, 달걀, 파르미지아노로 만든 로마식 파스타 소스.",tip:"불을 끈 상태에서 달걀을 넣어야 스크램블이 되지 않습니다."},"페스토":{cat:"이탈리안 소스",desc:"바질, 잣, 파르미지아노, 올리브오일로 만든 제노바식 소스.",tip:"바질을 블랜치하면 색이 오래 유지됩니다."},"리조또":{cat:"이탈리안 요리",desc:"아르보리오 쌀을 스톡으로 조금씩 부어가며 저어서 만드는 쌀 요리.",tip:"스톡을 조금씩 부어가며 전분을 뽑아내세요."},"비네그레트":{cat:"드레싱",desc:"오일과 식초를 3:1로 유화시킨 기본 드레싱.",tip:"머스타드를 유화제로 쓰면 분리되지 않습니다."},"치킨스톡":{cat:"스톡",desc:"닭 뼈와 채소를 오래 끓여 만든 기본 육수.",tip:"찬물에서 시작해야 잡내 없이 맑은 스톡이 됩니다."},"브라운스톡":{cat:"스톡",desc:"뼈를 오븐에 구운 후 끓여 만든 진한 갈색 육수.",tip:"뼈를 220도에서 충분히 구워야 색과 깊은 맛이 납니다."}};
-const FOOD_EMOJIS=['🥘','🍲','🥗','🍝','🥩','🍗','🍛','🫕','🍜','🍱','🥞','🫔'];
+'use strict';
 
-async function transcribeWithAssembly(file,ak,onProg){
-  onProg('파일 업로드 중...');
-  const up=await fetch('https://api.assemblyai.com/v2/upload',{method:'POST',headers:{'authorization':ak,'content-type':'application/octet-stream'},body:file});
-  if(!up.ok)throw new Error('업로드 실패('+up.status+'): '+await up.text());
-  const {upload_url}=await up.json();
-  onProg('음성 변환 요청 중...');
-  const tr=await fetch('https://api.assemblyai.com/v2/transcript',{method:'POST',headers:{'authorization':ak,'content-type':'application/json'},body:JSON.stringify({audio_url:upload_url,speech_models:['universal-2'],language_code:'ko'})});
-  if(!tr.ok)throw new Error('변환요청 실패('+tr.status+'): '+await tr.text());
-  const {id}=await tr.json();
-  let elapsed=0;
-  while(true){
-    await sleep(4000);elapsed+=4;
-    const min=Math.floor(elapsed/60),sec=elapsed%60;
-    onProg(`음성 변환 중... (${min>0?min+'분 ':''}${sec}초)`);
-    const poll=await fetch('https://api.assemblyai.com/v2/transcript/'+id,{headers:{'authorization':ak}});
-    const data=await poll.json();
-    if(data.status==='completed')return data.text||'';
-    if(data.status==='error')throw new Error('AssemblyAI 실패: '+data.error);
-  }
+/* ───────────────── CONFIG ───────────────── */
+const PROXY = 'https://empty-cherry-ab7c.junhongbag64.workers.dev';
+
+/* ───────────────── STATE ───────────────── */
+const S = {
+  notes:      [],
+  filter:     'all',
+  activeNote: null,
+  recording:  false,
+  recStart:   0,
+  recTimer:   null,
+  chunks:     [],
+  recorder:   null,
+  stream:     null,
+  wakeLock:   null,
+  audioCtx:   null,
+  media:      [],   // {type, dataUrl}
+  memos:      [],
+  audio:      null,
+  playing:    false,
+  profile:    { name:'김조리', dept:'조리학과', sem:'3학기' },
+};
+
+/* ───────────────── SERVICE WORKER ───────────────── */
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js')
+    .then(() => console.log('[SW] registered'))
+    .catch(e => console.warn('[SW] failed:', e));
 }
 
-function parseJSON(text){
-  let t=text.replace(/```json\n?/gi,'').replace(/```\n?/g,'').trim();
-  try{return JSON.parse(t);}
-  catch{const m=t.match(/\{[\s\S]*\}|\[[\s\S]*\]/);if(m)try{return JSON.parse(m[0]);}catch{}throw new Error('파싱실패: '+t.slice(0,100));}
+/* ───────────────── INIT ───────────────── */
+document.addEventListener('DOMContentLoaded', () => {
+  loadStorage();
+  renderProfile();
+  renderNotes();
+  updateStats();
+});
+
+/* ───────────────── STORAGE ───────────────── */
+function loadStorage() {
+  try {
+    const n = localStorage.getItem('cn_notes');
+    S.notes = n ? JSON.parse(n) : [];
+    const p = localStorage.getItem('cn_profile');
+    if (p) S.profile = JSON.parse(p);
+  } catch { S.notes = []; }
 }
 
-async function callClaude(workerUrl,ck,prompt){
-  const r=await fetch(workerUrl,{
-    method:'POST',
-    headers:{'content-type':'text/plain'},
-    body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:4000,messages:[{role:'user',content:prompt}]})
-  });
-  const body=await r.json();
- if(!r.ok)throw new Error('Claude 실패('+r.status+'): '+JSON.stringify(body).slice(0,200));
-  if(body.error)throw new Error('Claude 오류: '+JSON.stringify(body.error).slice(0,200));
-  if(!body.content||!body.content[0])throw new Error('응답확인: '+JSON.stringify(body).slice(0,300));
-  return body.content[0].text;
-
+function saveStorage() {
+  localStorage.setItem('cn_notes', JSON.stringify(S.notes));
 }
 
-async function extractContent(transcript,workerUrl,ck,onProg){
-  onProg('1단계: 수업 주제 파악 중...');
-  const raw1=await callClaude(workerUrl,ck,`다음 요리 수업 녹음에서 다루는 모든 주제를 파악하세요.
-마크다운 없이 순수 JSON만: {"recipes":["요리명"],"exam":true,"theory":["주제"],"tips":true,"assignment":false}
-텍스트: ${transcript}`);
-  let topics;
-  try{topics=parseJSON(raw1);}
-  catch(e){throw new Error('주제파악 실패: '+e.message);}
+/* ───────────────── TAB NAV ───────────────── */
+function switchTab(tab) {
+  document.querySelectorAll('.screen:not(#screen-detail)').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+  const s = document.getElementById(`screen-${tab}`);
+  const t = document.querySelector(`[data-tab="${tab}"]`);
+  if (s) s.classList.add('active');
+  if (t) t.classList.add('active');
+  if (tab === 'archive') filterNotes();
+}
 
-  const result={recipes:[],exam:[],theory:[],tips:[],assignment:[]};
-  const tasks=[];
-  (topics.recipes||[]).forEach(r=>tasks.push({type:'recipe',name:r}));
-  if(topics.exam)tasks.push({type:'exam'});
-  (topics.theory||[]).forEach(t=>tasks.push({type:'theory',name:t}));
-  if(topics.tips)tasks.push({type:'tips'});
-  if(topics.assignment)tasks.push({type:'assignment'});
+/* ═══════════════════════════════════════════
+   RECORDING CORE
+═══════════════════════════════════════════ */
+async function toggleRecording() {
+  if (S.recording) await stopRecording();
+  else await startRecording();
+}
 
-  for(let i=0;i<tasks.length;i++){
-    const t=tasks[i];
-    onProg(`2단계: ${t.name||t.type} 추출 중... (${i+1}/${tasks.length})`);
-    try{
-      if(t.type==='recipe'){
-        const raw=await callClaude(workerUrl,ck,`"${t.name}" 레시피만 추출. 다른 요리 섞지 말것.
-JSON만: {"recipeName":"","ingredients":["재료 분량"],"steps":["단계"],"tips":["팁"]}
-텍스트: ${transcript}`);
-        const r=parseJSON(raw);if(r.steps?.length>0)result.recipes.push(r);
-      }else if(t.type==='exam'){
-        const raw=await callClaude(workerUrl,ck,`시험/평가 관련 내용 전부 추출.
-JSON만: [{"title":"","content":""}]
-텍스트: ${transcript}`);
-        const items=parseJSON(raw);if(Array.isArray(items))result.exam=items;
-      }else if(t.type==='theory'){
-        const raw=await callClaude(workerUrl,ck,`"${t.name}" 이론 내용 추출.
-JSON만: {"title":"${t.name}","content":""}
-텍스트: ${transcript}`);
-        const item=parseJSON(raw);if(item.content)result.theory.push(item);
-      }else if(t.type==='tips'){
-        const raw=await callClaude(workerUrl,ck,`교수님 특별 팁/주의사항 추출.
-JSON만: [{"title":"","content":""}]
-텍스트: ${transcript}`);
-        const items=parseJSON(raw);if(Array.isArray(items))result.tips=items;
-      }else if(t.type==='assignment'){
-        const raw=await callClaude(workerUrl,ck,`과제/준비물/제출물 추출.
-JSON만: [{"title":"","content":""}]
-텍스트: ${transcript}`);
-        const items=parseJSON(raw);if(Array.isArray(items))result.assignment=items;
+async function startRecording() {
+  try {
+    /* iOS: AudioContext must be created inside user gesture */
+    if (!S.audioCtx) {
+      S.audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+    }
+    await S.audioCtx.resume();
+
+    /* Request mic stream — separate from camera if needed */
+    S.stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        sampleRate: 16000,
+        channelCount: 1,
       }
-    }catch(e){console.error(t.name||t.type,'추출실패:',e.message);}
-    if(i<tasks.length-1)await sleep(500);
-  }
-  return result;
-}
-
-function highlightTerms(txt){
-  const terms=Object.keys(TERM_DICT).sort((a,b)=>b.length-a.length);
-  let parts=[{t:'text',v:txt}];
-  terms.forEach(term=>{const next=[];parts.forEach(p=>{if(p.t!=='text'){next.push(p);return;}const sp=p.v.split(term);sp.forEach((c,i)=>{if(c)next.push({t:'text',v:c});if(i<sp.length-1)next.push({t:'term',v:term});});});parts=next;});
-  return parts.map(p=>p.t==='term'?`<span class="culinary-term" onclick="showTerm('${p.v}')">${p.v}</span>`:p.v).join('');
-}
-function showTerm(term){
-  const d=TERM_DICT[term];if(!d)return;
-  document.getElementById('tWord').textContent=term;document.getElementById('tCat').textContent=d.cat;document.getElementById('tDesc').textContent=d.desc;
-  const ib=document.getElementById('tIngBlock'),tb=document.getElementById('tTipBlock');
-  if(d.ing){document.getElementById('tIng').textContent=d.ing;ib.style.display='block';}else ib.style.display='none';
-  if(d.tip){document.getElementById('tTip').textContent=d.tip;tb.style.display='block';}else tb.style.display='none';
-  document.getElementById('termOverlay').classList.add('open');
-}
-function closeTerm(){document.getElementById('termOverlay').classList.remove('open');}
-document.getElementById('termOverlay').addEventListener('click',e=>{if(e.target===e.currentTarget)closeTerm();});
-
-let selectedFile=null;
-function handleFile(input){
-  const file=input.files[0];if(!file)return;selectedFile=file;
-  const mb=(file.size/1024/1024).toFixed(1);
-  document.getElementById('filePill').style.display='block';
-  document.getElementById('filePill').innerHTML=`<div class="file-pill"><span style="font-size:20px">🎵</span><div class="file-pill-name">${file.name}</div><div class="file-pill-size">${mb}MB</div></div>`;
-  document.getElementById('convertBtn').style.display='block';document.getElementById('errorBox').style.display='none';
-}
-function showError(msg){
-  const b=document.getElementById('errorBox');b.innerHTML=msg;b.style.display='block';window.scrollTo(0,0);
-}
-function setStep(n,status,msg){
-  const el=document.getElementById('step'+n);
-  if(status==='active')el.className='p-step active',el.innerHTML=`<div class="spinner"></div>&nbsp;${msg}`;
-  else if(status==='done')el.className='p-step done',el.innerHTML=`✅&nbsp;${msg}`;
-  else el.className='p-step',el.innerHTML=`⏳&nbsp;${msg}`;
-}
-
-async function startConvert(){
-  const ak=localStorage.getItem('assembly_api_key');
-  const ck=localStorage.getItem('claude_api_key')||'';
-  const wu=localStorage.getItem('worker_url')||'';
-  if(!ak||!ck||!wu){showError('⚙️ 설정에서 모든 키를 입력해주세요.');openSettings();return;}
-  if(!selectedFile)return;
-  document.getElementById('convertBtn').disabled=true;
-  document.getElementById('progressBox').style.display='block';
-  document.getElementById('errorBox').style.display='none';
-  setStep(1,'active','파일 확인 중...');await sleep(300);setStep(1,'done','파일 확인 완료');
-  try{
-    setStep(2,'active','파일 업로드 중...');
-    const transcript=await transcribeWithAssembly(selectedFile,ak,msg=>setStep(2,'active',msg));
-    setStep(2,'done','음성 변환 완료 ('+transcript.length+'자)');
-    setStep(3,'active','수업 주제 파악 중...');
-    const result=await extractContent(transcript,wu,ck,msg=>{
-      if(msg.includes('1단계'))setStep(3,'active',msg);
-      else{setStep(3,'done','주제 파악 완료');setStep(4,'active',msg);}
     });
-    setStep(4,'done','완료! 레시피 '+result.recipes.length+'개');
-    const date=new Date().toLocaleDateString('ko-KR');
-    const sessions=JSON.parse(localStorage.getItem('chefnote_sessions')||'[]');
-    sessions.unshift({date,fileName:selectedFile.name,...result});
-    localStorage.setItem('chefnote_sessions',JSON.stringify(sessions));
-    await sleep(800);
-    document.getElementById('progressBox').style.display='none';
-    document.getElementById('filePill').style.display='none';
-    document.getElementById('convertBtn').style.display='none';
-    renderGrid();
-  }catch(e){
-    showError('❌ '+e.message);
-    document.getElementById('progressBox').style.display='none';
+
+    /* Choose best MIME type */
+    const mime = getBestMime();
+    S.chunks = [];
+    S.recorder = new MediaRecorder(S.stream, mime ? { mimeType: mime } : {});
+
+    /* Collect chunks every second — essential for background survival */
+    S.recorder.ondataavailable = e => { if (e.data?.size > 0) S.chunks.push(e.data); };
+    S.recorder.onstop = onRecordingDone;
+    S.recorder.start(1000);
+
+    /* WakeLock — keep screen alive */
+    await grabWakeLock();
+
+    /* Page Visibility: if hidden, keep recorder running */
+    document.addEventListener('visibilitychange', onVisChange);
+
+    /* UI */
+    S.recording = true;
+    S.recStart  = Date.now();
+    S.media     = [];
+    document.getElementById('mediaScroll').innerHTML = '';
+    document.getElementById('mediaStrip').classList.remove('on');
+    setRecUI(true);
+    startTimer();
+    showToast('🎙️ 녹음 시작됨 (백그라운드 유지)');
+  } catch(err) {
+    console.error('[REC]', err);
+    showToast('마이크 권한이 필요합니다');
   }
-  document.getElementById('convertBtn').disabled=false;
 }
 
-let allRecipes=[],allExam=[],allTheory=[],allTips=[],allAssign=[];
-function renderGrid(){
-  const sessions=JSON.parse(localStorage.getItem('chefnote_sessions')||'[]');
-  if(!sessions.length){document.getElementById('uploadPrompt').style.display='block';document.getElementById('collectionView').style.display='none';return;}
-  document.getElementById('uploadPrompt').style.display='none';document.getElementById('collectionView').style.display='block';
-  allRecipes=[];allExam=[];allTheory=[];allTips=[];allAssign=[];
-  sessions.forEach(s=>{
-    (s.recipes||[]).forEach(r=>allRecipes.push({item:r,date:s.date}));
-    (s.exam||[]).forEach(n=>allExam.push({item:n,date:s.date}));
-    (s.theory||[]).forEach(n=>allTheory.push({item:n,date:s.date}));
-    (s.tips||[]).forEach(n=>allTips.push({item:n,date:s.date}));
-    (s.assignment||[]).forEach(n=>allAssign.push({item:n,date:s.date}));
-  });
-  const rs=(sid,lid,items,bc,bl,off)=>{
-    const sec=document.getElementById(sid);if(!items.length){sec.style.display='none';return;}sec.style.display='block';
-    document.getElementById(lid).innerHTML=items.map(({item},i)=>`<div class="note-card" onclick="openNoteDetail(${i+off})"><span class="note-card-badge ${bc}">${bl}</span><div class="note-card-title">${item.title||'노트'}</div><div class="note-card-preview">${(item.content||'').slice(0,80)}...</div></div>`).join('');
-  };
-  rs('examSection','examList',allExam,'badge-exam','시험',0);
-  rs('theorySection','theoryList',allTheory,'badge-theory','이론',allExam.length);
-  rs('tipsSection','tipsList',allTips,'badge-tip','팁',allExam.length+allTheory.length);
-  rs('assignSection','assignList',allAssign,'badge-assignment','과제',allExam.length+allTheory.length+allTips.length);
-  document.getElementById('recipeCount').textContent=`${allRecipes.length}개`;
-  document.getElementById('recipeGrid').innerHTML=allRecipes.map(({item:r,date},i)=>`<div class="recipe-card" onclick="openDetail(${i})"><div class="recipe-card-img">${FOOD_EMOJIS[i%FOOD_EMOJIS.length]}</div><div class="recipe-card-body"><div class="recipe-card-name">${r.recipeName||'레시피'}</div><div class="recipe-card-tags"><div class="recipe-tag">⏱ ${r.steps?.length||0}단계</div><div class="recipe-tag">📅 ${date}</div></div></div></div>`).join('');
+async function stopRecording() {
+  S.recording = false;
+  clearInterval(S.recTimer);
+  document.removeEventListener('visibilitychange', onVisChange);
+
+  if (S.recorder && S.recorder.state !== 'inactive') S.recorder.stop();
+  if (S.stream) { S.stream.getTracks().forEach(t => t.stop()); S.stream = null; }
+  releaseWakeLock();
+  setRecUI(false);
 }
-function openNoteDetail(idx){const all=[...allExam,...allTheory,...allTips,...allAssign];const{item}=all[idx]||{};if(!item)return;document.getElementById('ndTitle').textContent=item.title||'노트';document.getElementById('ndContent').textContent=item.content||'내용 없음';document.getElementById('noteDetail').classList.add('open');}
-function closeNoteDetail(){document.getElementById('noteDetail').classList.remove('open');}
-let activeRecipe=null;
-function openDetail(idx){const{item:r,date}=allRecipes[idx];activeRecipe=r;const hero=document.getElementById('rdHero');hero.querySelectorAll('.em').forEach(e=>e.remove());hero.insertAdjacentHTML('afterbegin',`<span class="em" style="font-size:80px;z-index:1">${FOOD_EMOJIS[idx%FOOD_EMOJIS.length]}</span>`);document.getElementById('rdName').textContent=r.recipeName||'레시피';document.getElementById('rdDate').textContent=date;document.getElementById('rdIngs').innerHTML=(r.ingredients||[]).map(i=>{const m=i.match(/^(.+?)\s+([\d약적소정당]+.*)$/);const n=m?m[1]:i,a=m?m[2]:'';return`<div class="rd-ing-chip"><div class="rd-ing-name">${highlightTerms(n)}</div>${a?`<div class="rd-ing-amt">${a}</div>`:''}</div>`;}).join('');document.getElementById('rdSteps').innerHTML=(r.steps||[]).map((s,i)=>`<div class="rd-step"><div class="rd-step-num">${i+1}</div><div class="rd-step-text">${highlightTerms(s)}</div></div>`).join('');document.getElementById('rdTips').innerHTML=(r.tips||[]).map(t=>`<div class="rd-tip">${highlightTerms(t)}</div>`).join('');document.getElementById('recipeDetail').classList.add('open');document.getElementById('recipeDetail').scrollTop=0;}
-function closeDetail(){document.getElementById('recipeDetail').classList.remove('open');}
-let cmSteps=[],cmIdx=0;
-function startCooking(){if(!activeRecipe)return;cmSteps=activeRecipe.steps||[];cmIdx=0;document.getElementById('cmName').textContent=activeRecipe.recipeName||'요리';renderCm('in');document.getElementById('cookingMode').classList.add('open');}
-function closeCooking(){document.getElementById('cookingMode').classList.remove('open');}
-function renderCm(dir){const total=cmSteps.length;document.getElementById('cmBar').style.width=((cmIdx+1)/total*100)+'%';document.getElementById('cmCounter').textContent=`${cmIdx+1} / ${total}`;document.getElementById('cmLabel').textContent=`STEP ${cmIdx+1}`;document.getElementById('cmBody').innerHTML=highlightTerms(cmSteps[cmIdx]);const nb=document.getElementById('cmNextBtn');nb.textContent=cmIdx===total-1?'완료 🎉':'다음 →';nb.className='cm-btn-next'+(cmIdx===total-1?' done':'');const c=document.getElementById('cmContent');c.className='cm-content '+(dir==='in'?'cm-slide':'cm-slide-back');setTimeout(()=>c.className='cm-content',250);document.getElementById('cmDots').innerHTML=cmSteps.map((_,i)=>`<div class="cm-dot${i===cmIdx?' on':''}"></div>`).join('');}
-function cmNext(){if(cmIdx<cmSteps.length-1){cmIdx++;renderCm('in');}else closeCooking();}
-function cmPrev(){if(cmIdx>0){cmIdx--;renderCm('back');}}
-let tsX=0;
-document.getElementById('cookingMode').addEventListener('touchstart',e=>{tsX=e.touches[0].clientX;},{passive:true});
-document.getElementById('cookingMode').addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-tsX;if(Math.abs(dx)>50){dx<0?cmNext():cmPrev();}});
-function openSettings(){document.getElementById('assemblyKeyInput').value=localStorage.getItem('assembly_api_key')||'';document.getElementById('claudeKeyInput').value=localStorage.getItem('claude_api_key')||'';document.getElementById('workerUrlInput').value=localStorage.getItem('worker_url')||'';document.getElementById('settingsModal').classList.add('open');}
-function saveSettings(){localStorage.setItem('assembly_api_key',document.getElementById('assemblyKeyInput').value.trim());const ck=document.getElementById('claudeKeyInput').value.trim();if(ck)localStorage.setItem('claude_api_key',ck);else localStorage.removeItem('claude_api_key');const wu=document.getElementById('workerUrlInput').value.trim();if(wu)localStorage.setItem('worker_url',wu);else localStorage.removeItem('worker_url');document.getElementById('settingsModal').classList.remove('open');}
-function resetData(){if(confirm('저장된 레시피를 모두 삭제할까요?')){localStorage.removeItem('chefnote_sessions');document.getElementById('settingsModal').classList.remove('open');renderGrid();}}
-document.getElementById('settingsModal').addEventListener('click',e=>{if(e.target===e.currentTarget)e.currentTarget.classList.remove('open');});
-function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
-renderGrid();
+
+function getBestMime() {
+  const candidates = [
+    'audio/webm;codecs=opus',
+    'audio/webm',
+    'audio/ogg;codecs=opus',
+    'audio/mp4',
+  ];
+  return candidates.find(m => {
+    try { return MediaRecorder.isTypeSupported(m); } catch { return false; }
+  }) || '';
+}
+
+function onVisChange() {
+  /* Keep recorder alive when tab goes to background */
+  if (document.hidden && S.recording && S.recorder) {
+    if (S.recorder.state === 'inactive') {
+      try { S.recorder.start(1000); } catch {}
+    }
+  }
+}
+
+/* ───────────────── WakeLock ───────────────── */
+async function grabWakeLock() {
+  try {
+    if ('wakeLock' in navigator) {
+      S.wakeLock = await navigator.wakeLock.request('screen');
+      S.wakeLock.addEventListener('release', () => {
+        if (S.recording) grabWakeLock(); // re-acquire if still recording
+      });
+    }
+  } catch (e) {
+    console.warn('[WakeLock]', e.message); // graceful fallback
+  }
+}
+
+function releaseWakeLock() {
+  try { if (S.wakeLock) { S.wakeLock.release(); S.wakeLock = null; } } catch {}
+}
+
+/* ───────────────── Timer ───────────────── */
+function startTimer() {
+  S.recTimer = setInterval(() => {
+    const e = Math.floor((Date.now() - S.recStart) / 1000);
+    const m = String(Math.floor(e / 60)).padStart(2, '0');
+    const s = String(e % 60).padStart(2, '0');
+    document.getElementById('recTimer').textContent = `${m}:${s}`;
+  }, 500);
+}
+
+function setRecUI(on) {
+  document.getElementById('recIdle').classList.toggle('off', on);
+  document.getElementById('recActive').classList.toggle('on', on);
+  if (!on) document.getElementById('recTimer').textContent = '00:00';
+}
+
+/* ═══════════════════════════════════════════
+   RECORDING COMPLETE → TRANSCRIBE → NOTE
+═══════════════════════════════════════════ */
+async function onRecordingDone() {
+  if (!S.chunks.length) { showToast('녹음 데이터가 없습니다'); return; }
+
+  const dur    = Math.floor((Date.now() - S.recStart) / 1000);
+  const mtype  = S.chunks[0]?.type || 'audio/webm';
+  const blob   = new Blob(S.chunks, { type: mtype });
+
+  showProc('음성 인식 중...', 'AssemblyAI로 녹음을 변환하고 있어요...');
+
+  try {
+    const transcript = await transcribeAudio(blob);
+
+    updateProc('노트 생성 중...', 'Claude가 수업 내용을 정리하고 있어요...');
+
+    const note = await generateNote(transcript, dur);
+    note.id        = Date.now().toString();
+    note.date      = new Date().toLocaleDateString('ko-KR', { year:'numeric', month:'long', day:'numeric' });
+    note.timestamp = Date.now();
+    note.duration  = dur;
+    note.favorite  = false;
+    note.media     = [...S.media];
+    note.audioBlob = await blobToDataUrl(blob);
+    note.memos     = [...S.memos];
+
+    S.notes.unshift(note);
+    S.memos = [];
+    saveStorage();
+    renderNotes();
+    updateStats();
+
+    hideProc();
+    showToast('✅ 노트가 생성되었습니다!');
+    setTimeout(() => openNote(note.id), 600);
+  } catch(err) {
+    console.error('[NOTE]', err);
+    hideProc();
+    showToast('❌ 노트 생성 실패: ' + (err.message || '오류'));
+  }
+}
+
+/* ═══════════════════════════════════════════
+   ASSEMBLYAI
+═══════════════════════════════════════════ */
+async function transcribeAudio(blob) {
+  const key = localStorage.getItem('cn_asm_key');
+  if (!key) throw new Error('AssemblyAI API 키를 먼저 설정해주세요');
+
+  /* 1. Upload */
+  const upRes = await fetch(`${PROXY}/assemblyai/v2/upload`, {
+    method: 'POST',
+    headers: { authorization: key, 'content-type': blob.type || 'audio/webm' },
+    body: blob,
+  });
+  if (!upRes.ok) throw new Error(`Upload failed: ${upRes.status}`);
+  const { upload_url } = await upRes.json();
+
+  /* 2. Request transcript */
+  const trRes = await fetch(`${PROXY}/assemblyai/v2/transcript`, {
+    method: 'POST',
+    headers: { authorization: key, 'content-type': 'application/json' },
+    body: JSON.stringify({ audio_url: upload_url, language_code: 'ko', punctuate: true, format_text: true }),
+  });
+  if (!trRes.ok) throw new Error(`Transcript request failed: ${trRes.status}`);
+  const { id } = await trRes.json();
+
+  /* 3. Poll */
+  for (let i = 0; i < 120; i++) {
+    await sleep(2500);
+    const poll = await fetch(`${PROXY}/assemblyai/v2/transcript/${id}`, {
+      headers: { authorization: key },
+    });
+    const result = await poll.json();
+    if (result.status === 'completed') return result.text || '(내용 없음)';
+    if (result.status === 'error') throw new Error('Transcription error: ' + result.error);
+  }
+  throw new Error('Transcription timed out');
+}
+
+/* ═══════════════════════════════════════════
+   CLAUDE NOTE GENERATION
+═══════════════════════════════════════════ */
+async function generateNote(transcript, dur) {
+  const key = localStorage.getItem('cn_cl_key');
+  if (!key) return fallbackNote(dur);
+  if (!transcript || transcript.trim().length < 5) return fallbackNote(dur);
+
+  const prompt = `다음은 조리학과 수업 녹음을 텍스트로 변환한 내용입니다.
+
+텍스트:
+"""
+${transcript}
+"""
+
+이 수업 내용을 분석해 아래 JSON 형식 **만** 반환하세요. 다른 텍스트나 마크다운 코드 블록 없이 순수 JSON만 반환하세요.
+
+{
+  "type": "recipe" 또는 "theory",
+  "title": "수업/요리명 (간결하게)",
+  "classType": "실습" 또는 "이론",
+  "content": "수업 핵심 내용 요약 (3-6 문단, 줄바꿈 \\n 사용)",
+  "ingredients": ["재료명 (용량/수량)"] (recipe 타입만, theory는 빈 배열),
+  "tips": ["교수님이 강조한 팁"] (없으면 빈 배열)
+}
+
+판단 기준:
+- 실제 조리/요리/실습 관련이면 "recipe"
+- 이론·역사·영양학·위생·서비스 등이면 "theory"`;
+
+  const res = await fetch(`${PROXY}/anthropic/v1/messages`, {
+    method: 'POST',
+    headers: {
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1024,
+      messages: [{ role: 'user', content: prompt }],
+    }),
+  });
+
+  if (!res.ok) throw new Error(`Claude API error: ${res.status}`);
+  const data = await res.json();
+  const raw  = data.content?.[0]?.text || '';
+
+  try {
+    const clean = raw.replace(/```[\w]*\n?/g, '').trim();
+    return JSON.parse(clean);
+  } catch {
+    return fallbackNote(dur);
+  }
+}
+
+function fallbackNote(dur) {
+  const d = new Date().toLocaleDateString('ko-KR');
+  return {
+    type: 'theory', title: `수업 노트 ${d}`,
+    classType: '이론', content: '노트를 자동 생성하지 못했습니다.\nAPI 키를 설정하거나 직접 내용을 추가하세요.',
+    ingredients: [], tips: [],
+  };
+}
+
+/* ═══════════════════════════════════════════
+   MEDIA CAPTURE
+═══════════════════════════════════════════ */
+function capturePhoto() { document.getElementById('photoIn').click(); }
+function captureVideo() { document.getElementById('videoIn').click(); }
+
+async function handlePhoto(inp) {
+  const f = inp.files[0]; if (!f) return;
+  const du = await blobToDataUrl(f);
+  addMediaItem({ type: 'photo', dataUrl: du });
+  inp.value = '';
+}
+
+async function handleVideo(inp) {
+  const f = inp.files[0]; if (!f) return;
+  const du = await blobToDataUrl(f);
+  addMediaItem({ type: 'video', dataUrl: du });
+  inp.value = '';
+}
+
+function addMediaItem(item) {
+  S.media.push(item);
+  const scroll = document.getElementById('mediaScroll');
+  const div    = document.createElement('div');
+  div.className = 'media-thumb';
+  div.innerHTML  = item.type === 'photo'
+    ? `<img src="${item.dataUrl}" alt="">`
+    : `<video src="${item.dataUrl}" muted playsinline></video>`;
+  scroll.appendChild(div);
+  document.getElementById('mediaStrip').classList.add('on');
+  showToast(`📸 ${item.type === 'photo' ? '사진' : '영상'} 추가됨`);
+}
+
+/* ═══════════════════════════════════════════
+   MEMO MODAL
+═══════════════════════════════════════════ */
+function openMemoModal() {
+  document.getElementById('memoModal').classList.add('on');
+  setTimeout(() => document.getElementById('memoTxt').focus(), 120);
+}
+function closeMemoModal() { document.getElementById('memoModal').classList.remove('on'); }
+function saveMemo() {
+  const t = document.getElementById('memoTxt').value.trim();
+  if (t) { S.memos.push(t); showToast('📝 메모 저장됨'); }
+  document.getElementById('memoTxt').value = '';
+  closeMemoModal();
+}
+
+/* ═══════════════════════════════════════════
+   NOTE RENDERING
+═══════════════════════════════════════════ */
+function renderNotes() {
+  renderList('homeList',    S.notes.slice(0, 5));
+  const filt = getFiltered();
+  renderList('archiveList', filt);
+}
+
+function renderList(id, notes) {
+  const el = document.getElementById(id);
+  if (!notes.length) {
+    el.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">📓</div>
+      <div class="empty-title">노트가 없어요</div>
+      <div class="empty-desc">녹음을 시작하면<br>자동으로 생성됩니다</div>
+    </div>`;
+    return;
+  }
+  el.innerHTML = notes.map(noteCardHTML).join('');
+}
+
+function noteCardHTML(n) {
+  const thumb = n.media?.[0]?.dataUrl
+    ? `<div class="note-card-thumb"><img src="${n.media[0].dataUrl}" alt=""></div>`
+    : `<div class="note-card-thumb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>`;
+  const cls = n.type === 'recipe' ? 'badge-recipe' : 'badge-theory';
+  const lbl = n.type === 'recipe' ? '레시피' : '이론';
+  return `<div class="note-card" onclick="openNote('${n.id}')">
+    <div class="note-card-body">
+      <div class="note-card-head">
+        <span class="badge ${cls}">${lbl}</span>
+        ${n.favorite ? '<span style="color:#C0392B;font-size:13px">♥</span>' : ''}
+      </div>
+      <div class="note-card-title">${esc(n.title)}</div>
+      <div class="note-card-date">${n.date}</div>
+    </div>
+    ${thumb}
+  </div>`;
+}
+
+/* ═══════════════════════════════════════════
+   FILTERS
+═══════════════════════════════════════════ */
+let curFilter = 'all';
+function setFilter(f, el) {
+  curFilter = f;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  filterNotes();
+}
+
+function filterNotes() {
+  const q = (document.getElementById('archiveQ')?.value || '').toLowerCase();
+  renderList('archiveList', getFiltered(q));
+}
+
+function getFiltered(q = '') {
+  return S.notes.filter(n => {
+    if (curFilter === 'recipe'  && n.type !== 'recipe')  return false;
+    if (curFilter === 'theory'  && n.type !== 'theory')  return false;
+    if (curFilter === 'fav'     && !n.favorite)           return false;
+    if (q) {
+      const hay = `${n.title} ${n.content || ''} ${(n.ingredients||[]).join(' ')}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+/* ═══════════════════════════════════════════
+   SEARCH
+═══════════════════════════════════════════ */
+function handleSearch(q) {
+  const res   = document.getElementById('searchResults');
+  const empty = document.getElementById('searchEmpty');
+  if (!q.trim()) {
+    res.style.display = 'none'; empty.style.display = 'flex';
+    empty.querySelector('p').textContent = '검색어를 입력하세요';
+    return;
+  }
+  const ql   = q.toLowerCase();
+  const hits = S.notes.filter(n => {
+    const t = `${n.title} ${n.content||''} ${(n.ingredients||[]).join(' ')}`.toLowerCase();
+    return t.includes(ql);
+  });
+  if (!hits.length) {
+    res.style.display = 'none'; empty.style.display = 'flex';
+    empty.querySelector('p').textContent = `"${q}" 검색 결과 없음`;
+    return;
+  }
+  empty.style.display = 'none'; res.style.display = 'flex';
+  res.innerHTML = hits.map(noteCardHTML).join('');
+}
+
+/* ═══════════════════════════════════════════
+   NOTE DETAIL
+═══════════════════════════════════════════ */
+function openNote(id) {
+  const n = S.notes.find(x => x.id === id);
+  if (!n) return;
+  S.activeNote = id;
+
+  /* Type label */
+  const lbl = document.getElementById('dtTypeLbl');
+  lbl.textContent = n.type === 'recipe' ? '레시피' : '이론';
+  lbl.className   = `detail-type-lbl ${n.type === 'recipe' ? 'recipe' : 'theory'}`;
+
+  document.getElementById('dtTitle').textContent = n.title;
+  document.getElementById('dtDate').textContent  = n.date;
+  document.getElementById('dtClass').textContent = n.classType || (n.type === 'recipe' ? '실습' : '이론');
+
+  const d = n.duration || 0;
+  document.getElementById('dtDur').textContent = `${String(Math.floor(d/60)).padStart(2,'0')}:${String(d%60).padStart(2,'0')}`;
+
+  updateFavIcon(n.favorite);
+
+  /* Content */
+  let html = '';
+  if (n.content) {
+    n.content.split('\n').filter(p=>p.trim()).forEach(p => { html += `<p>${esc(p)}</p>`; });
+  }
+  if (n.memos?.length) {
+    n.memos.forEach(m => { html += `<p style="border-left:3px solid var(--border-2);padding-left:12px;color:var(--text-2)">📝 ${esc(m)}</p>`; });
+  }
+  if (n.media?.length) {
+    n.media.forEach(m => {
+      if (m.type === 'photo') html += `<img src="${m.dataUrl}" alt="수업 사진" loading="lazy">`;
+    });
+  }
+  document.getElementById('dtContent').innerHTML = html;
+
+  /* Audio */
+  const audioSec = document.getElementById('audioSection');
+  if (n.audioBlob) {
+    audioSec.style.display = 'block';
+    setupAudio(n.audioBlob, n.duration);
+  } else {
+    audioSec.style.display = 'none';
+  }
+
+  /* Ingredients */
+  const ingEl = document.getElementById('ingSection');
+  if (n.type === 'recipe' && n.ingredients?.length) {
+    ingEl.style.display = 'block';
+    document.getElementById('ingList').innerHTML = n.ingredients
+      .map(i => `<span class="ing-pill">🥣 ${esc(i)}</span>`).join('');
+  } else { ingEl.style.display = 'none'; }
+
+  /* Tips */
+  const tipEl = document.getElementById('tipsSection');
+  if (n.tips?.length) {
+    tipEl.style.display = 'block';
+    document.getElementById('tipsList').innerHTML = n.tips
+      .map(t => `<div class="tip-item">${esc(t)}</div>`).join('');
+  } else { tipEl.style.display = 'none'; }
+
+  const det = document.getElementById('screen-detail');
+  det.scrollTop = 0;
+  det.classList.add('open');
+}
+
+function closeDetail() {
+  document.getElementById('screen-detail').classList.remove('open');
+  stopAudio();
+}
+
+/* ─── Audio Player ─── */
+function setupAudio(dataUrl, dur) {
+  stopAudio();
+  S.audio   = new Audio(dataUrl);
+  S.playing = false;
+  S.audio.ontimeupdate = updateAudioUI;
+  S.audio.onended = () => {
+    S.playing = false;
+    setPlayIcon(false);
+    document.getElementById('audioFill').style.width = '0%';
+  };
+  const total = dur || 0;
+  document.getElementById('audioTime').textContent = `0:00 / ${fmt(total)}`;
+}
+
+function togglePlay() {
+  if (!S.audio) return;
+  if (S.playing) { S.audio.pause(); S.playing = false; setPlayIcon(false); }
+  else           { S.audio.play();  S.playing = true;  setPlayIcon(true);  }
+}
+
+function stopAudio() {
+  if (S.audio) { S.audio.pause(); S.audio = null; S.playing = false; setPlayIcon(false); }
+}
+
+function setPlayIcon(on) {
+  document.getElementById('playIco').innerHTML = on
+    ? '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>'
+    : '<polygon points="5 3 19 12 5 21 5 3"/>';
+}
+
+function updateAudioUI() {
+  if (!S.audio) return;
+  const { currentTime: ct, duration: dur } = S.audio;
+  if (dur && !isNaN(dur)) {
+    document.getElementById('audioFill').style.width = `${(ct / dur) * 100}%`;
+    document.getElementById('audioTime').textContent  = `${fmt(ct)} / ${fmt(dur)}`;
+  }
+}
+
+function seekAudio(e) {
+  if (!S.audio || !S.audio.duration) return;
+  const r   = e.currentTarget.getBoundingClientRect();
+  const pct = (e.clientX - r.left) / r.width;
+  S.audio.currentTime = pct * S.audio.duration;
+}
+
+function fmt(s) {
+  s = Math.floor(s);
+  return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+}
+
+/* ─── Fav / Share ─── */
+function toggleFav() {
+  const n = S.notes.find(x => x.id === S.activeNote);
+  if (!n) return;
+  n.favorite = !n.favorite;
+  saveStorage();
+  updateFavIcon(n.favorite);
+  showToast(n.favorite ? '❤️ 즐겨찾기 추가' : '즐겨찾기 해제');
+}
+
+function updateFavIcon(on) {
+  const ico = document.getElementById('favIcon');
+  ico.style.fill   = on ? '#C0392B' : 'none';
+  ico.style.stroke = on ? '#C0392B' : 'currentColor';
+}
+
+function shareNote() {
+  const n = S.notes.find(x => x.id === S.activeNote);
+  if (!n) return;
+  if (navigator.share) {
+    navigator.share({ title: n.title, text: n.content || '' }).catch(() => {});
+  } else {
+    navigator.clipboard?.writeText(n.content || '').then(() => showToast('클립보드에 복사됨'));
+  }
+}
+
+/* ═══════════════════════════════════════════
+   PROFILE
+═══════════════════════════════════════════ */
+function renderProfile() {
+  const p = S.profile;
+  document.getElementById('profileName').textContent  = p.name;
+  document.getElementById('profileSub').textContent   = `${p.dept} · ${p.sem}`;
+  document.getElementById('profileAvatar').textContent = p.name[0] || '?';
+}
+
+function updateStats() {
+  const t = S.notes.length;
+  const r = S.notes.filter(n => n.type === 'recipe').length;
+  document.getElementById('sTot').textContent = t;
+  document.getElementById('sRec').textContent = r;
+  document.getElementById('sTh').textContent  = t - r;
+}
+
+function editProfile() {
+  const name = prompt('이름:', S.profile.name);
+  if (name?.trim()) {
+    const dept = prompt('학과:', S.profile.dept) || S.profile.dept;
+    const sem  = prompt('학기:', S.profile.sem)  || S.profile.sem;
+    S.profile  = { name: name.trim(), dept, sem };
+    localStorage.setItem('cn_profile', JSON.stringify(S.profile));
+    renderProfile();
+  }
+}
+
+/* ═══════════════════════════════════════════
+   SETTINGS
+═══════════════════════════════════════════ */
+function openApiModal() {
+  document.getElementById('asmKey').value = localStorage.getItem('cn_asm_key') || '';
+  document.getElementById('clKey').value  = localStorage.getItem('cn_cl_key')  || '';
+  document.getElementById('apiModal').classList.add('on');
+}
+function closeApiModal() { document.getElementById('apiModal').classList.remove('on'); }
+function saveApiKeys() {
+  const a = document.getElementById('asmKey').value.trim();
+  const c = document.getElementById('clKey').value.trim();
+  if (a) localStorage.setItem('cn_asm_key', a);
+  if (c) localStorage.setItem('cn_cl_key',  c);
+  closeApiModal();
+  showToast('✅ API 키 저장됨');
+}
+
+function exportNotes() {
+  const blob = new Blob([JSON.stringify(S.notes, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = Object.assign(document.createElement('a'), {
+    href: url, download: `chefnote_${Date.now()}.json`
+  });
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('📦 내보내기 완료');
+}
+
+function clearData() {
+  if (!confirm('모든 노트를 삭제할까요? 되돌릴 수 없습니다.')) return;
+  S.notes = [];
+  saveStorage();
+  renderNotes();
+  updateStats();
+  showToast('🗑️ 삭제 완료');
+}
+
+/* ═══════════════════════════════════════════
+   PROCESSING OVERLAY
+═══════════════════════════════════════════ */
+function showProc(t, d) {
+  document.getElementById('procTitle').textContent   = t;
+  document.getElementById('procDesc').innerHTML      = d;
+  document.getElementById('procOverlay').classList.add('on');
+}
+function updateProc(t, d) {
+  document.getElementById('procTitle').textContent   = t;
+  document.getElementById('procDesc').innerHTML      = d;
+}
+function hideProc() { document.getElementById('procOverlay').classList.remove('on'); }
+
+/* ═══════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════ */
+let _toastTm;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('on');
+  clearTimeout(_toastTm);
+  _toastTm = setTimeout(() => el.classList.remove('on'), 2800);
+}
+
+/* ═══════════════════════════════════════════
+   UTILS
+═══════════════════════════════════════════ */
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function blobToDataUrl(blob) {
+  return new Promise((res, rej) => {
+    const fr = new FileReader();
+    fr.onload  = () => res(fr.result);
+    fr.onerror = () => rej(new Error('FileReader error'));
+    fr.readAsDataURL(blob);
+  });
+}
+
+function esc(s) {
+  return String(s ?? '')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
 </script>
 </body>
 </html>
