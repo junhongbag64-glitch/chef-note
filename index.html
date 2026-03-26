@@ -1802,37 +1802,42 @@ function encodeWAV(samples, sampleRate) {
 }
 
 async function transcribeAudio(blob) {
-  // Worker에서 키 받아서 AssemblyAI 직접 호출 (파일 크기 제한 없음)
   const keyRes = await fetch(`${PROXY}/get-asm-key`);
   if (!keyRes.ok) throw new Error('API 키를 가져오지 못했습니다');
   const { key } = await keyRes.json();
 
-  updateProc?.('음성 업로드 중...', `파일을 AssemblyAI에 업로드하고 있어요...`);
+  updateProc('음성 업로드 중...', '파일을 AssemblyAI에 업로드하고 있어요...');
 
-  /* 1. Upload 직접 */
+  /* 1. Upload */
   const upRes = await fetch('https://api.assemblyai.com/v2/upload', {
     method: 'POST',
     headers: {
       'authorization': key,
-      'content-type': blob.type || 'audio/webm',
+      'content-type': 'application/octet-stream',
     },
     body: blob,
   });
-  if (!upRes.ok) throw new Error(`Upload failed: ${upRes.status}`);
+  if (!upRes.ok) {
+    const e = await upRes.json().catch(() => ({}));
+    throw new Error(`Upload failed: ${upRes.status} - ${e.error || ''}`);
+  }
   const { upload_url } = await upRes.json();
+  if (!upload_url) throw new Error('Upload URL을 받지 못했습니다');
 
-  /* 2. Transcript 요청 직접 */
+  /* 2. Transcript — format_text 제거 (한국어 미지원 → 400 원인) */
   const trRes = await fetch('https://api.assemblyai.com/v2/transcript', {
     method: 'POST',
     headers: { 'authorization': key, 'content-type': 'application/json' },
-    body: JSON.stringify({ audio_url: upload_url, language_code: 'ko', punctuate: true, format_text: true }),
+    body: JSON.stringify({ audio_url: upload_url, language_code: 'ko', punctuate: true }),
   });
-  if (!trRes.ok) throw new Error(`Transcript request failed: ${trRes.status}`);
+  if (!trRes.ok) {
+    const e = await trRes.json().catch(() => ({}));
+    throw new Error(`Transcript request failed: ${trRes.status} - ${e.error || JSON.stringify(e)}`);
+  }
   const { id } = await trRes.json();
 
-  /* 3. Poll */
-  updateProc?.('음성 인식 중...', '변환 중이에요. 긴 파일은 시간이 걸릴 수 있어요...');
-  for (let i = 0; i < 300; i++) {
+  /* 3. Poll — 최대 30분 (1시간 20분 파일 대응) */
+  for (let i = 0; i < 600; i++) {
     await sleep(3000);
     const poll = await fetch(`https://api.assemblyai.com/v2/transcript/${id}`, {
       headers: { 'authorization': key },
@@ -1840,8 +1845,12 @@ async function transcribeAudio(blob) {
     const result = await poll.json();
     if (result.status === 'completed') return result.text || '(내용 없음)';
     if (result.status === 'error') throw new Error('Transcription error: ' + result.error);
+    if (i % 10 === 0) {
+      const mins = Math.floor(i * 3 / 60);
+      updateProc('음성 인식 중...', `변환 중이에요... (${mins}분 경과)<br>긴 파일은 20~30분 걸릴 수 있어요`);
+    }
   }
-  throw new Error('Transcription timed out');
+  throw new Error('Transcription timed out (30분 초과)');
 }
 
 /* ═══════════════════════════════════════════
@@ -1930,7 +1939,8 @@ async function handleAudioUpload(inp) {
     note.duration  = dur;
     note.favorite  = false;
     note.media     = [];
-    note.audioBlob = await blobToDataUrl(f);
+    // 10MB 이상 파일은 오디오 저장 생략 (Firestore 1MB 제한 초과 방지)
+    note.audioBlob = f.size < 10 * 1024 * 1024 ? await blobToDataUrl(f) : null;
     note.memos     = [];
 
     S.notes.unshift(note);
