@@ -1881,12 +1881,18 @@ ${transcript}
 - 실제 조리/요리/실습 관련이면 "recipe"
 - 이론·역사·영양학·위생·서비스 등이면 "theory"`;
 
-  /* Claude API — Worker 프록시 경유 */
+  /* Claude API — 브라우저에서 직접 호출 */
   let raw = '';
   try {
-    const res = await fetch(`${PROXY}/anthropic/v1/messages`, {
+    const ckRes = await fetch(`${PROXY}/get-claude-key`);
+    const { key: claudeKey } = await ckRes.json();
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+      headers: {
+        'x-api-key': claudeKey,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 1024,
@@ -1897,11 +1903,12 @@ ${transcript}
       const data = await res.json();
       raw = data.content?.[0]?.text || '';
     } else {
-      console.warn('[Claude] API 오류', res.status, '— 로컬 분석으로 대체');
+      const errBody = await res.text().catch(() => '');
+      console.warn('[Claude] API 오류', res.status, errBody);
       return smartExtract(transcript, dur);
     }
   } catch (e) {
-    console.warn('[Claude] 연결 실패 — 로컬 분석으로 대체');
+    console.warn('[Claude] 연결 실패:', e.message);
     return smartExtract(transcript, dur);
   }
 
