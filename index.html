@@ -1881,9 +1881,15 @@ ${transcript}
 - 실제 조리/요리/실습 관련이면 "recipe"
 - 이론·역사·영양학·위생·서비스 등이면 "theory"`;
 
-  const res = await fetch(`${PROXY}/anthropic/v1/messages`, {
+  /* Claude API 키를 Worker에서 받아 직접 호출 (Worker 프록시 우회) */
+  const ckRes = await fetch(`${PROXY}/get-claude-key`);
+  if (!ckRes.ok) throw new Error('Claude 키를 가져오지 못했습니다');
+  const { key: claudeKey } = await ckRes.json();
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
+      'x-api-key': claudeKey,
       'anthropic-version': '2023-06-01',
       'content-type': 'application/json',
     },
