@@ -1881,32 +1881,29 @@ ${transcript}
 - 실제 조리/요리/실습 관련이면 "recipe"
 - 이론·역사·영양학·위생·서비스 등이면 "theory"`;
 
-  /* Claude API 키를 Worker에서 받아 직접 호출 (Worker 프록시 우회) */
-  const ckRes = await fetch(`${PROXY}/get-claude-key`);
-  if (!ckRes.ok) throw new Error('Claude 키를 가져오지 못했습니다');
-  const { key: claudeKey } = await ckRes.json();
-
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'x-api-key': claudeKey,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-5',
-      max_tokens: 1024,
-      messages: [{ role: 'user', content: prompt }],
-    }),
-  });
-
-  if (!res.ok) {
-    const errText = await res.text().catch(() => '');
-    console.error('[Claude API Error]', res.status, errText);
-    throw new Error(`Claude ${res.status}: ${errText.slice(0, 120)}`);
+  /* Claude API — Worker 프록시 경유 */
+  let raw = '';
+  try {
+    const res = await fetch(`${PROXY}/anthropic/v1/messages`, {
+      method: 'POST',
+      headers: { 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 1024,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      raw = data.content?.[0]?.text || '';
+    } else {
+      console.warn('[Claude] API 오류', res.status, '— 로컬 분석으로 대체');
+      return smartExtract(transcript, dur);
+    }
+  } catch (e) {
+    console.warn('[Claude] 연결 실패 — 로컬 분석으로 대체');
+    return smartExtract(transcript, dur);
   }
-  const data = await res.json();
-  const raw  = data.content?.[0]?.text || '';
 
   try {
     const clean = raw.replace(/```[\w]*\n?/g, '').trim();
@@ -1920,8 +1917,47 @@ function fallbackNote(dur) {
   const d = new Date().toLocaleDateString('ko-KR');
   return {
     type: 'theory', title: `수업 노트 ${d}`,
-    classType: '이론', content: '노트를 자동 생성하지 못했습니다.\nAPI 키를 설정하거나 직접 내용을 추가하세요.',
+    classType: '이론', content: '노트를 자동 생성하지 못했습니다.',
     ingredients: [], tips: [],
+  };
+}
+
+/* Claude 없이 트랜스크립트에서 노트 추출 */
+function smartExtract(transcript, dur) {
+  const d = new Date().toLocaleDateString('ko-KR');
+  const recipeKw = ['재료','계량','손질','조리','볶','끓','굽','튀기','레시피','소금','설탕','기름','양념','밀가루','달걀','버터','육수'];
+  const score = recipeKw.filter(k => transcript.includes(k)).length;
+  const isRecipe = score >= 2;
+
+  // 문장 단위로 분리해서 핵심 내용 추출
+  const sentences = transcript
+    .replace(/\s+/g, ' ')
+    .split(/(?<=[.!?。])\s+/)
+    .filter(s => s.length > 15)
+    .slice(0, 12);
+
+  const content = sentences.join('\n') || transcript.slice(0, 1200);
+
+  // 재료 추출 (숫자+단위 패턴)
+  const ingMatches = transcript.match(/[\w가-힣]+\s*\d+[\w가-힣]*/g) || [];
+  const ingredients = isRecipe ? [...new Set(ingMatches)].slice(0, 8) : [];
+
+  // 교수 강조 표현 추출
+  const tipKw = ['중요','반드시','꼭','주의','포인트','핵심','tip','팁'];
+  const tips = sentences
+    .filter(s => tipKw.some(k => s.includes(k)))
+    .slice(0, 4);
+
+  // 제목 추출 (첫 의미있는 문장)
+  const title = sentences[0]?.slice(0, 20).trim() || `수업 노트 ${d}`;
+
+  return {
+    type: isRecipe ? 'recipe' : 'theory',
+    title,
+    classType: isRecipe ? '실습' : '이론',
+    content,
+    ingredients,
+    tips,
   };
 }
 
