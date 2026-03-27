@@ -1881,15 +1881,12 @@ ${transcript}
 - 실제 조리/요리/실습 관련이면 "recipe"
 - 이론·역사·영양학·위생·서비스 등이면 "theory"`;
 
-  /* Claude API — 브라우저에서 직접 호출 */
+  /* Claude API — Worker 프록시 경유 (AI Gateway 사용) */
   let raw = '';
   try {
-    const ckRes = await fetch(`${PROXY}/get-claude-key`);
-    const { key: claudeKey } = await ckRes.json();
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch(`${PROXY}/anthropic/v1/messages`, {
       method: 'POST',
       headers: {
-        'x-api-key': claudeKey,
         'anthropic-version': '2023-06-01',
         'content-type': 'application/json',
       },
