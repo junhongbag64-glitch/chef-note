@@ -1916,10 +1916,12 @@ ${transcript}
   }
 
   try {
-    const clean = raw.replace(/```[\w]*\n?/g, '').trim();
+    const m = raw.match(/\{[\s\S]*\}/);
+    const clean = m ? m[0] : raw.replace(/```[\w]*\n?/g, '').trim();
     return JSON.parse(clean);
-  } catch {
-    return fallbackNote(dur);
+} catch (e) {
+      console.error('[Claude] JSON 파싱 실패:', e.message, raw.slice(0, 300));
+      return fallbackNote(dur);
   }
 }
 
