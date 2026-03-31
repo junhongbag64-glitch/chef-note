@@ -676,6 +676,49 @@
       font-size: 14px; color: var(--text-1); line-height: 1.6;
     }
 
+    /* Paragraph inline attachments */
+    .para-block { margin-bottom: 4px; }
+    .para-text { margin-bottom: 4px !important; }
+    .para-add-btn {
+      display: flex; align-items: center; gap: 4px;
+      background: none; border: 1px dashed var(--border-2);
+      border-radius: var(--r-full); color: var(--text-3);
+      font-size: 11px; padding: 2px 10px; cursor: pointer;
+      margin-bottom: 10px; transition: all .15s;
+    }
+    .para-add-btn:active { background: var(--border-1); }
+    .para-attach-actions { display: none; flex-direction: row; gap: 8px; margin-bottom: 10px; }
+    .para-attach-actions.open { display: flex; }
+    .para-attach-btn {
+      display: flex; align-items: center; gap: 4px;
+      background: var(--bg-card); border: 1px solid var(--border-1);
+      border-radius: var(--r-full); color: var(--text-2);
+      font-size: 12px; padding: 4px 12px; cursor: pointer;
+      transition: all .15s;
+    }
+    .para-attach-btn:active { background: var(--border-1); }
+    .para-memo-item {
+      background: #f0f4ff; border-left: 3px solid #6b8cff;
+      border-radius: 0 var(--r-sm) var(--r-sm) 0;
+      padding: 8px 10px 8px 12px; margin-bottom: 8px;
+      font-size: 13px; color: var(--text-1); line-height: 1.6;
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
+    }
+    .para-memo-text { flex: 1; }
+    .para-attach-del {
+      background: none; border: none; cursor: pointer;
+      color: var(--text-3); font-size: 17px; line-height: 1; padding: 0; flex-shrink: 0;
+    }
+    .para-photo-item { margin-bottom: 10px; position: relative; }
+    .para-photo-item img { width: 100%; border-radius: var(--r-md); display: block; }
+    .para-photo-del {
+      position: absolute; top: 6px; right: 6px;
+      background: rgba(0,0,0,.5); border: none; cursor: pointer;
+      color: white; font-size: 14px; line-height: 1;
+      border-radius: 50%; width: 24px; height: 24px;
+      display: flex; align-items: center; justify-content: center;
+    }
+
     /* ═══════════════════════════════════════════
        TOAST
     ═══════════════════════════════════════════ */
@@ -2204,17 +2247,35 @@ function openNote(id) {
 
   updateFavIcon(n.favorite);
 
-  /* Content */
+  /* Content — paragraph blocks with inline attachments */
+  const pa = n.paragraphAttachments || {};
   let html = '';
   if (n.content) {
-    n.content.split('\n').filter(p=>p.trim()).forEach(p => { html += `<p>${esc(p)}</p>`; });
+    n.content.split('\n').filter(p=>p.trim()).forEach((p, i) => {
+      const attachs = pa[i] || [];
+      html += `<div class="para-block" data-idx="${i}">`;
+      html += `<p class="para-text">${esc(p)}</p>`;
+      attachs.forEach((a, ai) => {
+        if (a.type === 'memo') {
+          html += `<div class="para-memo-item"><span class="para-memo-text">✏️ ${esc(a.text)}</span><button class="para-attach-del" onclick="delParaAttach('${n.id}',${i},${ai})">×</button></div>`;
+        } else if (a.type === 'photo') {
+          html += `<div class="para-photo-item"><img src="${a.dataUrl}" alt="사진" loading="lazy"><button class="para-photo-del" onclick="delParaAttach('${n.id}',${i},${ai})">×</button></div>`;
+        }
+      });
+      html += `<button class="para-add-btn" onclick="toggleParaAdd(${i})">+ 메모·사진</button>`;
+      html += `<div class="para-attach-actions" id="pac-${i}">`;
+      html += `<button class="para-attach-btn" onclick="addParaMemo('${n.id}',${i})">✏️ 메모</button>`;
+      html += `<button class="para-attach-btn" onclick="addParaPhoto('${n.id}',${i})">📷 사진</button>`;
+      html += `</div>`;
+      html += `</div>`;
+    });
   }
   if (n.memos?.length) {
-    n.memos.forEach(m => { html += `<p style="border-left:3px solid var(--border-2);padding-left:12px;color:var(--text-2)">📝 ${esc(m)}</p>`; });
+    n.memos.forEach(m => { html += `<div class="para-memo-item"><span class="para-memo-text">✏️ ${esc(m)}</span></div>`; });
   }
   if (n.media?.length) {
     n.media.forEach(m => {
-      if (m.type === 'photo') html += `<img src="${m.dataUrl}" alt="수업 사진" loading="lazy">`;
+      if (m.type === 'photo') html += `<img src="${m.dataUrl}" alt="수업 사진" loading="lazy" style="width:100%;border-radius:var(--r-md);margin-bottom:12px">`;
     });
   }
   document.getElementById('dtContent').innerHTML = html;
@@ -2440,6 +2501,65 @@ function esc(s) {
     .replace(/>/g,'&gt;')
     .replace(/"/g,'&quot;');
 }
+
+
+/* ─── Paragraph inline attachments ─── */
+let _paraTarget = null;
+
+function toggleParaAdd(idx) {
+  const el = document.getElementById('pac-' + idx);
+  if (!el) return;
+  const isOpen = el.classList.contains('open');
+  document.querySelectorAll('.para-attach-actions').forEach(e => e.classList.remove('open'));
+  if (!isOpen) el.classList.add('open');
+}
+
+function addParaMemo(noteId, paraIdx) {
+  const text = prompt('메모 입력:');
+  if (!text || !text.trim()) return;
+  const n = S.notes.find(x => x.id === noteId);
+  if (!n) return;
+  if (!n.paragraphAttachments) n.paragraphAttachments = {};
+  if (!n.paragraphAttachments[paraIdx]) n.paragraphAttachments[paraIdx] = [];
+  n.paragraphAttachments[paraIdx].push({ type: 'memo', text: text.trim() });
+  saveNoteToFirestore(n);
+  openNote(noteId);
+}
+
+function addParaPhoto(noteId, paraIdx) {
+  _paraTarget = { noteId: noteId, paraIdx: paraIdx };
+  document.getElementById('paraPhotoInput').click();
+}
+
+function onParaPhotoSelected(e) {
+  const file = e.target.files[0];
+  if (!file || !_paraTarget) return;
+  const noteId = _paraTarget.noteId;
+  const paraIdx = _paraTarget.paraIdx;
+  _paraTarget = null;
+  e.target.value = '';
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    const n = S.notes.find(x => x.id === noteId);
+    if (!n) return;
+    if (!n.paragraphAttachments) n.paragraphAttachments = {};
+    if (!n.paragraphAttachments[paraIdx]) n.paragraphAttachments[paraIdx] = [];
+    n.paragraphAttachments[paraIdx].push({ type: 'photo', dataUrl: ev.target.result });
+    saveNoteToFirestore(n);
+    openNote(noteId);
+  };
+  reader.readAsDataURL(file);
+}
+
+function delParaAttach(noteId, paraIdx, attachIdx) {
+  const n = S.notes.find(x => x.id === noteId);
+  if (!n || !n.paragraphAttachments || !n.paragraphAttachments[paraIdx]) return;
+  n.paragraphAttachments[paraIdx].splice(attachIdx, 1);
+  saveNoteToFirestore(n);
+  openNote(noteId);
+}
 </script>
+<input type="file" id="paraPhotoInput" accept="image/*" capture="environment" style="display:none" onchange="onParaPhotoSelected(event)">
 </body>
 </html>
+
