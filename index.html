@@ -1554,8 +1554,9 @@ async function loadNotesFromFirestore() {
   if (!S.currentUser) return;
   try {
     const snap = await db.collection('users').doc(S.currentUser.uid)
-      .collection('notes').orderBy('createdAt', 'desc').get();
-    S.notes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      .collection('notes').get();
+    S.notes = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
   } catch(e) {
     // Fallback to localStorage if offline
     try {
@@ -1571,7 +1572,10 @@ async function saveNoteToFirestore(note) {
     if (note.id && note.id.length > 10) {
       // Existing Firestore doc
       await db.collection('users').doc(S.currentUser.uid)
-        .collection('notes').doc(note.id).set(note);
+        .collection('notes').doc(note.id).set({
+          ...note,
+          createdAt: note.createdAt || firebase.firestore.FieldValue.serverTimestamp()
+        });
     } else {
       // New note
       const ref = await db.collection('users').doc(S.currentUser.uid)
