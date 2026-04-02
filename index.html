@@ -1266,6 +1266,14 @@
             <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
           </svg>
         </button>
+        <button class="icon-btn" onclick="deleteCurrentNote()" style="color:var(--danger)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+            <path d="M10 11v6M14 11v6"/>
+            <path d="M9 6V4h6v2"/>
+          </svg>
+        </button>
       </div>
     </div>
 
@@ -2401,6 +2409,18 @@ function shareNote() {
   } else {
     navigator.clipboard?.writeText(n.content || '').then(() => showToast('클립보드에 복사됨'));
   }
+}
+
+async function deleteCurrentNote() {
+  if (!confirm('이 노트를 삭제할까요?')) return;
+  const id = S.activeNote;
+  S.notes = S.notes.filter(n => n.id !== id);
+  await deleteNoteFromFirestore(id);
+  localStorage.setItem('cn_notes', JSON.stringify(S.notes));
+  renderNotes();
+  updateStats();
+  showScreen('home');
+  showToast('🗑️ 삭제됐어요');
 }
 
 /* ═══════════════════════════════════════════
