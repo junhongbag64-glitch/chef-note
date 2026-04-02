@@ -1764,7 +1764,7 @@ async function onRecordingDone() {
     note.duration  = dur;
     note.favorite  = false;
     note.media     = [...S.media];
-    note.audioBlob = await blobToDataUrl(blob);
+    note.audioBlob = blob.size < 10 * 1024 * 1024 ? await blobToDataUrl(blob) : null;
     note.memos     = [...S.memos];
 
     S.notes.unshift(note);
