@@ -1748,6 +1748,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       } catch {}
       await loadNotesFromFirestore();
+      await migrateNotes();
       renderProfile();
       renderNotes();
       updateStats();
@@ -1788,6 +1789,38 @@ async function loadNotesFromFirestore() {
   } catch(e) {
     console.warn('[Firestore] load failed, using localStorage:', e.message);
     S.notes = localNotes.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+  }
+}
+
+/* 노트 스키마 기본값 — 새 필드 추가 시 여기에만 추가하면 기존 노트 자동 마이그레이션 */
+const NOTE_SCHEMA = {
+  category:             null,
+  coverPhoto:           null,
+  paragraphAttachments: {},
+  media:                [],
+  memos:                [],
+  ingredients:          [],
+  tips:                 [],
+  favorite:             false,
+  audioBlob:            null,
+};
+
+async function migrateNotes() {
+  const toSave = [];
+  S.notes.forEach(n => {
+    let changed = false;
+    Object.entries(NOTE_SCHEMA).forEach(([key, defaultVal]) => {
+      if (!(key in n)) {
+        n[key] = JSON.parse(JSON.stringify(defaultVal)); // deep copy default
+        changed = true;
+      }
+    });
+    if (changed) toSave.push(n);
+  });
+  if (toSave.length) {
+    console.log(`[Migration] ${toSave.length}개 노트 업데이트`);
+    await Promise.all(toSave.map(n => saveNoteToFirestore(n)));
+    localStorage.setItem('cn_notes', JSON.stringify(S.notes));
   }
 }
 
