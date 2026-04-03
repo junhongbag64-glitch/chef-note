@@ -697,6 +697,166 @@
       font-size: 14px; color: var(--text-2); line-height: 1.65;
     }
 
+
+    /* ═══════ CATEGORY CARDS ═══════ */
+    .cat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      padding: 0 16px 8px;
+    }
+    .cat-card {
+      position: relative;
+      height: 130px;
+      border-radius: 16px;
+      overflow: hidden;
+      cursor: pointer;
+      background: var(--accent);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .cat-card-bg {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+    }
+    .cat-card-overlay {
+      position: absolute; inset: 0;
+      background: linear-gradient(to bottom, rgba(0,0,0,.08), rgba(0,0,0,.58));
+    }
+    .cat-card-info {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      padding: 10px 12px;
+    }
+    .cat-card-name {
+      font-family: 'Playfair Display', serif;
+      font-size: 15px; font-weight: 700;
+      color: white; line-height: 1.2;
+    }
+    .cat-card-count {
+      font-size: 10px; color: rgba(255,255,255,.75);
+      margin-top: 2px;
+    }
+    .cat-add-card {
+      border: 2px dashed var(--border-2);
+      background: none;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      color: var(--text-3); cursor: pointer;
+      border-radius: 16px; height: 130px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .cat-add-icon { font-size: 22px; margin-bottom: 4px; }
+    .cat-add-label { font-size: 11px; }
+
+    /* ═══════ CATEGORY SCREEN ═══════ */
+    #screen-category { flex-direction: column; }
+    .cat-screen-nav {
+      display: flex; align-items: center; gap: 12px;
+      padding: 16px 16px 0;
+    }
+    .cat-screen-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 20px; font-weight: 700; color: var(--text-1);
+      flex: 1;
+    }
+    .cat-banner {
+      width: 100%; height: 160px; position: relative;
+      overflow: hidden; margin-bottom: 4px;
+    }
+    .cat-banner img {
+      width: 100%; height: 100%; object-fit: cover; display: block;
+    }
+    .cat-banner-placeholder {
+      width: 100%; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 48px;
+    }
+    .cat-banner-overlay {
+      position: absolute; inset: 0;
+      background: linear-gradient(to bottom, transparent 40%, var(--bg-page));
+    }
+
+    /* ═══════ NOTE GRID (category view) ═══════ */
+    .note-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px; padding: 12px 16px 100px;
+    }
+    .note-grid-card {
+      border-radius: 14px; overflow: hidden;
+      background: var(--bg-card); cursor: pointer;
+      box-shadow: 0 2px 10px rgba(0,0,0,.07);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .note-grid-photo {
+      height: 110px; background: var(--bg-2);
+      position: relative;
+    }
+    .note-grid-photo img {
+      width: 100%; height: 100%; object-fit: cover; display: block;
+    }
+    .note-grid-placeholder {
+      width: 100%; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 30px;
+      background: linear-gradient(135deg, #eef3e8, #dde8cc);
+    }
+    .note-grid-body { padding: 10px 11px 12px; }
+    .note-grid-badge {
+      font-size: 9px; font-weight: 600; padding: 2px 6px;
+      border-radius: 4px; margin-bottom: 5px; display: inline-block;
+      letter-spacing: .3px;
+    }
+    .note-grid-badge.recipe { background: #e8f0e0; color: #4E6035; }
+    .note-grid-badge.theory { background: #e8eef5; color: #3a5a8c; }
+    .note-grid-title {
+      font-size: 12.5px; font-weight: 600; color: var(--text-1);
+      line-height: 1.4; margin-bottom: 4px;
+      display: -webkit-box; -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .note-grid-date { font-size: 10.5px; color: var(--text-3); }
+
+    /* ═══════ NOTE HERO PHOTO ═══════ */
+    .note-hero {
+      width: 100%; height: 230px;
+      position: relative; overflow: hidden; flex-shrink: 0;
+    }
+    .note-hero img {
+      width: 100%; height: 100%; object-fit: cover; display: block;
+    }
+    .note-hero-gradient {
+      position: absolute; bottom: 0; left: 0; right: 0; height: 80px;
+      background: linear-gradient(to bottom, transparent, var(--bg-page));
+    }
+    .note-hero-placeholder {
+      width: 100%; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 56px;
+      background: linear-gradient(135deg, #eef3e8, #c8ddb0);
+    }
+    .note-hero-actions {
+      position: absolute; bottom: 10px; right: 12px;
+      display: flex; gap: 6px;
+    }
+    .note-hero-btn {
+      background: rgba(0,0,0,.38); border: none; color: white;
+      font-size: 11px; padding: 5px 11px;
+      border-radius: 20px; cursor: pointer;
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+    }
+
+    /* ═══════ CATEGORY CHIP on note detail ═══════ */
+    .cat-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: var(--accent-lt); color: var(--accent);
+      font-size: 11px; font-weight: 600;
+      padding: 3px 10px; border-radius: 20px;
+      cursor: pointer; margin-bottom: 8px;
+      border: none;
+    }
+
     /* Paragraph inline attachments */
     .para-block { margin-bottom: 4px; }
     .para-text { margin-bottom: 4px !important; }
@@ -1066,13 +1226,23 @@
       </div>
     </div>
 
-    <!-- Section header -->
+    <!-- Categories -->
+    <div class="sec-header" style="padding-top:8px">
+      <span class="sec-title">카테고리</span>
+      <button class="sec-more" style="background:none;border:none;cursor:pointer;color:var(--accent);font-size:13px;padding:0" onclick="addCategory()">+ 추가</button>
+    </div>
+    <div class="cat-grid" id="catGrid">
+      <div class="cat-add-card" onclick="addCategory()">
+        <div class="cat-add-icon">＋</div>
+        <div class="cat-add-label">카테고리 추가</div>
+      </div>
+    </div>
+
+    <!-- Recent notes -->
     <div class="sec-header">
       <span class="sec-title">최근 노트</span>
       <span class="sec-more" onclick="switchTab('archive')">전체 보기</span>
     </div>
-
-    <!-- Note list -->
     <div class="note-list" id="homeList" style="padding-bottom:100px">
       <div class="empty-state">
         <div class="empty-icon">📓</div>
@@ -1111,6 +1281,29 @@
       <div class="media-strip-scroll" id="mediaScroll"></div>
     </div>
 
+  </div>
+
+  <!-- ═══════════════════ CATEGORY ═══════════════════ -->
+  <div id="screen-category" class="screen">
+    <div class="cat-screen-nav">
+      <button class="icon-btn" onclick="closeCategoryScreen()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+      </button>
+      <div class="cat-screen-title" id="catScreenTitle">카테고리</div>
+      <button class="icon-btn" onclick="renameCategoryPrompt()" title="카테고리 편집">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+        </svg>
+      </button>
+    </div>
+    <div id="catBanner" class="cat-banner" style="display:none">
+      <div id="catBannerInner"></div>
+      <div class="cat-banner-overlay"></div>
+    </div>
+    <div class="note-grid" id="catNoteGrid"></div>
   </div>
 
     <!-- ═══════════════════ ARCHIVE ═══════════════════ -->
@@ -1277,7 +1470,19 @@
       </div>
     </div>
 
+    <!-- Hero Photo -->
+    <div class="note-hero" id="noteHero">
+      <div class="note-hero-placeholder" id="noteHeroPlaceholder">🍳</div>
+      <div class="note-hero-gradient" id="noteHeroGradient" style="display:none"></div>
+      <div class="note-hero-actions">
+        <button class="note-hero-btn" onclick="changeNoteCover()">📷 표지 변경</button>
+      </div>
+    </div>
+
     <div class="detail-body">
+      <button class="cat-chip" id="dtCatChip" onclick="changeCategoryPrompt()">
+        <span id="dtCatLabel">카테고리 없음</span>
+      </button>
       <div class="detail-type-lbl" id="dtTypeLbl">레시피</div>
       <div class="detail-title" id="dtTitle">노트 제목</div>
       <div class="detail-meta">
@@ -1429,6 +1634,7 @@ const S = {
   notes:      [],
   filter:     'all',
   activeNote: null,
+  activeCategory: null,
   recording:  false,
   recStart:   0,
   recTimer:   null,
@@ -1631,6 +1837,7 @@ function switchTab(tab) {
   if (s) s.classList.add('active');
   if (t) t.classList.add('active');
   if (tab === 'archive') filterNotes();
+  if (tab === 'category') renderCategoryScreen();
 }
 
 /* ═══════════════════════════════════════════
@@ -2152,7 +2359,8 @@ async function convertMemoToNote() {
    NOTE RENDERING
 ═══════════════════════════════════════════ */
 function renderNotes() {
-  renderList('homeList',    S.notes.slice(0, 5));
+  renderCategories();
+  renderList('homeList', S.notes.slice(0, 5));
   const filt = getFiltered();
   renderList('archiveList', filt);
 }
@@ -2269,6 +2477,31 @@ function openNote(id) {
   document.getElementById('dtDur').textContent = `${String(Math.floor(d/60)).padStart(2,'0')}:${String(d%60).padStart(2,'0')}`;
 
   updateFavIcon(n.favorite);
+
+  /* Hero photo */
+  const heroPlaceholder = document.getElementById('noteHeroPlaceholder');
+  const heroGradient    = document.getElementById('noteHeroGradient');
+  const heroEl          = document.getElementById('noteHero');
+  const existingHeroImg = heroEl.querySelector('img.hero-img');
+  if (existingHeroImg) existingHeroImg.remove();
+  const coverSrc = n.coverPhoto || n.media?.[0]?.dataUrl || null;
+  if (coverSrc) {
+    heroPlaceholder.style.display = 'none';
+    heroGradient.style.display = 'block';
+    const img = document.createElement('img');
+    img.src = coverSrc; img.className = 'hero-img';
+    img.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover';
+    heroEl.insertBefore(img, heroEl.firstChild);
+  } else {
+    heroPlaceholder.style.display = '';
+    heroPlaceholder.textContent = n.type === 'recipe' ? '🍳' : '📖';
+    heroGradient.style.display = 'none';
+  }
+
+  /* Category chip */
+  const catChip = document.getElementById('dtCatChip');
+  document.getElementById('dtCatLabel').textContent = n.category || '카테고리 없음';
+  catChip.style.display = n.category ? 'inline-flex' : 'inline-flex';
 
   /* Content — paragraph blocks with inline attachments */
   const pa = n.paragraphAttachments || {};
@@ -2538,6 +2771,178 @@ function esc(s) {
 }
 
 
+
+/* ═══════════════════════════════════════════
+   CATEGORIES
+═══════════════════════════════════════════ */
+const CAT_GRADIENTS = [
+  ['#4E6035','#2d3a1e'], ['#8B6914','#5a4209'],
+  ['#5B6F8C','#2d3a4e'], ['#8C5B5B','#4e2d2d'],
+  ['#5B8C6F','#2d4e3a'], ['#7B5B8C','#3a2d4e'],
+];
+
+function catGradient(name) {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffff;
+  const [a, b] = CAT_GRADIENTS[h % CAT_GRADIENTS.length];
+  return `linear-gradient(135deg, ${a}, ${b})`;
+}
+
+function getCategories() {
+  const cats = {};
+  S.notes.forEach(n => {
+    const c = n.category || '';
+    if (c) cats[c] = (cats[c] || 0) + 1;
+  });
+  return cats; // { name: count }
+}
+
+function renderCategories() {
+  const grid = document.getElementById('catGrid');
+  if (!grid) return;
+  const cats = getCategories();
+  const entries = Object.entries(cats).sort((a, b) => b[1] - a[1]);
+
+  let html = '';
+  entries.forEach(([name, count]) => {
+    // Find cover photo from first note in this category
+    const note = S.notes.find(n => n.category === name && (n.coverPhoto || n.media?.[0]?.dataUrl));
+    const coverSrc = note ? (note.coverPhoto || note.media[0].dataUrl) : null;
+    const bg = coverSrc ? '' : `style="background:${catGradient(name)}"`;
+    const imgTag = coverSrc ? `<img class="cat-card-bg" src="${coverSrc}" alt="">` : '';
+    html += `<div class="cat-card" ${bg} onclick="openCategory('${esc(name)}')">
+      ${imgTag}
+      <div class="cat-card-overlay"></div>
+      <div class="cat-card-info">
+        <div class="cat-card-name">${esc(name)}</div>
+        <div class="cat-card-count">${count}개 노트</div>
+      </div>
+    </div>`;
+  });
+
+  html += `<div class="cat-add-card" onclick="addCategory()">
+    <div class="cat-add-icon">＋</div>
+    <div class="cat-add-label">카테고리 추가</div>
+  </div>`;
+
+  grid.innerHTML = html;
+}
+
+function openCategory(name) {
+  S.activeCategory = name;
+  document.getElementById('catScreenTitle').textContent = name;
+
+  // Banner
+  const banner = document.getElementById('catBanner');
+  const bannerInner = document.getElementById('catBannerInner');
+  const catNote = S.notes.find(n => n.category === name && (n.coverPhoto || n.media?.[0]?.dataUrl));
+  const coverSrc = catNote ? (catNote.coverPhoto || catNote.media[0].dataUrl) : null;
+  if (coverSrc) {
+    banner.style.display = 'block';
+    bannerInner.innerHTML = `<img src="${coverSrc}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">`;
+  } else {
+    banner.style.display = 'none';
+    bannerInner.innerHTML = '';
+  }
+
+  renderCategoryScreen();
+  document.querySelectorAll('.screen:not(#screen-detail)').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-category').classList.add('active');
+  document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+}
+
+function closeCategoryScreen() {
+  document.getElementById('screen-category').classList.remove('active');
+  document.getElementById('screen-home').classList.add('active');
+  document.querySelector('[data-tab="home"]')?.classList.add('active');
+  S.activeCategory = null;
+}
+
+function renderCategoryScreen() {
+  const grid = document.getElementById('catNoteGrid');
+  if (!grid || !S.activeCategory) return;
+  const notes = S.notes.filter(n => n.category === S.activeCategory);
+  if (!notes.length) {
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px 0;color:var(--text-3)">
+      <div style="font-size:32px;margin-bottom:8px">📓</div>
+      <div>이 카테고리에 노트가 없어요</div>
+    </div>`;
+    return;
+  }
+  grid.innerHTML = notes.map(noteGridCardHTML).join('');
+}
+
+function noteGridCardHTML(n) {
+  const coverSrc = n.coverPhoto || n.media?.[0]?.dataUrl || null;
+  const photoEl = coverSrc
+    ? `<img src="${coverSrc}" alt="" loading="lazy">`
+    : `<div class="note-grid-placeholder">${n.type === 'recipe' ? '🍳' : '📖'}</div>`;
+  const badgeCls = n.type === 'recipe' ? 'recipe' : 'theory';
+  const badgeLbl = n.type === 'recipe' ? '레시피' : '이론';
+  return `<div class="note-grid-card" onclick="openNote('${n.id}')">
+    <div class="note-grid-photo">${photoEl}</div>
+    <div class="note-grid-body">
+      <div class="note-grid-badge ${badgeCls}">${badgeLbl}</div>
+      <div class="note-grid-title">${esc(n.title)}</div>
+      <div class="note-grid-date">${n.date}</div>
+    </div>
+  </div>`;
+}
+
+function addCategory() {
+  const name = prompt('카테고리 이름을 입력하세요
+(예: 한식, 서양조리, 제과제빵)');
+  if (!name || !name.trim()) return;
+  // Open category immediately — user can add notes to it
+  openCategory(name.trim());
+}
+
+function changeCategoryPrompt() {
+  const n = S.notes.find(x => x.id === S.activeNote);
+  if (!n) return;
+  const cats = Object.keys(getCategories());
+  const catList = cats.length ? '\n현재 카테고리: ' + cats.join(', ') : '';
+  const val = prompt(`카테고리 이름 입력${catList}`, n.category || '');
+  if (val === null) return;
+  n.category = val.trim() || null;
+  document.getElementById('dtCatLabel').textContent = n.category || '카테고리 없음';
+  saveNoteToFirestore(n);
+  renderCategories();
+}
+
+function renameCategoryPrompt() {
+  const cat = S.activeCategory;
+  if (!cat) return;
+  const newName = prompt('새 카테고리 이름:', cat);
+  if (!newName || !newName.trim() || newName.trim() === cat) return;
+  S.notes.forEach(n => { if (n.category === cat) { n.category = newName.trim(); saveNoteToFirestore(n); } });
+  S.activeCategory = newName.trim();
+  document.getElementById('catScreenTitle').textContent = newName.trim();
+  renderCategories();
+  renderCategoryScreen();
+}
+
+function changeNoteCover() {
+  document.getElementById('coverPhotoInput').click();
+}
+
+function onCoverPhotoSelected(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  e.target.value = '';
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    const n = S.notes.find(x => x.id === S.activeNote);
+    if (!n) return;
+    n.coverPhoto = ev.target.result;
+    saveNoteToFirestore(n);
+    openNote(n.id);
+    renderCategories();
+    if (S.activeCategory === n.category) renderCategoryScreen();
+  };
+  reader.readAsDataURL(file);
+}
+
 /* ─── Paragraph inline attachments ─── */
 let _paraTarget = null;
 
@@ -2594,7 +2999,8 @@ function delParaAttach(noteId, paraIdx, attachIdx) {
   openNote(noteId);
 }
 </script>
-<input type="file" id="paraPhotoInput" accept="image/*" capture="environment" style="display:none" onchange="onParaPhotoSelected(event)">
+<input type="file" id="coverPhotoInput" accept="image/*" capture="environment" style="display:none" onchange="onCoverPhotoSelected(event)">
+  <input type="file" id="paraPhotoInput" accept="image/*" capture="environment" style="display:none" onchange="onParaPhotoSelected(event)">
 </body>
 </html>
 
