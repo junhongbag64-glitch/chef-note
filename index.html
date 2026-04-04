@@ -282,6 +282,36 @@
       padding-left: 2px; letter-spacing: -.1px;
     }
 
+    /* ─── Recording toolbar (above FAB) ─── */
+    .rec-toolbar {
+      position: fixed;
+      bottom: calc(var(--tab-h) + var(--safe-b) + var(--fab-sz) + 20px);
+      left: 50%; transform: translateX(-50%);
+      display: none; align-items: center; gap: 10px;
+      background: rgba(14,14,12,.82);
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      border-radius: 40px; padding: 10px 18px;
+      z-index: 149;
+      box-shadow: 0 4px 24px rgba(0,0,0,.25);
+    }
+    .rec-toolbar.on { display: flex; }
+    .rec-tool-btn {
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+      background: none; border: none; color: white; cursor: pointer;
+      padding: 4px 8px; border-radius: 12px;
+      transition: background .15s;
+      -webkit-tap-highlight-color: transparent;
+      min-width: 48px;
+    }
+    .rec-tool-btn:active { background: rgba(255,255,255,.15); }
+    .rec-tool-btn svg { width: 22px; height: 22px; }
+    .rec-tool-btn span { font-size: 10px; color: rgba(255,255,255,.8); }
+    .rec-tool-counts {
+      font-size: 11px; color: rgba(255,255,255,.6);
+      padding-left: 4px; border-left: 1px solid rgba(255,255,255,.2);
+      margin-left: 2px; white-space: nowrap;
+    }
+
     /* ─── Recording FAB ─── */
     .rec-zone {
       position: fixed;
@@ -1248,6 +1278,32 @@
       </div>
     </div>
 
+    <!-- Recording toolbar — appears above FAB when recording -->
+    <div class="rec-toolbar" id="recToolbar">
+      <button class="rec-tool-btn" onclick="document.getElementById('photoIn').click()" title="사진">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+          <circle cx="12" cy="13" r="4"/>
+        </svg>
+        <span>사진</span>
+      </button>
+      <button class="rec-tool-btn" onclick="document.getElementById('videoIn').click()" title="동영상">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <polygon points="23 7 16 12 23 17 23 7"/>
+          <rect x="1" y="5" width="15" height="14" rx="2"/>
+        </svg>
+        <span>동영상</span>
+      </button>
+      <button class="rec-tool-btn" onclick="openMemoModal()" title="메모">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+        </svg>
+        <span>메모</span>
+      </button>
+      <div class="rec-tool-counts" id="recToolCounts"></div>
+    </div>
+
     <!-- Media strip (shown when media added during recording) -->
     <div class="media-strip" id="mediaStrip">
       <div class="media-strip-scroll" id="mediaScroll"></div>
@@ -1968,7 +2024,20 @@ function setRecUI(on) {
   document.getElementById('recIdle').classList.toggle('off', on);
   document.getElementById('recActive').classList.toggle('on', on);
   document.getElementById('recZone').classList.toggle('recording-active', on);
-  if (!on) document.getElementById('recTimer').textContent = '00:00';
+  document.getElementById('recToolbar').classList.toggle('on', on);
+  if (!on) {
+    document.getElementById('recTimer').textContent = '00:00';
+    document.getElementById('recToolCounts').textContent = '';
+  }
+}
+
+function updateRecCounts() {
+  const el = document.getElementById('recToolCounts');
+  if (!el) return;
+  const parts = [];
+  if (S.media.length) parts.push(`📸 ${S.media.length}`);
+  if (S.memos.length) parts.push(`📝 ${S.memos.length}`);
+  el.textContent = parts.join('  ');
 }
 
 /* ═══════════════════════════════════════════
@@ -1988,7 +2057,7 @@ async function onRecordingDone() {
 
     updateProc('노트 생성 중...', 'Claude가 수업 내용을 정리하고 있어요...');
 
-    const note = await generateNote(transcript, dur);
+    const note = await generateNote(transcript, dur, [...S.memos]);
     note.id        = Date.now().toString();
     note.date      = new Date().toLocaleDateString('ko-KR', { year:'numeric', month:'long', day:'numeric' });
     note.timestamp = Date.now();
@@ -2136,17 +2205,21 @@ async function transcribeAudio(blob) {
 /* ═══════════════════════════════════════════
    CLAUDE NOTE GENERATION
 ═══════════════════════════════════════════ */
-async function generateNote(transcript, dur) {
+async function generateNote(transcript, dur, memos = []) {
   if (!transcript || transcript.trim().length < 5) return fallbackNote(dur);
 
-  const prompt = `다음은 조리학과 수업 녹음을 텍스트로 변환한 내용입니다.
+  const memoSection = memos.length
+    ? `\n수업 중 추가 메모 (중요 참고사항):\n${memos.map((m,i) => `${i+1}. ${m}`).join('\n')}\n`
+    : '';
 
+  const prompt = `다음은 조리학과 수업 녹음을 텍스트로 변환한 내용입니다.
+${memoSection}
 텍스트:
 """
 ${transcript}
 """
 
-이 수업 내용을 분석해 아래 JSON 형식 **만** 반환하세요. 다른 텍스트나 마크다운 코드 블록 없이 순수 JSON만 반환하세요.
+이 수업 내용을 분석해 아래 JSON 형식 **만** 반환하세요. 다른 텍스트나 마크다운 코드 블록 없이 순수 JSON만 반환하세요.${memos.length ? ' 메모에 언급된 내용을 content와 tips에 반드시 반영하세요.' : ''}
 
 {
   "type": "recipe" 또는 "theory",
@@ -2314,6 +2387,7 @@ function addMediaItem(item) {
   scroll.appendChild(div);
   document.getElementById('mediaStrip').classList.add('on');
   showToast(`📸 ${item.type === 'photo' ? '사진' : '영상'} 추가됨`);
+  updateRecCounts();
 }
 
 /* ═══════════════════════════════════════════
@@ -2326,7 +2400,7 @@ function openMemoModal() {
 function closeMemoModal() { document.getElementById('memoModal').classList.remove('on'); }
 function saveMemo() {
   const t = document.getElementById('memoTxt').value.trim();
-  if (t) { S.memos.push(t); showToast('📝 메모 저장됨'); }
+  if (t) { S.memos.push(t); showToast('📝 메모 저장됨'); updateRecCounts(); }
   document.getElementById('memoTxt').value = '';
   closeMemoModal();
 }
