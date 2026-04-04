@@ -2898,8 +2898,7 @@ function noteGridCardHTML(n) {
 }
 
 function addCategory() {
-  const name = prompt('카테고리 이름을 입력하세요
-(예: 한식, 서양조리, 제과제빵)');
+  const name = prompt('카테고리 이름을 입력하세요\n(예: 한식, 서양조리, 제과제빵)');
   if (!name || !name.trim()) return;
   // Open category immediately — user can add notes to it
   openCategory(name.trim());
