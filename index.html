@@ -1150,6 +1150,8 @@
     }
 
   </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
 </head>
 <body>
 
@@ -1594,6 +1596,25 @@
         <circle cx="12" cy="7" r="4"/>
       </svg>
       <span class="tab-label">프로필</span>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ CROP MODAL ═══════════════════ -->
+  <div id="cropModal" style="display:none;position:fixed;inset:0;z-index:900;background:#000;flex-direction:column">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:#111">
+      <button onclick="cancelCrop()" style="background:none;border:none;color:#fff;font-size:15px;cursor:pointer">취소</button>
+      <span style="color:#fff;font-size:14px;font-weight:600">사진 편집</span>
+      <button onclick="confirmCrop()" style="background:#4E6035;border:none;color:#fff;font-size:15px;font-weight:600;padding:6px 16px;border-radius:20px;cursor:pointer">완료</button>
+    </div>
+    <div style="flex:1;overflow:hidden;position:relative">
+      <img id="cropImg" style="max-width:100%;display:block">
+    </div>
+    <div style="display:flex;justify-content:center;gap:16px;padding:14px;background:#111">
+      <button onclick="_cropper&&_cropper.zoom(0.1)" style="background:#222;border:none;color:#fff;width:44px;height:44px;border-radius:50%;font-size:20px;cursor:pointer">+</button>
+      <button onclick="_cropper&&_cropper.zoom(-0.1)" style="background:#222;border:none;color:#fff;width:44px;height:44px;border-radius:50%;font-size:20px;cursor:pointer">−</button>
+      <button onclick="_cropper&&_cropper.rotate(-90)" style="background:#222;border:none;color:#fff;width:44px;height:44px;border-radius:50%;font-size:18px;cursor:pointer">↺</button>
+      <button onclick="_cropper&&_cropper.rotate(90)" style="background:#222;border:none;color:#fff;width:44px;height:44px;border-radius:50%;font-size:18px;cursor:pointer">↻</button>
+      <button onclick="_cropper&&_cropper.reset()" style="background:#222;border:none;color:#fff;width:44px;height:44px;border-radius:50%;font-size:12px;cursor:pointer">리셋</button>
     </div>
   </div>
 
@@ -2391,11 +2412,53 @@ async function handleAudioUpload(inp) {
   }
 }
 
+/* ═══════════════════════════════════════════
+   CROP MODAL
+═══════════════════════════════════════════ */
+let _cropper = null, _cropCallback = null;
+
+function openCropModal(dataUrl, callback) {
+  _cropCallback = callback;
+  const modal = document.getElementById('cropModal');
+  const img   = document.getElementById('cropImg');
+  modal.style.display = 'flex';
+  img.src = dataUrl;
+  if (_cropper) { _cropper.destroy(); _cropper = null; }
+  img.onload = () => {
+    _cropper = new Cropper(img, {
+      viewMode: 1,
+      autoCropArea: 1,
+      movable: true,
+      zoomable: true,
+      rotatable: true,
+      scalable: true,
+      responsive: true,
+    });
+  };
+}
+
+function confirmCrop() {
+  if (!_cropper) return;
+  const canvas = _cropper.getCroppedCanvas({ maxWidth: 1200, maxHeight: 1200 });
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+  const cb = _cropCallback;
+  cancelCrop();
+  if (cb) cb(dataUrl);
+}
+
+function cancelCrop() {
+  document.getElementById('cropModal').style.display = 'none';
+  if (_cropper) { _cropper.destroy(); _cropper = null; }
+  _cropCallback = null;
+}
+
 async function handlePhoto(inp) {
   const f = inp.files[0]; if (!f) return;
   const du = await blobToDataUrl(f);
-  addMediaItem({ type: 'photo', dataUrl: du });
   inp.value = '';
+  openCropModal(du, (cropped) => {
+    addMediaItem({ type: 'photo', dataUrl: cropped });
+  });
 }
 
 async function handleVideo(inp) {
@@ -3056,13 +3119,15 @@ function onCoverPhotoSelected(e) {
   e.target.value = '';
   const reader = new FileReader();
   reader.onload = function(ev) {
-    const n = S.notes.find(x => x.id === S.activeNote);
-    if (!n) return;
-    n.coverPhoto = ev.target.result;
-    saveNoteToFirestore(n);
-    openNote(n.id);
-    renderCategories();
-    if (S.activeCategory === n.category) renderCategoryScreen();
+    openCropModal(ev.target.result, (cropped) => {
+      const n = S.notes.find(x => x.id === S.activeNote);
+      if (!n) return;
+      n.coverPhoto = cropped;
+      saveNoteToFirestore(n);
+      openNote(n.id);
+      renderCategories();
+      if (S.activeCategory === n.category) renderCategoryScreen();
+    });
   };
   reader.readAsDataURL(file);
 }
@@ -3098,19 +3163,21 @@ function addParaPhoto(noteId, paraIdx) {
 function onParaPhotoSelected(e) {
   const file = e.target.files[0];
   if (!file || !_paraTarget) return;
-  const noteId = _paraTarget.noteId;
+  const noteId  = _paraTarget.noteId;
   const paraIdx = _paraTarget.paraIdx;
   _paraTarget = null;
   e.target.value = '';
   const reader = new FileReader();
   reader.onload = function(ev) {
-    const n = S.notes.find(x => x.id === noteId);
-    if (!n) return;
-    if (!n.paragraphAttachments) n.paragraphAttachments = {};
-    if (!n.paragraphAttachments[paraIdx]) n.paragraphAttachments[paraIdx] = [];
-    n.paragraphAttachments[paraIdx].push({ type: 'photo', dataUrl: ev.target.result });
-    saveNoteToFirestore(n);
-    openNote(noteId);
+    openCropModal(ev.target.result, (cropped) => {
+      const n = S.notes.find(x => x.id === noteId);
+      if (!n) return;
+      if (!n.paragraphAttachments) n.paragraphAttachments = {};
+      if (!n.paragraphAttachments[paraIdx]) n.paragraphAttachments[paraIdx] = [];
+      n.paragraphAttachments[paraIdx].push({ type: 'photo', dataUrl: cropped });
+      saveNoteToFirestore(n);
+      openNote(noteId);
+    });
   };
   reader.readAsDataURL(file);
 }
