@@ -612,54 +612,52 @@
     }
     .detail-nav-r { display: flex; gap: 2px; }
 
-    .detail-body { padding: 20px 20px 0; }
+    .detail-body { padding: 24px 20px 60px; }
 
     .detail-type-lbl {
-      font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
-      margin-top: 20px; margin-bottom: 10px;
+      font-size: 9px; font-weight: 800; letter-spacing: 2.5px; text-transform: uppercase;
+      margin-bottom: 8px;
     }
     .detail-type-lbl.recipe { color: var(--accent); }
     .detail-type-lbl.theory { color: var(--text-3); }
 
     .detail-title {
       font-family: var(--f-display);
-      font-size: 26px; font-weight: 700; color: var(--text-1);
-      letter-spacing: -.4px; line-height: 1.25;
-      margin-bottom: 16px;
+      font-size: 28px; font-weight: 700; color: var(--text-1);
+      letter-spacing: -.5px; line-height: 1.2;
+      margin-bottom: 14px;
     }
 
-    /* Meta chips — no backgrounds, dot separator */
     .detail-meta {
       display: flex; flex-wrap: wrap; align-items: center; gap: 0;
-      margin-bottom: 0;
-      padding-bottom: 14px;
-      border-bottom: 1px solid var(--border-1);
+      padding-bottom: 18px;
+      border-bottom: 1.5px solid var(--text-1);
     }
     .meta-chip {
       display: flex; align-items: center; gap: 4px;
-      font-size: 12px; color: var(--text-3);
-      padding: 0;
-      background: none; border-radius: 0;
+      font-size: 11px; color: var(--text-2);
+      font-weight: 500;
     }
     .meta-chip + .meta-chip::before {
-      content: '·';
-      color: var(--text-3);
-      margin: 0 6px;
-      font-size: 14px;
+      content: '·'; color: var(--text-3);
+      margin: 0 8px; font-size: 16px;
     }
     .meta-chip svg { width: 11px; height: 11px; }
 
+    /* Section headers */
+    .block-title {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 9px; font-weight: 800; letter-spacing: 2.5px; text-transform: uppercase;
+      color: var(--text-3); margin: 28px 0 0;
+    }
+    .block-title::after { content:''; flex:1; height:1px; background:var(--border-1); }
+
     /* Audio player */
     .audio-player {
-      background: var(--bg-card);
-      border: 1px solid var(--border-1);
-      border-radius: var(--r-md);
-      padding: 12px 14px;
-      margin: 16px 0;
+      background: var(--bg-card); border: 1px solid var(--border-1);
+      border-radius: var(--r-md); padding: 12px 14px; margin: 18px 0 0;
     }
-    .audio-ctrl {
-      display: flex; align-items: center; gap: 10px;
-    }
+    .audio-ctrl { display: flex; align-items: center; gap: 10px; }
     .play-btn {
       width: 36px; height: 36px; border-radius: 50%;
       background: var(--accent); border: none; cursor: pointer;
@@ -671,46 +669,47 @@
       border-radius: 2px; cursor: pointer; position: relative;
     }
     .audio-fill {
-      height: 100%; background: var(--accent);
-      border-radius: 2px; width: 0%;
-      transition: width .1s linear;
+      height: 100%; background: var(--accent); border-radius: 2px;
+      width: 0%; transition: width .1s linear;
     }
     .audio-time { font-size: 11px; color: var(--text-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
 
-    /* Content */
+    /* Ingredients — clean row table */
+    .ingredients-sec { margin-bottom: 0; }
+    .ing-list { margin-top: 12px; }
+    .ing-row {
+      display: flex; justify-content: space-between; align-items: baseline;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border-1);
+      gap: 12px;
+    }
+    .ing-row:first-child { border-top: 1px solid var(--border-1); }
+    .ing-name { font-size: 14px; color: var(--text-1); font-weight: 500; }
+    .ing-amount { font-size: 13px; color: var(--text-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+    /* Content — method steps */
     .detail-content {
-      font-size: 15px; line-height: 1.85; color: var(--text-1);
-      margin-top: 16px; margin-bottom: 28px;
+      font-size: 14.5px; line-height: 1.9; color: var(--text-1);
+      margin-top: 14px; margin-bottom: 0;
     }
-    .detail-content p { margin-bottom: 14px; }
-    .detail-content img { width: 100%; border-radius: var(--r-md); margin: 6px 0 14px; }
+    .detail-content p {
+      padding: 14px 0;
+      border-bottom: 1px dashed var(--border-1);
+      margin: 0;
+    }
+    .detail-content p:last-of-type { border-bottom: none; }
+    .detail-content img { width: 100%; border-radius: var(--r-md); margin: 8px 0 14px; }
 
-    /* Ingredients */
-    .ingredients-sec { margin-bottom: 24px; }
-    .block-title {
-      font-size: 10px; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 1.2px; color: var(--text-3);
-      margin-bottom: 12px;
-    }
-    .ing-pill {
-      display: inline-flex; align-items: center; gap: 5px;
-      background: var(--bg-card);
-      border: 1px solid var(--border-1);
-      color: var(--text-1);
-      border-radius: var(--r-full);
-      padding: 5px 11px;
-      font-size: 13px; font-weight: 500;
-      margin: 0 6px 8px 0;
-    }
-
-    /* Tips */
-    .tips-sec { margin-bottom: 48px; }
+    /* Tips — chef's notes */
+    .tips-sec { margin-bottom: 0; }
     .tip-item {
-      border-left: 2px solid var(--accent);
-      padding: 6px 0 6px 14px;
-      margin-bottom: 10px;
-      background: none;
-      font-size: 14px; color: var(--text-2); line-height: 1.65;
+      position: relative;
+      padding: 12px 14px 12px 18px;
+      border-left: 3px solid var(--accent);
+      background: var(--accent-lt);
+      border-radius: 0 var(--r-sm) var(--r-sm) 0;
+      margin-top: 10px;
+      font-size: 13.5px; color: var(--text-1); line-height: 1.7;
     }
 
 
@@ -2763,8 +2762,14 @@ function openNote(id) {
   const ingEl = document.getElementById('ingSection');
   if (n.type === 'recipe' && n.ingredients?.length) {
     ingEl.style.display = 'block';
-    document.getElementById('ingList').innerHTML = n.ingredients
-      .map(i => `<span class="ing-pill">🥣 ${esc(i)}</span>`).join('');
+    document.getElementById('ingList').innerHTML = `<div class="ing-list">` +
+      n.ingredients.map(i => {
+        // Split "당근 50g" → name + amount (last word if has digit/unit)
+        const m = i.match(/^(.+?)\s+([\d\/\.]+\s*[a-zA-Zg㎖ml스큰작약간]+.*)$/);
+        const name = m ? m[1] : i;
+        const amt  = m ? m[2] : '';
+        return `<div class="ing-row"><span class="ing-name">${esc(name)}</span>${amt ? `<span class="ing-amount">${esc(amt)}</span>` : ''}</div>`;
+      }).join('') + `</div>`;
   } else { ingEl.style.display = 'none'; }
 
   /* Tips */
