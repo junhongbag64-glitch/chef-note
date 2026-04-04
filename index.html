@@ -1740,26 +1740,28 @@ document.addEventListener('DOMContentLoaded', () => {
 /* ───────────────── FIRESTORE STORAGE ───────────────── */
 async function loadNotesFromFirestore() {
   if (!S.currentUser) return;
-  // Load from localStorage first (has audioBlob)
+  // Always load localStorage first — instant fallback
   let localNotes = [];
   try {
     const raw = localStorage.getItem('cn_notes');
     localNotes = raw ? JSON.parse(raw) : [];
   } catch {}
-  // Merge with Firestore (source of truth for text data)
+
+  // Try Firestore with 6s timeout
+  const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 6000));
   try {
-    const snap = await db.collection('users').doc(S.currentUser.uid)
-      .collection('notes').get();
+    const snap = await Promise.race([
+      db.collection('users').doc(S.currentUser.uid).collection('notes').get(),
+      timeout
+    ]);
     const fsNotes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    // Merge: Firestore text data + localStorage audioBlob
     const localMap = Object.fromEntries(localNotes.map(n => [n.id, n]));
     S.notes = fsNotes.map(n => ({ ...n, audioBlob: localMap[n.id]?.audioBlob || null }));
-    // Add any local-only notes not yet synced to Firestore
     const fsIds = new Set(fsNotes.map(n => n.id));
     localNotes.filter(n => !fsIds.has(n.id)).forEach(n => S.notes.push(n));
     S.notes.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
   } catch(e) {
-    console.warn('[Firestore] load failed, using localStorage:', e.message);
+    console.warn('[Firestore] load failed/timeout, using localStorage:', e.message);
     S.notes = localNotes.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
   }
 }
