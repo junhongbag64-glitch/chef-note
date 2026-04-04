@@ -1207,7 +1207,7 @@
             <path d="M8.5 19.5H21.5V25C21.5 25.6 21.1 26 20.5 26H9.5C8.9 26 8.5 25.6 8.5 25V19.5Z" fill="#4E6035"/>
             <path d="M11.5 19.5H13.5V26H11.5V19.5ZM16.5 19.5H18.5V26H16.5V19.5Z" fill="rgba(255,255,255,0.18)"/>
           </svg>
-          <div class="logo-text">Chef<em>Note</em></div>
+          <div class="logo-text" id="logoText" onclick="secretLogoTap()">Chef<em>Note</em></div>
         </div>
         <div class="header-actions">
           <button class="icon-btn home-upload-btn" onclick="document.getElementById('audioIn').click()" title="파일 업로드">
@@ -2751,6 +2751,20 @@ function renderProfile() {
   document.getElementById('profileName').textContent  = p.name;
   document.getElementById('profileSub').textContent   = `${p.dept} · ${p.sem}`;
   document.getElementById('profileAvatar').textContent = p.name[0] || '?';
+}
+
+/* 숨겨진 업로드 — 로고 3번 탭 */
+let _logoTaps = 0, _logoTimer = null;
+function secretLogoTap() {
+  _logoTaps++;
+  clearTimeout(_logoTimer);
+  if (_logoTaps >= 3) {
+    _logoTaps = 0;
+    showToast('🎙️ 녹음 파일 업로드');
+    document.getElementById('audioIn').click();
+  } else {
+    _logoTimer = setTimeout(() => { _logoTaps = 0; }, 600);
+  }
 }
 
 function updateStats() {
