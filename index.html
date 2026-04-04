@@ -730,7 +730,27 @@
     }
     .tip-del { background:none; border:none; cursor:pointer; color:var(--text-3); font-size:16px; padding:0; flex-shrink:0; }
 
-    /* ── Desktop: remove media query from before ── */
+    /* ── Edit mode fields ── */
+    .dt-title-input {
+      display: none;
+      font-family: var(--f-display);
+      font-size: 24px; font-weight: 700; color: var(--text-1);
+      border: none; border-bottom: 2px solid var(--accent);
+      background: none; width: 100%; padding: 4px 0 8px;
+      outline: none; letter-spacing: -.4px; line-height: 1.2;
+      margin-bottom: 12px;
+    }
+    .dt-edit-area {
+      width: 100%; border: 1px solid var(--border-2);
+      border-radius: var(--r-md); padding: 12px 14px;
+      font-size: 14px; font-family: var(--f-sans);
+      line-height: 1.8; resize: vertical; color: var(--text-1);
+      background: var(--bg-card); box-sizing: border-box;
+      min-height: 120px; outline: none;
+    }
+    .dt-edit-area:focus { border-color: var(--accent); }
+
+    /* ── Desktop ── */
     @media (min-width: 768px) {
       #screen-detail { overflow-y: auto; overflow-x: hidden; }
       .dt-split { height: 340px; }
@@ -1477,6 +1497,14 @@
             <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
           </svg>
         </button>
+        <!-- Edit toggle -->
+        <button class="icon-btn" id="editBtn" onclick="enterEditMode()" title="편집">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+        </button>
+        <button class="icon-btn" id="editDoneBtn" onclick="saveEditMode()" style="display:none;color:var(--accent);font-size:13px;font-weight:700">완료</button>
         <button class="icon-btn" onclick="shareNote()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
             <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
@@ -1503,6 +1531,7 @@
         </button>
         <div class="detail-type-lbl" id="dtTypeLbl">레시피</div>
         <div class="detail-title" id="dtTitle">노트 제목</div>
+        <input id="dtTitleInput" class="dt-title-input" type="text" placeholder="제목 입력">
         <div class="detail-meta">
           <div class="meta-chip">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1537,12 +1566,14 @@
         <div class="dt-ing" id="ingSection">
           <div class="block-title">재료</div>
           <div id="ingList"><span style="color:var(--text-3);font-size:13px">재료 없음</span></div>
+          <textarea id="dtIngEdit" class="dt-edit-area" style="display:none" placeholder="재료를 한 줄에 하나씩&#10;예) 당근 50g&#10;소금 약간"></textarea>
         </div>
       </div>
 
       <!-- 3. Recipe content -->
       <div class="dt-recipe">
         <div class="detail-content" id="dtContent"></div>
+        <textarea id="dtContentEdit" class="dt-edit-area" style="display:none" placeholder="레시피 내용을 입력하세요..."></textarea>
       </div>
 
       <!-- 4. Tips -->
@@ -2734,6 +2765,16 @@ function openNote(id) {
     ? n.tips.map((t, i) => `<div class="tip-item"><span style="flex:1">${esc(t)}</span><button class="tip-del" onclick="deleteTip('${n.id}',${i})">×</button></div>`).join('')
     : `<span style="color:var(--text-3);font-size:13px">+ 버튼으로 팁 추가</span>`;
 
+  // Always reset to view mode on open
+  document.getElementById('editBtn').style.display = 'flex';
+  document.getElementById('editDoneBtn').style.display = 'none';
+  document.getElementById('dtTitle').style.display = '';
+  document.getElementById('dtTitleInput').style.display = 'none';
+  document.getElementById('dtContent').style.display = '';
+  document.getElementById('dtContentEdit').style.display = 'none';
+  document.getElementById('ingList').style.display = '';
+  document.getElementById('dtIngEdit').style.display = 'none';
+
   const det = document.getElementById('screen-detail');
   det.scrollTop = 0;
   det.classList.add('open');
@@ -3179,6 +3220,63 @@ function onParaPhotoSelected(e) {
     });
   };
   reader.readAsDataURL(file);
+}
+
+/* ═══════════════════════════════════════════
+   EDIT MODE
+═══════════════════════════════════════════ */
+function enterEditMode() {
+  const n = S.notes.find(x => x.id === S.activeNote);
+  if (!n) return;
+
+  // Nav swap
+  document.getElementById('editBtn').style.display = 'none';
+  document.getElementById('editDoneBtn').style.display = 'flex';
+
+  // Title
+  document.getElementById('dtTitle').style.display = 'none';
+  const ti = document.getElementById('dtTitleInput');
+  ti.value = n.title || '';
+  ti.style.display = 'block';
+  ti.focus();
+
+  // Content
+  document.getElementById('dtContent').style.display = 'none';
+  const ce = document.getElementById('dtContentEdit');
+  ce.value = n.content || '';
+  ce.style.display = 'block';
+  ce.style.minHeight = Math.max(200, ce.scrollHeight) + 'px';
+
+  // Ingredients
+  document.getElementById('ingList').style.display = 'none';
+  const ie = document.getElementById('dtIngEdit');
+  ie.value = (n.ingredients || []).join('\n');
+  ie.style.display = 'block';
+
+  // Photo button always visible in edit mode
+  document.querySelector('.dt-photo-btn').style.opacity = '1';
+}
+
+function saveEditMode() {
+  const n = S.notes.find(x => x.id === S.activeNote);
+  if (!n) return;
+
+  const titleVal = document.getElementById('dtTitleInput').value.trim();
+  if (titleVal) n.title = titleVal;
+
+  n.content = document.getElementById('dtContentEdit').value.trim();
+
+  const ingRaw = document.getElementById('dtIngEdit').value.trim();
+  n.ingredients = ingRaw ? ingRaw.split('\n').map(s => s.trim()).filter(Boolean) : [];
+
+  saveNoteToFirestore(n);
+  showToast('✅ 저장됨');
+
+  // Nav swap back
+  document.getElementById('editBtn').style.display = 'flex';
+  document.getElementById('editDoneBtn').style.display = 'none';
+
+  openNote(n.id); // re-render in view mode
 }
 
 function addTipInline() {
