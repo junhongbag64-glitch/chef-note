@@ -1812,7 +1812,16 @@ async function loadNotesFromFirestore() {
     ]);
     const fsNotes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     const localMap = Object.fromEntries(localNotes.map(n => [n.id, n]));
-    S.notes = fsNotes.map(n => ({ ...n, audioBlob: localMap[n.id]?.audioBlob || null }));
+    S.notes = fsNotes.map(n => {
+      const local = localMap[n.id] || {};
+      return {
+        ...n,
+        audioBlob:            local.audioBlob            || null,
+        coverPhoto:           local.coverPhoto           || null,
+        media:                local.media                || n.media || [],
+        paragraphAttachments: local.paragraphAttachments || n.paragraphAttachments || {},
+      };
+    });
     const fsIds = new Set(fsNotes.map(n => n.id));
     localNotes.filter(n => !fsIds.has(n.id)).forEach(n => S.notes.push(n));
     S.notes.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
@@ -1856,8 +1865,8 @@ async function migrateNotes() {
 
 async function saveNoteToFirestore(note) {
   if (!S.currentUser) return;
-  // Strip large binary fields — audioBlob stays in memory/localStorage only
-  const { audioBlob, ...fsNote } = note;
+  // Strip ALL large binary fields — only text/metadata goes to Firestore
+  const fsNote = stripBinaryFields(note);
   const docData = {
     ...fsNote,
     createdAt: note.createdAt || firebase.firestore.FieldValue.serverTimestamp()
@@ -1868,8 +1877,28 @@ async function saveNoteToFirestore(note) {
   } catch(e) {
     console.warn('[Firestore] save failed, localStorage only:', e.message);
   }
-  // Always cache to localStorage (includes audioBlob for local playback)
+  // Always cache full data (with binary) to localStorage
   localStorage.setItem('cn_notes', JSON.stringify(S.notes));
+}
+
+function stripBinaryFields(note) {
+  const n = { ...note };
+  // Remove top-level binary blobs
+  delete n.audioBlob;
+  delete n.coverPhoto;
+  // Strip dataUrl from media array
+  if (n.media?.length) {
+    n.media = n.media.map(m => ({ type: m.type }));
+  }
+  // Strip dataUrl from paragraphAttachments photos
+  if (n.paragraphAttachments) {
+    const pa = {};
+    Object.entries(n.paragraphAttachments).forEach(([idx, items]) => {
+      pa[idx] = items.map(a => a.type === 'photo' ? { type: 'photo' } : a);
+    });
+    n.paragraphAttachments = pa;
+  }
+  return n;
 }
 
 async function deleteNoteFromFirestore(noteId) {
