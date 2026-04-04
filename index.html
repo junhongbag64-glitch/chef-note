@@ -835,13 +835,12 @@
 
     /* ═══════ NOTE HERO PHOTO ═══════ */
     .note-hero {
-      width: 100%;
-      position: relative; flex-shrink: 0;
-      background: #0a0a0a;
+      width: 100%; height: 240px;
+      position: relative; overflow: hidden; flex-shrink: 0;
     }
     .note-hero img {
-      width: 100%; height: auto;
-      display: block;
+      position: absolute; inset: 0;
+      width: 100%; height: 100%; object-fit: cover; display: block;
     }
     .note-hero-gradient {
       position: absolute; bottom: 0; left: 0; right: 0; height: 80px;
@@ -2679,7 +2678,6 @@ function openNote(id) {
     heroGradient.style.display = 'block';
     const img = document.createElement('img');
     img.src = coverSrc; img.className = 'hero-img';
-    img.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover';
     heroEl.insertBefore(img, heroEl.firstChild);
   } else {
     heroPlaceholder.style.display = '';
