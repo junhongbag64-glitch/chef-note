@@ -612,7 +612,10 @@
     }
     .detail-nav-r { display: flex; gap: 2px; }
 
-    .detail-body { padding: 24px 20px 60px; }
+    /* ── Detail body ── */
+    .detail-body { display: flex; flex-direction: column; flex: 1; }
+
+    .dt-header { padding: 20px 20px 0; }
 
     .detail-type-lbl {
       font-size: 9px; font-weight: 800; letter-spacing: 2.5px; text-transform: uppercase;
@@ -623,39 +626,21 @@
 
     .detail-title {
       font-family: var(--f-display);
-      font-size: 28px; font-weight: 700; color: var(--text-1);
-      letter-spacing: -.5px; line-height: 1.2;
-      margin-bottom: 14px;
+      font-size: 26px; font-weight: 700; color: var(--text-1);
+      letter-spacing: -.5px; line-height: 1.2; margin-bottom: 12px;
     }
 
     .detail-meta {
-      display: flex; flex-wrap: wrap; align-items: center; gap: 0;
-      padding-bottom: 18px;
-      border-bottom: 1.5px solid var(--text-1);
+      display: flex; flex-wrap: wrap; align-items: center;
+      padding-bottom: 16px; border-bottom: 1.5px solid var(--text-1);
     }
-    .meta-chip {
-      display: flex; align-items: center; gap: 4px;
-      font-size: 11px; color: var(--text-2);
-      font-weight: 500;
-    }
-    .meta-chip + .meta-chip::before {
-      content: '·'; color: var(--text-3);
-      margin: 0 8px; font-size: 16px;
-    }
+    .meta-chip { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-2); font-weight: 500; }
+    .meta-chip + .meta-chip::before { content:'·'; color:var(--text-3); margin: 0 8px; font-size: 16px; }
     .meta-chip svg { width: 11px; height: 11px; }
 
-    /* Section headers */
-    .block-title {
-      display: flex; align-items: center; gap: 10px;
-      font-size: 9px; font-weight: 800; letter-spacing: 2.5px; text-transform: uppercase;
-      color: var(--text-3); margin: 28px 0 0;
-    }
-    .block-title::after { content:''; flex:1; height:1px; background:var(--border-1); }
-
-    /* Audio player */
     .audio-player {
       background: var(--bg-card); border: 1px solid var(--border-1);
-      border-radius: var(--r-md); padding: 12px 14px; margin: 18px 0 0;
+      border-radius: var(--r-md); padding: 12px 14px; margin: 14px 0 0;
     }
     .audio-ctrl { display: flex; align-items: center; gap: 10px; }
     .play-btn {
@@ -663,53 +648,90 @@
       background: var(--accent); border: none; cursor: pointer;
       display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
-    .play-btn svg { width: 15px; height: 15px; color: white; }
-    .audio-progress {
-      flex: 1; height: 2px; background: var(--border-1);
-      border-radius: 2px; cursor: pointer; position: relative;
-    }
-    .audio-fill {
-      height: 100%; background: var(--accent); border-radius: 2px;
-      width: 0%; transition: width .1s linear;
-    }
-    .audio-time { font-size: 11px; color: var(--text-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .play-btn svg { width: 15px; height: 15px; }
+    .audio-progress { flex:1; height:2px; background:var(--border-1); border-radius:2px; cursor:pointer; position:relative; }
+    .audio-fill { height:100%; background:var(--accent); border-radius:2px; width:0%; transition:width .1s linear; }
+    .audio-time { font-size:11px; color:var(--text-3); white-space:nowrap; font-variant-numeric:tabular-nums; }
 
-    /* Ingredients — clean row table */
-    .ingredients-sec { margin-bottom: 0; }
-    .ing-list { margin-top: 12px; }
-    .ing-row {
-      display: flex; justify-content: space-between; align-items: baseline;
-      padding: 10px 0;
+    /* ── Split: photo | ingredients ── */
+    .dt-split {
+      display: grid; grid-template-columns: 1fr 1fr;
+      height: 280px; margin: 20px 0 0;
+      border-top: 1px solid var(--border-1);
       border-bottom: 1px solid var(--border-1);
-      gap: 12px;
     }
-    .ing-row:first-child { border-top: 1px solid var(--border-1); }
-    .ing-name { font-size: 14px; color: var(--text-1); font-weight: 500; }
-    .ing-amount { font-size: 13px; color: var(--text-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .dt-photo {
+      position: relative; overflow: hidden;
+      border-right: 1px solid var(--border-1);
+      background: #f0ede8;
+    }
+    .dt-photo img { width:100%; height:100%; object-fit:cover; display:block; }
+    .dt-photo-placeholder {
+      width:100%; height:100%;
+      display:flex; align-items:center; justify-content:center;
+      font-size:52px;
+      background: linear-gradient(135deg,#eef3e8,#c8ddb0);
+    }
+    .dt-photo-btn {
+      position:absolute; bottom:8px; right:8px;
+      background:rgba(0,0,0,.4); border:none; color:#fff;
+      font-size:10px; padding:4px 10px; border-radius:20px; cursor:pointer;
+      backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+    }
+    .dt-ing {
+      overflow-y: auto; -webkit-overflow-scrolling: touch;
+      padding: 12px 14px;
+    }
 
-    /* Content — method steps */
+    /* ── Section headers ── */
+    .block-title {
+      display:flex; align-items:center; gap:8px;
+      font-size:9px; font-weight:800; letter-spacing:2.5px; text-transform:uppercase;
+      color:var(--text-3); margin-bottom: 10px;
+    }
+    .block-title::after { content:''; flex:1; height:1px; background:var(--border-1); }
+
+    /* ── Ingredients rows ── */
+    .ing-list { }
+    .ing-row {
+      display:flex; justify-content:space-between; align-items:baseline;
+      padding: 8px 0; border-bottom: 1px solid var(--border-1); gap:8px;
+    }
+    .ing-name { font-size:13px; color:var(--text-1); font-weight:500; }
+    .ing-amount { font-size:12px; color:var(--text-3); white-space:nowrap; }
+
+    /* ── Recipe content ── */
+    .dt-recipe { padding: 0 20px; }
     .detail-content {
       font-size: 14.5px; line-height: 1.9; color: var(--text-1);
-      margin-top: 14px; margin-bottom: 0;
+      padding: 8px 0;
     }
-    .detail-content p {
-      padding: 14px 0;
-      border-bottom: 1px dashed var(--border-1);
-      margin: 0;
-    }
-    .detail-content p:last-of-type { border-bottom: none; }
-    .detail-content img { width: 100%; border-radius: var(--r-md); margin: 8px 0 14px; }
+    .detail-content p { padding:13px 0; border-bottom:1px dashed var(--border-1); margin:0; }
+    .detail-content p:last-of-type { border-bottom:none; }
+    .detail-content img { width:100%; border-radius:var(--r-md); margin:8px 0 14px; }
 
-    /* Tips — chef's notes */
-    .tips-sec { margin-bottom: 0; }
+    /* ── Tips ── */
+    .dt-tips { padding: 0 20px 80px; }
+    .tip-add-btn {
+      margin-left: 4px; background:var(--accent); border:none; color:#fff;
+      width:18px; height:18px; border-radius:50%; font-size:14px; line-height:1;
+      cursor:pointer; display:inline-flex; align-items:center; justify-content:center;
+      flex-shrink:0;
+    }
     .tip-item {
-      position: relative;
-      padding: 12px 14px 12px 18px;
-      border-left: 3px solid var(--accent);
-      background: var(--accent-lt);
-      border-radius: 0 var(--r-sm) var(--r-sm) 0;
-      margin-top: 10px;
-      font-size: 13.5px; color: var(--text-1); line-height: 1.7;
+      display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
+      padding:12px 14px 12px 16px;
+      border-left:3px solid var(--accent); background:var(--accent-lt);
+      border-radius:0 var(--r-sm) var(--r-sm) 0; margin-top:8px;
+      font-size:13.5px; color:var(--text-1); line-height:1.7;
+    }
+    .tip-del { background:none; border:none; cursor:pointer; color:var(--text-3); font-size:16px; padding:0; flex-shrink:0; }
+
+    /* ── Desktop: remove media query from before ── */
+    @media (min-width: 768px) {
+      #screen-detail { overflow-y: auto; overflow-x: hidden; }
+      .dt-split { height: 340px; }
+      .detail-title { font-size: 30px; }
     }
 
 
@@ -832,61 +854,6 @@
     }
     .note-grid-date { font-size: 10.5px; color: var(--text-3); }
 
-    /* ═══════ NOTE HERO PHOTO ═══════ */
-    /* ── Detail 2-col layout ── */
-    .detail-main {
-      flex: 1; display: flex; flex-direction: column;
-    }
-    .note-hero {
-      width: 100%; height: 260px;
-      position: relative; overflow: hidden; flex-shrink: 0;
-    }
-    .note-hero img {
-      width: 100%; height: 100%; object-fit: cover; display: block;
-    }
-
-    @media (min-width: 768px) {
-      #screen-detail { overflow: hidden; }
-      .detail-main {
-        flex-direction: row;
-        height: calc(100vh - 53px);
-        overflow: hidden;
-      }
-      .note-hero {
-        width: 44%; height: 100%; flex-shrink: 0;
-      }
-      .note-hero img {
-        width: 100%; height: 100%; object-fit: cover;
-      }
-      .note-hero-placeholder { height: 100% !important; }
-      .detail-body {
-        flex: 1; overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-        padding: 28px 36px 80px;
-        height: 100%;
-      }
-    }
-    .note-hero-gradient {
-      position: absolute; bottom: 0; left: 0; right: 0; height: 80px;
-      background: linear-gradient(to bottom, transparent, var(--bg-page));
-    }
-    .note-hero-placeholder {
-      width: 100%; height: 220px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 56px;
-      background: linear-gradient(135deg, #eef3e8, #c8ddb0);
-    }
-    .note-hero-actions {
-      position: absolute; bottom: 10px; right: 12px;
-      display: flex; gap: 6px;
-    }
-    .note-hero-btn {
-      background: rgba(0,0,0,.38); border: none; color: white;
-      font-size: 11px; padding: 5px 11px;
-      border-radius: 20px; cursor: pointer;
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
-    }
 
     /* ═══════ CATEGORY CHIP on note detail ═══════ */
     .cat-chip {
@@ -1525,71 +1492,72 @@
       </div>
     </div>
 
-    <div class="detail-main">
-    <!-- Hero Photo -->
-    <div class="note-hero" id="noteHero">
-      <div class="note-hero-placeholder" id="noteHeroPlaceholder">🍳</div>
-      <div class="note-hero-gradient" id="noteHeroGradient" style="display:none"></div>
-      <div class="note-hero-actions">
-        <button class="note-hero-btn" onclick="changeNoteCover()">📷 표지 변경</button>
-      </div>
-    </div>
-
     <div class="detail-body">
-      <button class="cat-chip" id="dtCatChip" onclick="changeCategoryPrompt()">
-        <span id="dtCatLabel">카테고리 없음</span>
-      </button>
-      <div class="detail-type-lbl" id="dtTypeLbl">레시피</div>
-      <div class="detail-title" id="dtTitle">노트 제목</div>
-      <div class="detail-meta">
-        <div class="meta-chip">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
-            <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-          </svg>
-          <span id="dtDate">날짜</span>
-        </div>
-        <div class="meta-chip">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-          </svg>
-          <span id="dtDur">00:00</span>
-        </div>
-        <div class="meta-chip">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
-            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-          </svg>
-          <span id="dtClass">실습</span>
-        </div>
-      </div>
-
-      <!-- Audio Player -->
-      <div class="audio-player" id="audioSection" style="display:none">
-        <div class="audio-ctrl">
-          <button class="play-btn" onclick="togglePlay()">
-            <svg id="playIco" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-          </button>
-          <div class="audio-progress" onclick="seekAudio(event)">
-            <div class="audio-fill" id="audioFill"></div>
+      <!-- 1. Title block -->
+      <div class="dt-header">
+        <button class="cat-chip" id="dtCatChip" onclick="changeCategoryPrompt()">
+          <span id="dtCatLabel">카테고리 없음</span>
+        </button>
+        <div class="detail-type-lbl" id="dtTypeLbl">레시피</div>
+        <div class="detail-title" id="dtTitle">노트 제목</div>
+        <div class="detail-meta">
+          <div class="meta-chip">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            <span id="dtDate">날짜</span>
           </div>
-          <span class="audio-time" id="audioTime">0:00 / 0:00</span>
+          <div class="meta-chip">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+            <span id="dtDur">00:00</span>
+          </div>
+          <div class="meta-chip">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+            </svg>
+            <span id="dtClass">실습</span>
+          </div>
+        </div>
+        <div class="audio-player" id="audioSection" style="display:none">
+          <div class="audio-ctrl">
+            <button class="play-btn" onclick="togglePlay()">
+              <svg id="playIco" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            </button>
+            <div class="audio-progress" onclick="seekAudio(event)">
+              <div class="audio-fill" id="audioFill"></div>
+            </div>
+            <span class="audio-time" id="audioTime">0:00 / 0:00</span>
+          </div>
         </div>
       </div>
 
-      <div class="detail-content" id="dtContent"></div>
-
-      <div class="ingredients-sec" id="ingSection" style="display:none">
-        <div class="block-title">🥄 재료</div>
-        <div id="ingList"></div>
+      <!-- 2. Split: Photo (left) | Ingredients (right) -->
+      <div class="dt-split">
+        <div class="dt-photo" id="noteHero">
+          <div class="dt-photo-placeholder" id="noteHeroPlaceholder">🍳</div>
+          <button class="dt-photo-btn" onclick="changeNoteCover()">📷 표지 변경</button>
+        </div>
+        <div class="dt-ing" id="ingSection">
+          <div class="block-title">재료</div>
+          <div id="ingList"><span style="color:var(--text-3);font-size:13px">재료 없음</span></div>
+        </div>
       </div>
 
-      <div class="tips-sec" id="tipsSection" style="display:none">
-        <div class="block-title">💡 교수님 팁</div>
+      <!-- 3. Recipe content -->
+      <div class="dt-recipe">
+        <div class="detail-content" id="dtContent"></div>
+      </div>
+
+      <!-- 4. Tips -->
+      <div class="dt-tips" id="tipsSection">
+        <div class="block-title">Tip <button class="tip-add-btn" onclick="addTipInline()">+</button></div>
         <div id="tipsList"></div>
       </div>
     </div>
-    </div><!-- /detail-main -->
   </div>
 
   <!-- ═══════════════════ TAB BAR ═══════════════════ -->
@@ -2692,23 +2660,20 @@ function openNote(id) {
 
   updateFavIcon(n.favorite);
 
-  /* Hero photo */
-  const heroPlaceholder = document.getElementById('noteHeroPlaceholder');
-  const heroGradient    = document.getElementById('noteHeroGradient');
-  const heroEl          = document.getElementById('noteHero');
-  const existingHeroImg = heroEl.querySelector('img.hero-img');
-  if (existingHeroImg) existingHeroImg.remove();
+  /* Photo (dt-split left) */
+  const heroEl = document.getElementById('noteHero');
+  const heroPH = document.getElementById('noteHeroPlaceholder');
+  const existingImg = heroEl.querySelector('img.hero-img');
+  if (existingImg) existingImg.remove();
   const coverSrc = n.coverPhoto || n.media?.[0]?.dataUrl || null;
   if (coverSrc) {
-    heroPlaceholder.style.display = 'none';
-    heroGradient.style.display = 'block';
+    heroPH.style.display = 'none';
     const img = document.createElement('img');
     img.src = coverSrc; img.className = 'hero-img';
     heroEl.insertBefore(img, heroEl.firstChild);
   } else {
-    heroPlaceholder.style.display = '';
-    heroPlaceholder.textContent = n.type === 'recipe' ? '🍳' : '📖';
-    heroGradient.style.display = 'none';
+    heroPH.style.display = '';
+    heroPH.textContent = n.type === 'recipe' ? '🍳' : '📖';
   }
 
   /* Category chip */
@@ -2758,27 +2723,23 @@ function openNote(id) {
     audioSec.style.display = 'none';
   }
 
-  /* Ingredients */
-  const ingEl = document.getElementById('ingSection');
-  if (n.type === 'recipe' && n.ingredients?.length) {
-    ingEl.style.display = 'block';
+  /* Ingredients — always visible in split */
+  if (n.ingredients?.length) {
     document.getElementById('ingList').innerHTML = `<div class="ing-list">` +
       n.ingredients.map(i => {
-        // Split "당근 50g" → name + amount (last word if has digit/unit)
         const m = i.match(/^(.+?)\s+([\d\/\.]+\s*[a-zA-Zg㎖ml스큰작약간]+.*)$/);
         const name = m ? m[1] : i;
         const amt  = m ? m[2] : '';
         return `<div class="ing-row"><span class="ing-name">${esc(name)}</span>${amt ? `<span class="ing-amount">${esc(amt)}</span>` : ''}</div>`;
       }).join('') + `</div>`;
-  } else { ingEl.style.display = 'none'; }
+  } else {
+    document.getElementById('ingList').innerHTML = `<span style="color:var(--text-3);font-size:13px">재료 없음</span>`;
+  }
 
-  /* Tips */
-  const tipEl = document.getElementById('tipsSection');
-  if (n.tips?.length) {
-    tipEl.style.display = 'block';
-    document.getElementById('tipsList').innerHTML = n.tips
-      .map(t => `<div class="tip-item">${esc(t)}</div>`).join('');
-  } else { tipEl.style.display = 'none'; }
+  /* Tips — always visible, with delete */
+  document.getElementById('tipsList').innerHTML = (n.tips?.length)
+    ? n.tips.map((t, i) => `<div class="tip-item"><span style="flex:1">${esc(t)}</span><button class="tip-del" onclick="deleteTip('${n.id}',${i})">×</button></div>`).join('')
+    : `<span style="color:var(--text-3);font-size:13px">+ 버튼으로 팁 추가</span>`;
 
   const det = document.getElementById('screen-detail');
   det.scrollTop = 0;
@@ -3225,6 +3186,25 @@ function onParaPhotoSelected(e) {
     });
   };
   reader.readAsDataURL(file);
+}
+
+function addTipInline() {
+  const text = prompt('Tip 추가:');
+  if (!text || !text.trim()) return;
+  const n = S.notes.find(x => x.id === S.activeNote);
+  if (!n) return;
+  if (!n.tips) n.tips = [];
+  n.tips.push(text.trim());
+  saveNoteToFirestore(n);
+  openNote(n.id);
+}
+
+function deleteTip(noteId, idx) {
+  const n = S.notes.find(x => x.id === noteId);
+  if (!n || !n.tips) return;
+  n.tips.splice(idx, 1);
+  saveNoteToFirestore(n);
+  openNote(noteId);
 }
 
 function delParaAttach(noteId, paraIdx, attachIdx) {
