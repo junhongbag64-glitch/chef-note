@@ -1,4 +1,4 @@
-const CACHE_NAME = 'chefnote-v4';
+const CACHE_NAME = 'chefnote-v5';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -34,6 +34,22 @@ self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
   if (url.hostname.includes('assemblyai') || url.hostname.includes('anthropic') || url.hostname.includes('workers.dev')) return;
 
+  // Network-first for HTML (always get fresh index.html)
+  const isHTML = url.pathname.endsWith('.html') || url.pathname === '/' || url.pathname.endsWith('/');
+  if (isHTML) {
+    event.respondWith(
+      fetch(event.request).then(response => {
+        if (response && response.status === 200) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+        }
+        return response;
+      }).catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // Cache-first for everything else (fonts, CDN assets)
   event.respondWith(
     caches.match(event.request).then(cached => {
       if (cached) return cached;

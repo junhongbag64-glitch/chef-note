@@ -1601,20 +1601,20 @@
 
   <!-- ═══════════════════ CROP MODAL ═══════════════════ -->
   <div id="cropModal" style="display:none;position:fixed;inset:0;z-index:900;background:#000;flex-direction:column">
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:#111">
-      <button onclick="cancelCrop()" style="background:none;border:none;color:#fff;font-size:15px;cursor:pointer">취소</button>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:#111;flex-shrink:0">
+      <button onclick="cancelCrop()" style="background:none;border:none;color:#fff;font-size:15px;cursor:pointer;padding:4px 8px">취소</button>
       <span style="color:#fff;font-size:14px;font-weight:600">사진 편집</span>
       <button onclick="confirmCrop()" style="background:#4E6035;border:none;color:#fff;font-size:15px;font-weight:600;padding:6px 16px;border-radius:20px;cursor:pointer">완료</button>
     </div>
-    <div style="flex:1;overflow:hidden;position:relative">
-      <img id="cropImg" style="max-width:100%;display:block">
+    <div id="cropContainer" style="flex:1;overflow:hidden;position:relative;width:100%;background:#000;min-height:0">
+      <img id="cropImg" style="display:block;max-width:100%;max-height:100%">
     </div>
-    <div style="display:flex;justify-content:center;gap:16px;padding:14px;background:#111">
-      <button onclick="_cropper&&_cropper.zoom(0.1)" style="background:#222;border:none;color:#fff;width:44px;height:44px;border-radius:50%;font-size:20px;cursor:pointer">+</button>
-      <button onclick="_cropper&&_cropper.zoom(-0.1)" style="background:#222;border:none;color:#fff;width:44px;height:44px;border-radius:50%;font-size:20px;cursor:pointer">−</button>
-      <button onclick="_cropper&&_cropper.rotate(-90)" style="background:#222;border:none;color:#fff;width:44px;height:44px;border-radius:50%;font-size:18px;cursor:pointer">↺</button>
-      <button onclick="_cropper&&_cropper.rotate(90)" style="background:#222;border:none;color:#fff;width:44px;height:44px;border-radius:50%;font-size:18px;cursor:pointer">↻</button>
-      <button onclick="_cropper&&_cropper.reset()" style="background:#222;border:none;color:#fff;width:44px;height:44px;border-radius:50%;font-size:12px;cursor:pointer">리셋</button>
+    <div style="display:flex;justify-content:center;align-items:center;gap:12px;padding:14px 16px;background:#111;flex-shrink:0">
+      <button onclick="_cropper&&_cropper.zoom(0.15)" style="background:#333;border:none;color:#fff;width:48px;height:48px;border-radius:50%;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center">+</button>
+      <button onclick="_cropper&&_cropper.zoom(-0.15)" style="background:#333;border:none;color:#fff;width:48px;height:48px;border-radius:50%;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center">−</button>
+      <button onclick="_cropper&&_cropper.rotate(-90)" style="background:#333;border:none;color:#fff;width:48px;height:48px;border-radius:50%;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center">↺</button>
+      <button onclick="_cropper&&_cropper.rotate(90)" style="background:#333;border:none;color:#fff;width:48px;height:48px;border-radius:50%;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center">↻</button>
+      <button onclick="_cropper&&_cropper.reset()" style="background:#333;border:none;color:#fff;width:48px;height:48px;border-radius:50%;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center">리셋</button>
     </div>
   </div>
 
@@ -2419,22 +2419,35 @@ let _cropper = null, _cropCallback = null;
 
 function openCropModal(dataUrl, callback) {
   _cropCallback = callback;
-  const modal = document.getElementById('cropModal');
-  const img   = document.getElementById('cropImg');
-  modal.style.display = 'flex';
-  img.src = dataUrl;
+  const modal     = document.getElementById('cropModal');
+  const container = document.getElementById('cropContainer');
+  const img       = document.getElementById('cropImg');
+
   if (_cropper) { _cropper.destroy(); _cropper = null; }
-  img.onload = () => {
-    _cropper = new Cropper(img, {
-      viewMode: 1,
-      autoCropArea: 1,
-      movable: true,
-      zoomable: true,
-      rotatable: true,
-      scalable: true,
-      responsive: true,
-    });
-  };
+  img.src = '';
+  modal.style.display = 'flex';
+
+  // Give browser one frame to lay out flex before measuring
+  requestAnimationFrame(() => {
+    const h = container.clientHeight || (window.innerHeight - 130);
+    container.style.height = h + 'px';
+    img.src = dataUrl;
+    img.onload = () => {
+      _cropper = new Cropper(img, {
+        viewMode: 1,
+        dragMode: 'move',
+        autoCropArea: 0.95,
+        movable: true,
+        zoomable: true,
+        rotatable: true,
+        scalable: true,
+        responsive: true,
+        restore: false,
+        checkCrossOrigin: false,
+        toggleDragModeOnDblclick: false,
+      });
+    };
+  });
 }
 
 function confirmCrop() {
