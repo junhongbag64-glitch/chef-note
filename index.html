@@ -1595,7 +1595,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db   = firebase.firestore();
-auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
+auth.setPersistence('local').catch(() => {});
 
 /* ───────────────── CONFIG ───────────────── */
 const PROXY = 'https://empty-cherry-ab7c.junhongbag64.workers.dev';
