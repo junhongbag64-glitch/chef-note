@@ -188,15 +188,15 @@
     .note-card:active { transform: scale(.97); box-shadow: 0 1px 6px rgba(0,0,0,.07); }
 
     .note-card-photo {
-      width: 100%;
-      position: relative;
+      width: 100%; height: 200px;
+      position: relative; overflow: hidden;
       background: #f0ede8;
     }
     .note-card-photo img {
-      width: 100%; height: auto; display: block;
+      width: 100%; height: 100%; object-fit: cover; display: block;
     }
     .note-card-photo-placeholder {
-      width: 100%; height: 170px;
+      width: 100%; height: 100%;
       display: flex; align-items: center; justify-content: center;
       font-size: 48px;
     }
@@ -1619,6 +1619,12 @@
   </div>
 
   <!-- ═══════════════════ CROP MODAL ═══════════════════ -->
+  <!-- ═══ PHOTO VIEWER ═══ -->
+  <div id="photoViewer" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.95);align-items:center;justify-content:center;flex-direction:column" onclick="closePhotoViewer()">
+    <button onclick="closePhotoViewer()" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,.15);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:20px;cursor:pointer;z-index:2">×</button>
+    <img id="photoViewerImg" src="" style="max-width:100%;max-height:100vh;object-fit:contain;display:block" onclick="event.stopPropagation()">
+  </div>
+
   <div id="cropModal" style="display:none;position:fixed;inset:0;z-index:900;background:#000;flex-direction:column">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:#111;flex-shrink:0">
       <button onclick="cancelCrop()" style="background:none;border:none;color:#fff;font-size:15px;cursor:pointer;padding:4px 8px">취소</button>
@@ -2717,7 +2723,7 @@ function openNote(id) {
         if (a.type === 'memo') {
           html += `<div class="para-memo-item"><span class="para-memo-text">✏️ ${esc(a.text)}</span><button class="para-attach-del" onclick="delParaAttach('${n.id}',${i},${ai})">×</button></div>`;
         } else if (a.type === 'photo') {
-          html += `<div class="para-photo-item"><img src="${a.dataUrl}" alt="사진" loading="lazy"><button class="para-photo-del" onclick="delParaAttach('${n.id}',${i},${ai})">×</button></div>`;
+          html += `<div class="para-photo-item"><img src="${a.dataUrl}" alt="사진" loading="lazy" onclick="openPhotoViewer('${a.dataUrl}')"><button class="para-photo-del" onclick="delParaAttach('${n.id}',${i},${ai})">×</button></div>`;
         }
       });
       html += `<button class="para-add-btn" onclick="toggleParaAdd(${i})">+ 메모·사진</button>`;
@@ -2733,7 +2739,7 @@ function openNote(id) {
   }
   if (n.media?.length) {
     n.media.forEach(m => {
-      if (m.type === 'photo') html += `<img src="${m.dataUrl}" alt="수업 사진" loading="lazy" style="width:100%;border-radius:var(--r-md);margin-bottom:12px">`;
+      if (m.type === 'photo') html += `<img src="${m.dataUrl}" alt="수업 사진" loading="lazy" onclick="openPhotoViewer('${m.dataUrl}')" style="cursor:pointer;width:100%;border-radius:var(--r-md);margin-bottom:12px">`;
     });
   }
   document.getElementById('dtContent').innerHTML = html;
@@ -3225,6 +3231,17 @@ function onParaPhotoSelected(e) {
 /* ═══════════════════════════════════════════
    EDIT MODE
 ═══════════════════════════════════════════ */
+/* ═══ PHOTO VIEWER ═══ */
+function openPhotoViewer(src) {
+  const v = document.getElementById('photoViewer');
+  document.getElementById('photoViewerImg').src = src;
+  v.style.display = 'flex';
+}
+function closePhotoViewer() {
+  document.getElementById('photoViewer').style.display = 'none';
+  document.getElementById('photoViewerImg').src = '';
+}
+
 function enterEditMode() {
   const n = S.notes.find(x => x.id === S.activeNote);
   if (!n) return;
