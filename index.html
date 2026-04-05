@@ -891,6 +891,13 @@
     /* Paragraph inline attachments */
     .para-block { margin-bottom: 4px; }
     .para-text { margin-bottom: 4px !important; }
+    /* 편집 모드에서만 표시 */
+    .para-add-btn, .para-attach-actions, .para-photo-del, .para-attach-del { display: none !important; }
+    .detail-editing .para-add-btn { display: inline-flex !important; }
+    .detail-editing .para-attach-actions.open { display: flex !important; }
+    .detail-editing .para-photo-del { display: flex !important; }
+    .detail-editing .para-attach-del { display: inline-flex !important; }
+
     .para-add-btn {
       display: flex; align-items: center; gap: 4px;
       background: none; border: 1px dashed var(--border-2);
@@ -2772,6 +2779,7 @@ function openNote(id) {
     : `<span style="color:var(--text-3);font-size:13px">+ 버튼으로 팁 추가</span>`;
 
   // Always reset to view mode on open
+  document.getElementById('screen-detail').classList.remove('detail-editing');
   document.getElementById('editBtn').style.display = 'flex';
   document.getElementById('editDoneBtn').style.display = 'none';
   document.getElementById('dtTitle').style.display = '';
@@ -3249,6 +3257,7 @@ function enterEditMode() {
   // Nav swap
   document.getElementById('editBtn').style.display = 'none';
   document.getElementById('editDoneBtn').style.display = 'flex';
+  document.getElementById('screen-detail').classList.add('detail-editing');
 
   // Title
   document.getElementById('dtTitle').style.display = 'none';
@@ -3292,6 +3301,7 @@ function saveEditMode() {
   // Nav swap back
   document.getElementById('editBtn').style.display = 'flex';
   document.getElementById('editDoneBtn').style.display = 'none';
+  document.getElementById('screen-detail').classList.remove('detail-editing');
 
   openNote(n.id); // re-render in view mode
 }
