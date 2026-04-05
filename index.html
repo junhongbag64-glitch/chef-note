@@ -710,7 +710,7 @@
     .detail-content p { padding:13px 0; border-bottom:1px dashed var(--border-1); margin:0; }
     .detail-content p:last-of-type { border-bottom:none; }
     .detail-content img {
-      width:100%; height:auto;
+      width:100%; max-height:200px; object-fit:cover;
       border-radius:var(--r-md); margin:8px 0 14px; display:block;
     }
 
@@ -922,7 +922,7 @@
       color: var(--text-3); font-size: 17px; line-height: 1; padding: 0; flex-shrink: 0;
     }
     .para-photo-item { margin-bottom: 10px; position: relative; }
-    .para-photo-item img { width:100%; height:auto; border-radius:var(--r-md); display:block; }
+    .para-photo-item img { width:100%; max-height:200px; object-fit:cover; border-radius:var(--r-md); display:block; }
     .para-photo-del {
       position: absolute; top: 6px; right: 6px;
       background: rgba(0,0,0,.5); border: none; cursor: pointer;
