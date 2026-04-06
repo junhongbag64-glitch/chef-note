@@ -3207,6 +3207,7 @@ function addParaMemo(noteId, paraIdx) {
   n.paragraphAttachments[paraIdx].push({ type: 'memo', text: text.trim() });
   saveNoteToFirestore(n);
   openNote(noteId);
+  if (_editMode) enterEditMode();
 }
 
 function addParaPhoto(noteId, paraIdx) {
@@ -3231,6 +3232,7 @@ function onParaPhotoSelected(e) {
       n.paragraphAttachments[paraIdx].push({ type: 'photo', dataUrl: cropped });
       saveNoteToFirestore(n);
       openNote(noteId);
+      if (_editMode) enterEditMode();
     });
   };
   reader.readAsDataURL(file);
@@ -3250,9 +3252,12 @@ function closePhotoViewer() {
   document.getElementById('photoViewerImg').src = '';
 }
 
+let _editMode = false;
+
 function enterEditMode() {
   const n = S.notes.find(x => x.id === S.activeNote);
   if (!n) return;
+  _editMode = true;
 
   // Nav swap
   document.getElementById('editBtn').style.display = 'none';
@@ -3264,23 +3269,20 @@ function enterEditMode() {
   const ti = document.getElementById('dtTitleInput');
   ti.value = n.title || '';
   ti.style.display = 'block';
-  ti.focus();
 
-  // Content
-  document.getElementById('dtContent').style.display = 'none';
+  // Content: keep rendered paragraphs visible (for photo/memo add),
+  // show textarea BELOW for text editing
+  document.getElementById('dtContent').style.display = '';
   const ce = document.getElementById('dtContentEdit');
   ce.value = n.content || '';
   ce.style.display = 'block';
-  ce.style.minHeight = Math.max(200, ce.scrollHeight) + 'px';
+  ce.style.minHeight = Math.max(160, ce.scrollHeight) + 'px';
 
   // Ingredients
   document.getElementById('ingList').style.display = 'none';
   const ie = document.getElementById('dtIngEdit');
   ie.value = (n.ingredients || []).join('\n');
   ie.style.display = 'block';
-
-  // Photo button always visible in edit mode
-  document.querySelector('.dt-photo-btn').style.opacity = '1';
 }
 
 function saveEditMode() {
@@ -3297,6 +3299,7 @@ function saveEditMode() {
 
   saveNoteToFirestore(n);
   showToast('✅ 저장됨');
+  _editMode = false;
 
   // Nav swap back
   document.getElementById('editBtn').style.display = 'flex';
@@ -3315,6 +3318,7 @@ function addTipInline() {
   n.tips.push(text.trim());
   saveNoteToFirestore(n);
   openNote(n.id);
+  if (_editMode) enterEditMode();
 }
 
 function deleteTip(noteId, idx) {
@@ -3323,6 +3327,7 @@ function deleteTip(noteId, idx) {
   n.tips.splice(idx, 1);
   saveNoteToFirestore(n);
   openNote(noteId);
+  if (_editMode) enterEditMode();
 }
 
 function delParaAttach(noteId, paraIdx, attachIdx) {
@@ -3331,6 +3336,7 @@ function delParaAttach(noteId, paraIdx, attachIdx) {
   n.paragraphAttachments[paraIdx].splice(attachIdx, 1);
   saveNoteToFirestore(n);
   openNote(noteId);
+  if (_editMode) enterEditMode();
 }
 </script>
 <input type="file" id="coverPhotoInput" accept="image/*" capture="environment" style="display:none" onchange="onCoverPhotoSelected(event)">
