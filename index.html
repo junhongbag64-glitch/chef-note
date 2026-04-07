@@ -1852,6 +1852,7 @@ document.addEventListener('DOMContentLoaded', () => {
       } catch {}
       await loadNotesFromFirestore();
       migrateNotes(); // fire-and-forget — don't block UI
+      migratePhotosToStorage(); // upload old base64 photos to Storage — fire-and-forget
       renderProfile();
       renderNotes();
       updateStats();
@@ -1960,6 +1961,41 @@ async function migrateNotes() {
     await Promise.all(toSave.map(n => saveNoteToFirestore(n)));
     saveToLocal();
   }
+}
+
+/* ─── One-time migration: upload old base64 photos to Firebase Storage ─── */
+async function migratePhotosToStorage() {
+  if (!S.currentUser) return;
+  // Find notes that still have local base64 photos (data: URLs)
+  const needsUpload = S.notes.filter(n => {
+    if (n.coverPhoto?.startsWith('data:')) return true;
+    if ((n.media||[]).some(m => m.type==='photo' && m.dataUrl?.startsWith('data:'))) return true;
+    if (Object.values(n.paragraphAttachments||{}).flat()
+        .some(a => a.type==='photo' && a.dataUrl?.startsWith('data:'))) return true;
+    return false;
+  });
+  if (!needsUpload.length) return;
+  console.log(`[PhotoMigration] ${needsUpload.length}개 노트 사진 Storage 업로드 중...`);
+  showToast(`☁️ 사진 ${needsUpload.length}개 노트 클라우드 동기화 중...`);
+  let done = 0;
+  for (const n of needsUpload) {
+    try {
+      await uploadLocalPhotos(n);   // replaces data: URLs with HTTPS URLs in-place
+      const fsNote = stripBinaryFields(n);
+      await db.collection('users').doc(S.currentUser.uid)
+        .collection('notes').doc(n.id).set({
+          ...fsNote,
+          createdAt: n.createdAt || firebase.firestore.FieldValue.serverTimestamp()
+        });
+      done++;
+    } catch(e) {
+      console.warn(`[PhotoMigration] ${n.id} 실패:`, e);
+    }
+  }
+  saveToLocal();
+  renderNotes(); // refresh cards to show updated photos
+  showToast(`✅ 사진 동기화 완료 (${done}개 노트)`);
+  console.log(`[PhotoMigration] 완료: ${done}/${needsUpload.length}`);
 }
 
 /* ─── Firebase Storage upload helpers ─── */
