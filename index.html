@@ -751,6 +751,25 @@
     }
     .dt-edit-area:focus { border-color: var(--accent); }
 
+    /* ── Mobile: stack photo + ingredients vertically ── */
+    @media (max-width: 599px) {
+      .dt-split {
+        grid-template-columns: 1fr;
+      }
+      .dt-photo {
+        border-right: none;
+        border-bottom: 1px solid var(--border-1);
+        max-height: 260px;
+        overflow: hidden;
+      }
+      .dt-photo img { width:100%; height:100%; object-fit:cover; }
+      .dt-ing {
+        max-height: 180px;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+    }
+
     /* ── Desktop ── */
     @media (min-width: 768px) {
       #screen-detail { overflow-y: auto; overflow-x: hidden; }
@@ -1723,6 +1742,7 @@ const S = {
   recorder:   null,
   stream:     null,
   wakeLock:   null,
+  audioKeepAlive: null,
   audioCtx:   null,
   media:      [],
   memos:      [],
@@ -2024,6 +2044,21 @@ async function startRecording() {
     /* WakeLock — keep screen alive */
     await grabWakeLock();
 
+    /* iOS: keep AudioContext alive every 4s when hidden */
+    S.audioKeepAlive = setInterval(async () => {
+      if (!S.recording) return;
+      try {
+        if (S.audioCtx?.state === 'suspended') await S.audioCtx.resume();
+      } catch {}
+      /* SW keepalive ping */
+      try {
+        if (navigator.serviceWorker?.controller) {
+          const mc = new MessageChannel();
+          navigator.serviceWorker.controller.postMessage('keepalive', [mc.port2]);
+        }
+      } catch {}
+    }, 4000);
+
     /* Page Visibility: if hidden, keep recorder running */
     document.addEventListener('visibilitychange', onVisChange);
 
@@ -2049,6 +2084,7 @@ async function stopRecording() {
 
   if (S.recorder && S.recorder.state !== 'inactive') S.recorder.stop();
   if (S.stream) { S.stream.getTracks().forEach(t => t.stop()); S.stream = null; }
+  clearInterval(S.audioKeepAlive); S.audioKeepAlive = null;
   releaseWakeLock();
   setRecUI(false);
 }
