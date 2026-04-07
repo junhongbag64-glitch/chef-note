@@ -2577,17 +2577,24 @@ function openCropModal(dataUrl, callback) {
     img.src = dataUrl;
     img.onload = () => {
       _cropper = new Cropper(img, {
-        viewMode: 1,
+        viewMode: 0,
         dragMode: 'move',
-        autoCropArea: 0.95,
+        autoCropArea: 0.8,
         movable: true,
         zoomable: true,
+        zoomOnWheel: true,
+        wheelZoomRatio: 0.08,
+        zoomOnTouch: true,
         rotatable: true,
         scalable: true,
         responsive: true,
         restore: false,
         checkCrossOrigin: false,
         toggleDragModeOnDblclick: false,
+        minContainerWidth: 0,
+        minContainerHeight: 0,
+        minCropBoxWidth: 40,
+        minCropBoxHeight: 40,
       });
     };
   });
