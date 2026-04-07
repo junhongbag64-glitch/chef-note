@@ -1699,8 +1699,8 @@
   </div>
 
   <!-- Hidden inputs -->
-  <input type="file" id="photoIn" accept="image/*" capture="environment" style="display:none" onchange="handlePhoto(this)">
-  <input type="file" id="videoIn" accept="video/*" capture="environment" style="display:none" onchange="handleVideo(this)">
+  <input type="file" id="photoIn" accept="image/*" style="display:none" onchange="handlePhoto(this)">
+  <input type="file" id="videoIn" accept="video/*" style="display:none" onchange="handleVideo(this)">
   <input type="file" id="audioIn" accept="audio/*,video/*" style="display:none" onchange="handleAudioUpload(this)">
 </div>
 
@@ -1954,8 +1954,7 @@ async function migratePhotosToStorage() {
     return false;
   });
   if (!needsSync.length) return;
-  console.log(`[PhotoMigration] ${needsSync.length}개 노트 사진 Firestore 동기화 중...`);
-  showToast(`☁️ 사진 ${needsSync.length}개 노트 동기화 중...`);
+  console.log(`[PhotoMigration] ${needsSync.length}개 노트 사진 동기화 중...`);
   let done = 0;
   for (const n of needsSync) {
     try {
@@ -1967,24 +1966,22 @@ async function migratePhotosToStorage() {
           createdAt: n.createdAt || firebase.firestore.FieldValue.serverTimestamp()
         });
       done++;
-      console.log(`[PhotoMigration] ${done}/${needsSync.length} 완료`);
     } catch(e) {
       console.warn(`[PhotoMigration] ${n.id} 실패:`, e);
     }
   }
   saveToLocal();
   renderNotes();
-  showToast(`✅ 사진 동기화 완료 (${done}개 노트)`);
   console.log(`[PhotoMigration] 완료: ${done}/${needsSync.length}`);
 }
 
 /* ─── Photo compression for Firestore storage ─── */
-// Compress to max 400px, quality 0.55 → ~10-20KB base64, well under Firestore 1MB limit
+// Compress to max 800px, quality 0.78 → ~30-60KB base64, well under Firestore 1MB limit
 function compressForFirestore(dataUrl) {
   return new Promise(resolve => {
     const img = new Image();
     img.onload = () => {
-      const MAX = 400;
+      const MAX = 800;
       let w = img.width, h = img.height;
       if (w > MAX || h > MAX) {
         if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
@@ -1993,7 +1990,7 @@ function compressForFirestore(dataUrl) {
       const c = document.createElement('canvas');
       c.width = w; c.height = h;
       c.getContext('2d').drawImage(img, 0, 0, w, h);
-      resolve(c.toDataURL('image/jpeg', 0.55));
+      resolve(c.toDataURL('image/jpeg', 0.78));
     };
     img.onerror = () => resolve(dataUrl); // fallback: keep original
     img.src = dataUrl;
@@ -3485,8 +3482,8 @@ function delParaAttach(noteId, paraIdx, attachIdx) {
   if (_editMode) enterEditMode();
 }
 </script>
-<input type="file" id="coverPhotoInput" accept="image/*" capture="environment" style="display:none" onchange="onCoverPhotoSelected(event)">
-  <input type="file" id="paraPhotoInput" accept="image/*" capture="environment" style="display:none" onchange="onParaPhotoSelected(event)">
+<input type="file" id="coverPhotoInput" accept="image/*" style="display:none" onchange="onCoverPhotoSelected(event)">
+  <input type="file" id="paraPhotoInput" accept="image/*" style="display:none" onchange="onParaPhotoSelected(event)">
 </body>
 </html>
 
