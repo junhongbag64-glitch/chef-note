@@ -1850,7 +1850,6 @@ document.addEventListener('DOMContentLoaded', () => {
       } catch {}
       await loadNotesFromFirestore();
       migrateNotes(); // fire-and-forget — don't block UI
-      migratePhotosToStorage(); // upload old base64 photos to Storage — fire-and-forget
       renderProfile();
       renderNotes();
       updateStats();
@@ -1943,37 +1942,6 @@ async function migrateNotes() {
   }
 }
 
-/* ─── One-time migration: compress & sync local photos to Firestore ─── */
-async function migratePhotosToStorage() {
-  if (!S.currentUser) return;
-  const needsSync = S.notes.filter(n => {
-    if (n.coverPhoto?.startsWith('data:')) return true;
-    if ((n.media||[]).some(m => m.type==='photo' && m.dataUrl?.startsWith('data:'))) return true;
-    if (Object.values(n.paragraphAttachments||{}).flat()
-        .some(a => a.type==='photo' && a.dataUrl?.startsWith('data:'))) return true;
-    return false;
-  });
-  if (!needsSync.length) return;
-  console.log(`[PhotoMigration] ${needsSync.length}개 노트 사진 동기화 중...`);
-  let done = 0;
-  for (const n of needsSync) {
-    try {
-      await compressNotePhotos(n);  // compress data: photos in-place
-      const fsNote = stripBinaryFields(n);
-      await db.collection('users').doc(S.currentUser.uid)
-        .collection('notes').doc(n.id).set({
-          ...fsNote,
-          createdAt: n.createdAt || firebase.firestore.FieldValue.serverTimestamp()
-        });
-      done++;
-    } catch(e) {
-      console.warn(`[PhotoMigration] ${n.id} 실패:`, e);
-    }
-  }
-  saveToLocal();
-  renderNotes();
-  console.log(`[PhotoMigration] 완료: ${done}/${needsSync.length}`);
-}
 
 /* ─── Photo compression for Firestore storage ─── */
 // Compress to max 800px, quality 0.78 → ~30-60KB base64, well under Firestore 1MB limit
