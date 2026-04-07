@@ -735,6 +735,23 @@
       border-radius: var(--r-md); margin: 8px 0 4px; display: block;
     }
 
+    /* ── Inline tip (extra tips distributed between steps) ── */
+    .inline-tip {
+      margin: 0 20px 0;
+      padding: 10px 14px 10px 16px;
+      border-left: 3px solid var(--accent);
+      background: var(--accent-lt);
+      border-radius: 0 var(--r-sm) var(--r-sm) 0;
+      font-family: var(--f-serif); font-style: italic;
+      font-size: 14px; line-height: 1.7; color: var(--text-1);
+    }
+    .inline-tip-label {
+      font-family: var(--f-sans); font-style: normal;
+      font-size: 9px; font-weight: 800; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--accent);
+      display: block; margin-bottom: 3px;
+    }
+
     /* ── Tips ── */
     .dt-tips { padding: 0 0 100px; }
     .tip-add-btn {
@@ -774,35 +791,26 @@
     @media (min-width: 768px) {
       /* Reset mobile order — grid handles layout */
       .dt-header, .dt-photo, .dt-ing-wrapper, #prepHeader, .dt-recipe, .dt-tips { order: unset; }
+      /* Single-scroll 2-col grid: both cols flow in the same scroll context */
       .detail-body {
         display: grid;
         grid-template-columns: 36fr 64fr;
-        grid-template-rows: 1fr;
         align-items: start;
         flex: 1;
       }
       .dt-col-left {
         display: flex; flex-direction: column;
         border-right: 1px solid var(--border-1);
-        position: sticky; top: 65px;
-        max-height: calc(100vh - 65px);
-        overflow-y: auto; -webkit-overflow-scrolling: touch;
+        /* NO sticky, NO separate scroll — everything scrolls as one page */
       }
-      .dt-col-right {
-        display: flex; flex-direction: column;
-      }
-      /* Left col: title */
+      .dt-col-right { display: flex; flex-direction: column; }
       .dt-header { padding: 32px 28px 24px 24px; border-bottom: 1px solid var(--border-1); }
       .detail-title { font-size: 36px; line-height: 1.1; }
-      /* Left col: ingredients */
-      .dt-ing-wrapper { flex: 1; }
       .nyt-sec { padding: 16px 24px 12px; }
-      .dt-ing { padding: 0 24px 20px; overflow-y: visible; max-height: none; }
-      /* Right col: photo */
+      .dt-ing { padding: 0 24px 24px; overflow-y: visible; max-height: none; }
       .dt-photo { border-bottom: 1px solid var(--border-1); }
-      /* Right col: steps */
       .dt-recipe .para-block { padding: 16px 24px; }
-      .dt-tips { padding: 0 0 60px; }
+      .dt-tips { padding: 0 0 80px; }
     }
 
 
@@ -2871,13 +2879,20 @@ function openNote(id) {
   document.getElementById('dtCatLabel').textContent = n.category || '카테고리 없음';
   catChip.style.display = n.category ? 'inline-flex' : 'inline-flex';
 
+  /* Distribute tips: first 10 go to TIP section, extras go inline between steps */
+  const allTips    = n.tips || [];
+  const mainTips   = allTips.slice(0, 10);
+  const extraTips  = allTips.slice(10);  // tips beyond 10
+
   /* Content — paragraph blocks with inline attachments */
   const pa = n.paragraphAttachments || {};
   let html = '';
   const isRecipe = n.type === 'recipe';
+  const steps = n.content ? n.content.split('\n').filter(p => p.trim()) : [];
+  const totalSteps = steps.length;
   if (n.content) {
     let stepNum = 0;
-    n.content.split('\n').filter(p=>p.trim()).forEach((p, i) => {
+    steps.forEach((p, i) => {
       const attachs = pa[i] || [];
       // Strip leading numbers like "1. " "① " for clean re-numbering
       const cleaned = p.replace(/^[\d①②③④⑤⑥⑦⑧⑨⑩]+[\.\)]\s*/, '').trim();
@@ -2898,6 +2913,17 @@ function openNote(id) {
       html += `<button class="para-attach-btn" onclick="addParaPhoto('${n.id}',${i})">📷 사진</button>`;
       html += `</div>`;
       html += `</div>`;
+
+      // Insert extra tips (beyond 10) evenly distributed between steps
+      if (extraTips.length > 0 && totalSteps > 0) {
+        extraTips.forEach((tip, ti) => {
+          // Place after step at position floor((ti+1) * totalSteps / (extraTips.length+1))
+          const insertAfter = Math.floor((ti + 1) * totalSteps / (extraTips.length + 1));
+          if (i === insertAfter - 1) {
+            html += `<div class="inline-tip"><span class="inline-tip-label">TIP</span>${esc(tip)}</div>`;
+          }
+        });
+      }
     });
   }
   if (n.memos?.length) {
@@ -2938,11 +2964,10 @@ function openNote(id) {
   /* PREPARATION header visibility */
   document.getElementById('prepHeader').style.display = n.content?.trim() ? '' : 'none';
 
-  /* Tips */
-  const hasTips = n.tips?.length;
+  /* Tips — show max 10 in TIP section; extras were distributed inline above */
   document.getElementById('tipsSection').style.display = '';
-  document.getElementById('tipsList').innerHTML = hasTips
-    ? n.tips.map((t, i) => `<div class="tip-item"><span style="flex:1">${esc(t)}</span><button class="tip-del" onclick="deleteTip('${n.id}',${i})">×</button></div>`).join('')
+  document.getElementById('tipsList').innerHTML = mainTips.length
+    ? mainTips.map((t, i) => `<div class="tip-item"><span style="flex:1">${esc(t)}</span><button class="tip-del" onclick="deleteTip('${n.id}',${i})">×</button></div>`).join('')
     : `<span style="color:var(--text-3);font-size:13px;padding:8px 20px;display:block">+ 버튼으로 팁 추가</span>`;
 
   // Always reset to view mode on open
