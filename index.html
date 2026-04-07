@@ -1932,7 +1932,7 @@ async function migrateNotes() {
   if (toSave.length) {
     console.log(`[Migration] ${toSave.length}개 노트 업데이트`);
     await Promise.all(toSave.map(n => saveNoteToFirestore(n)));
-    localStorage.setItem('cn_notes', JSON.stringify(S.notes));
+    saveToLocal();
   }
 }
 
@@ -1951,7 +1951,7 @@ async function saveNoteToFirestore(note) {
     console.warn('[Firestore] save failed, localStorage only:', e.message);
   }
   // Always cache full data (with binary) to localStorage
-  localStorage.setItem('cn_notes', JSON.stringify(S.notes));
+  saveToLocal();
 }
 
 function stripBinaryFields(note) {
@@ -1991,7 +1991,47 @@ async function saveProfileToFirestore() {
 
 // Legacy compat
 function loadStorage() {}
-function saveStorage() { localStorage.setItem('cn_notes', JSON.stringify(S.notes)); }
+function saveStorage() { saveToLocal(); }
+
+/* Safe localStorage — handles QuotaExceededError gracefully */
+function saveToLocal() {
+  try {
+    localStorage.setItem('cn_notes', JSON.stringify(S.notes));
+    return true;
+  } catch(e) {
+    if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED' || e.code === 22) {
+      console.warn('[Storage] Quota exceeded — stripping binary from older notes');
+      // Build a stripped version: keep binary only on the 3 most-recent notes
+      const sorted = [...S.notes].sort((a,b) => (b.timestamp||0)-(a.timestamp||0));
+      const keepBinary = new Set(sorted.slice(0,3).map(n=>n.id));
+      const lean = S.notes.map(n => {
+        if (keepBinary.has(n.id)) return n;
+        return {
+          ...n,
+          coverPhoto: null,
+          audioBlob: null,
+          media: (n.media||[]).map(m => ({type:m.type})),
+          paragraphAttachments: Object.fromEntries(
+            Object.entries(n.paragraphAttachments||{}).map(([k,arr]) => [
+              k, arr.map(a => a.type==='photo' ? {type:'photo'} : a)
+            ])
+          )
+        };
+      });
+      try {
+        localStorage.setItem('cn_notes', JSON.stringify(lean));
+        showToast('⚠️ 저장공간 부족 — 최근 3개 노트만 사진 유지');
+        return true;
+      } catch(e2) {
+        console.error('[Storage] Still over quota after stripping:', e2);
+        showToast('❌ 저장공간 부족');
+        return false;
+      }
+    }
+    console.error('[Storage] localStorage error:', e);
+    return false;
+  }
+}
 
 /* ───────────────── TAB NAV ───────────────── */
 function switchTab(tab) {
@@ -2520,8 +2560,8 @@ function openCropModal(dataUrl, callback) {
 
 function confirmCrop() {
   if (!_cropper) return;
-  const canvas = _cropper.getCroppedCanvas({ maxWidth: 1200, maxHeight: 1200 });
-  const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+  const canvas = _cropper.getCroppedCanvas({ maxWidth: 800, maxHeight: 800 });
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.72);
   const cb = _cropCallback;
   cancelCrop();
   if (cb) cb(dataUrl);
@@ -2918,7 +2958,7 @@ async function deleteCurrentNote() {
   const id = S.activeNote;
   S.notes = S.notes.filter(n => n.id !== id);
   await deleteNoteFromFirestore(id);
-  localStorage.setItem('cn_notes', JSON.stringify(S.notes));
+  saveToLocal();
   renderNotes();
   updateStats();
   showScreen('home');
