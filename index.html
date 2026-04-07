@@ -612,8 +612,18 @@
     }
     .detail-nav-r { display: flex; gap: 2px; }
 
-    /* ── Detail body ── */
-    .detail-body { display: flex; flex-direction: column; flex: 1; }
+    /* ── Detail body: mobile = stack cols; desktop = 2-col grid ── */
+    .detail-body {
+      display: flex; flex-direction: column; flex: 1;
+    }
+    /* Mobile: order = title(1) → photo(2) → ingredients(3) → steps(4) → tips(5) */
+    .dt-col-left, .dt-col-right { display: contents; }
+    .dt-header       { order: 1; }
+    .dt-photo        { order: 2; }
+    .dt-ing-wrapper  { order: 3; }
+    #prepHeader      { order: 4; }
+    .dt-recipe       { order: 4; }
+    .dt-tips         { order: 5; }
 
     .dt-header { padding: 20px 20px 0; }
 
@@ -760,19 +770,39 @@
     }
     .dt-edit-area:focus { border-color: var(--accent); }
 
-    /* ── Desktop: photo left | ingredients right ── */
-    @media (min-width: 600px) {
-      .dt-split {
-        display: grid; grid-template-columns: 55fr 45fr;
-        border-top: 1px solid var(--border-1);
-        border-bottom: 1px solid var(--border-1);
+    /* ── Desktop: left col (title+ingredients) | right col (photo+steps+tips) ── */
+    @media (min-width: 768px) {
+      /* Reset mobile order — grid handles layout */
+      .dt-header, .dt-photo, .dt-ing-wrapper, #prepHeader, .dt-recipe, .dt-tips { order: unset; }
+      .detail-body {
+        display: grid;
+        grid-template-columns: 36fr 64fr;
+        grid-template-rows: 1fr;
+        align-items: start;
+        flex: 1;
       }
-      .dt-photo { border-right: 1px solid var(--border-1); }
-      .dt-ing { padding: 20px 20px; overflow-y: auto; max-height: 420px; }
-      .detail-title { font-size: 34px; }
-      .nyt-sec { padding: 14px 20px 12px; }
-      .dt-recipe .para-block { padding: 16px 20px; }
-      .dt-tips { padding-bottom: 60px; }
+      .dt-col-left {
+        display: flex; flex-direction: column;
+        border-right: 1px solid var(--border-1);
+        position: sticky; top: 65px;
+        max-height: calc(100vh - 65px);
+        overflow-y: auto; -webkit-overflow-scrolling: touch;
+      }
+      .dt-col-right {
+        display: flex; flex-direction: column;
+      }
+      /* Left col: title */
+      .dt-header { padding: 32px 28px 24px 24px; border-bottom: 1px solid var(--border-1); }
+      .detail-title { font-size: 36px; line-height: 1.1; }
+      /* Left col: ingredients */
+      .dt-ing-wrapper { flex: 1; }
+      .nyt-sec { padding: 16px 24px 12px; }
+      .dt-ing { padding: 0 24px 20px; overflow-y: visible; max-height: none; }
+      /* Right col: photo */
+      .dt-photo { border-bottom: 1px solid var(--border-1); }
+      /* Right col: steps */
+      .dt-recipe .para-block { padding: 16px 24px; }
+      .dt-tips { padding: 0 0 60px; }
     }
 
 
@@ -1549,68 +1579,69 @@
     </div>
 
     <div class="detail-body">
-      <!-- 1. Title block -->
-      <div class="dt-header">
-        <button class="cat-chip" id="dtCatChip" onclick="changeCategoryPrompt()">
-          <span id="dtCatLabel">카테고리 없음</span>
-        </button>
-        <div class="detail-type-lbl" id="dtTypeLbl">레시피</div>
-        <div class="detail-title" id="dtTitle">노트 제목</div>
-        <input id="dtTitleInput" class="dt-title-input" type="text" placeholder="제목 입력">
-        <div class="detail-meta">
-          <div class="meta-chip">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
-              <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-            </svg>
-            <span id="dtDate">날짜</span>
-          </div>
-        </div>
-        <!-- hidden: still updated by JS but not shown -->
-        <span id="dtDur" style="display:none"></span>
-        <span id="dtClass" style="display:none"></span>
-        <div class="audio-player" id="audioSection" style="display:none">
-          <div class="audio-ctrl">
-            <button class="play-btn" onclick="togglePlay()">
-              <svg id="playIco" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            </button>
-            <div class="audio-progress" onclick="seekAudio(event)">
-              <div class="audio-fill" id="audioFill"></div>
-            </div>
-            <span class="audio-time" id="audioTime">0:00 / 0:00</span>
-          </div>
-        </div>
-      </div>
+      <!-- ── LEFT col (mobile: flows in order; desktop: title+ingredients) ── -->
+      <div class="dt-col-left">
 
-      <!-- 2. Photo (full width on mobile, left col on desktop) -->
-      <div class="dt-split">
+        <!-- 1. Title block -->
+        <div class="dt-header">
+          <button class="cat-chip" id="dtCatChip" onclick="changeCategoryPrompt()">
+            <span id="dtCatLabel">카테고리 없음</span>
+          </button>
+          <div class="detail-type-lbl" id="dtTypeLbl">레시피</div>
+          <div class="detail-title" id="dtTitle">노트 제목</div>
+          <input id="dtTitleInput" class="dt-title-input" type="text" placeholder="제목 입력">
+          <div class="detail-meta">
+            <span id="dtDate" class="meta-chip"></span>
+          </div>
+          <span id="dtDur" style="display:none"></span>
+          <span id="dtClass" style="display:none"></span>
+          <div class="audio-player" id="audioSection" style="display:none">
+            <div class="audio-ctrl">
+              <button class="play-btn" onclick="togglePlay()">
+                <svg id="playIco" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              </button>
+              <div class="audio-progress" onclick="seekAudio(event)">
+                <div class="audio-fill" id="audioFill"></div>
+              </div>
+              <span class="audio-time" id="audioTime">0:00 / 0:00</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Ingredients (below title on desktop left col) -->
+        <div class="dt-ing-wrapper">
+          <div class="nyt-sec" id="ingHeader">INGREDIENTS</div>
+          <div class="dt-ing" id="ingSection">
+            <div id="ingList"></div>
+            <textarea id="dtIngEdit" class="dt-edit-area" style="display:none" placeholder="재료를 한 줄에 하나씩&#10;예) 당근 50g&#10;소금 약간"></textarea>
+          </div>
+        </div>
+
+      </div><!-- /dt-col-left -->
+
+      <!-- ── RIGHT col (mobile: flows after left; desktop: photo+steps+tips) ── -->
+      <div class="dt-col-right">
+
+        <!-- 3. Photo -->
         <div class="dt-photo" id="noteHero">
           <div class="dt-photo-placeholder" id="noteHeroPlaceholder">🍳</div>
           <button class="dt-photo-btn" onclick="changeNoteCover()">📷 표지 변경</button>
         </div>
 
-        <!-- Ingredients -->
-        <div>
-          <div class="nyt-sec" id="ingHeader">INGREDIENTS</div>
-          <div class="dt-ing" id="ingSection">
-            <div id="ingList"><span style="color:var(--text-3);font-size:13px">재료 없음</span></div>
-            <textarea id="dtIngEdit" class="dt-edit-area" style="display:none" placeholder="재료를 한 줄에 하나씩&#10;예) 당근 50g&#10;소금 약간"></textarea>
-          </div>
+        <!-- 4. Preparation steps -->
+        <div class="nyt-sec" id="prepHeader">PREPARATION</div>
+        <div class="dt-recipe">
+          <div class="detail-content" id="dtContent"></div>
+          <textarea id="dtContentEdit" class="dt-edit-area" style="display:none" placeholder="레시피 내용을 입력하세요..."></textarea>
         </div>
-      </div>
 
-      <!-- 3. Preparation steps -->
-      <div class="nyt-sec" id="prepHeader">PREPARATION</div>
-      <div class="dt-recipe">
-        <div class="detail-content" id="dtContent"></div>
-        <textarea id="dtContentEdit" class="dt-edit-area" style="display:none" placeholder="레시피 내용을 입력하세요..."></textarea>
-      </div>
+        <!-- 5. Tips -->
+        <div class="dt-tips" id="tipsSection">
+          <div class="nyt-sec nyt-sec-tip">TIP <button class="tip-add-btn" onclick="addTipInline()">+</button></div>
+          <div id="tipsList"></div>
+        </div>
 
-      <!-- 4. Tips -->
-      <div class="dt-tips" id="tipsSection">
-        <div class="nyt-sec nyt-sec-tip">TIP <button class="tip-add-btn" onclick="addTipInline()">+</button></div>
-        <div id="tipsList"></div>
-      </div>
+      </div><!-- /dt-col-right -->
     </div>
   </div>
 
