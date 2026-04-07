@@ -653,83 +653,92 @@
     .audio-fill { height:100%; background:var(--accent); border-radius:2px; width:0%; transition:width .1s linear; }
     .audio-time { font-size:11px; color:var(--text-3); white-space:nowrap; font-variant-numeric:tabular-nums; }
 
-    /* ── Split: photo | ingredients ── */
-    .dt-split {
-      display: grid; grid-template-columns: 1fr 1fr;
-      margin: 20px 0 0;
-      border-top: 1px solid var(--border-1);
-      border-bottom: 1px solid var(--border-1);
-      align-items: start;
+    /* ── Detail title: larger, more dramatic ── */
+    .detail-title {
+      font-family: var(--f-display);
+      font-size: 30px; font-weight: 700; color: var(--text-1);
+      letter-spacing: -.5px; line-height: 1.15; margin-bottom: 10px;
     }
-    .dt-photo {
-      position: relative;
-      border-right: 1px solid var(--border-1);
-      background: #f0ede8;
+    .detail-meta {
+      display: flex; flex-wrap: wrap; align-items: center;
+      padding-bottom: 0; border-bottom: none;
     }
-    .dt-photo img { width:100%; height:auto; display:block; }
+    .meta-chip { display: flex; align-items: center; gap: 4px; font-size: 13px; color: var(--text-2); font-weight: 400; font-family: var(--f-sans); }
+    .meta-chip svg { display: none; }
+
+    /* ── NYT section header ── */
+    .nyt-sec {
+      font-family: var(--f-sans); font-size: 10px; font-weight: 800;
+      letter-spacing: 2.5px; text-transform: uppercase; color: var(--text-1);
+      padding: 14px 20px 12px; margin-top: 28px;
+      border-top: 2px solid var(--text-1);
+    }
+    .nyt-sec-tip { margin-top: 24px; }
+
+    /* ── Photo: full width, natural ratio ── */
+    .dt-split { display: block; margin: 20px 0 0; }
+    .dt-photo { position: relative; background: #f0ede8; }
+    .dt-photo img { width: 100%; height: auto; display: block; }
     .dt-photo-placeholder {
-      width:100%; height:200px;
-      display:flex; align-items:center; justify-content:center;
-      font-size:52px;
+      width: 100%; height: 220px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 52px;
       background: linear-gradient(135deg,#eef3e8,#c8ddb0);
     }
     .dt-photo-btn {
-      position:absolute; bottom:8px; right:8px;
-      background:rgba(0,0,0,.4); border:none; color:#fff;
-      font-size:10px; padding:4px 10px; border-radius:20px; cursor:pointer;
-      backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
-    }
-    .dt-ing {
-      overflow-y: auto; -webkit-overflow-scrolling: touch;
-      padding: 12px 14px;
+      position: absolute; bottom: 10px; right: 10px;
+      background: rgba(0,0,0,.42); border: none; color: #fff;
+      font-size: 10px; padding: 4px 10px; border-radius: 20px; cursor: pointer;
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
     }
 
-    /* ── Section headers ── */
-    .block-title {
-      display:flex; align-items:center; gap:8px;
-      font-size:9px; font-weight:800; letter-spacing:2.5px; text-transform:uppercase;
-      color:var(--text-3); margin-bottom: 10px;
-    }
-    .block-title::after { content:''; flex:1; height:1px; background:var(--border-1); }
-
-    /* ── Ingredients rows ── */
-    .ing-list { }
+    /* ── Ingredients ── */
+    .dt-ing { padding: 4px 20px 0; overflow-y: visible; }
+    .block-title { display: none; } /* replaced by .nyt-sec */
     .ing-row {
-      display:flex; justify-content:space-between; align-items:baseline;
-      padding: 8px 0; border-bottom: 1px solid var(--border-1); gap:8px;
+      display: flex; justify-content: space-between; align-items: baseline;
+      padding: 10px 0; border-bottom: 1px solid var(--border-1); gap: 8px;
     }
-    .ing-name { font-size:13px; color:var(--text-1); font-weight:500; }
-    .ing-amount { font-size:12px; color:var(--text-3); white-space:nowrap; }
+    .ing-row:last-child { border-bottom: none; }
+    .ing-name { font-family: var(--f-serif); font-size: 15px; color: var(--text-1); font-weight: 400; }
+    .ing-amount { font-family: var(--f-serif); font-size: 14px; color: var(--text-2); white-space: nowrap; }
 
-    /* ── Recipe content ── */
-    .dt-recipe { padding: 0 20px; }
-    .detail-content {
-      font-size: 14.5px; line-height: 1.9; color: var(--text-1);
-      padding: 8px 0;
+    /* ── Preparation steps ── */
+    .dt-recipe { padding: 0; }
+    .detail-content { padding: 0; }
+    .para-block {
+      padding: 14px 20px 14px;
+      border-bottom: 1px solid var(--border-1);
     }
-    .detail-content p { padding:13px 0; border-bottom:1px dashed var(--border-1); margin:0; }
-    .detail-content p:last-of-type { border-bottom:none; }
+    .para-block:last-child { border-bottom: none; }
+    .step-label {
+      font-family: var(--f-sans); font-weight: 700; font-size: 13px;
+      color: var(--text-1); margin-bottom: 5px;
+    }
+    .para-text {
+      font-family: var(--f-serif); font-size: 15px; line-height: 1.8;
+      color: var(--text-1); margin: 0 !important; padding: 0 !important;
+      border: none !important;
+    }
     .detail-content img {
-      max-height:200px; width:auto; max-width:100%;
-      border-radius:var(--r-md); margin:8px 0 14px; display:block;
+      width: 100%; height: auto; max-height: 280px; object-fit: cover;
+      border-radius: var(--r-md); margin: 8px 0 4px; display: block;
     }
 
     /* ── Tips ── */
-    .dt-tips { padding: 0 20px 80px; }
+    .dt-tips { padding: 0 0 100px; }
     .tip-add-btn {
-      margin-left: 4px; background:var(--accent); border:none; color:#fff;
-      width:18px; height:18px; border-radius:50%; font-size:14px; line-height:1;
-      cursor:pointer; display:inline-flex; align-items:center; justify-content:center;
-      flex-shrink:0;
+      margin-left: 6px; background: var(--accent); border: none; color: #fff;
+      width: 18px; height: 18px; border-radius: 50%; font-size: 14px; line-height: 1;
+      cursor: pointer; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
     .tip-item {
-      display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
-      padding:12px 14px 12px 16px;
-      border-left:3px solid var(--accent); background:var(--accent-lt);
-      border-radius:0 var(--r-sm) var(--r-sm) 0; margin-top:8px;
-      font-size:13.5px; color:var(--text-1); line-height:1.7;
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
+      padding: 12px 20px;
+      font-family: var(--f-serif); font-style: italic;
+      font-size: 15px; color: var(--text-1); line-height: 1.75;
     }
-    .tip-del { background:none; border:none; cursor:pointer; color:var(--text-3); font-size:16px; padding:0; flex-shrink:0; }
+    .tip-del { background: none; border: none; cursor: pointer; color: var(--text-3); font-size: 18px; padding: 0; flex-shrink: 0; line-height: 1; }
 
     /* ── Edit mode fields ── */
     .dt-title-input {
@@ -751,29 +760,19 @@
     }
     .dt-edit-area:focus { border-color: var(--accent); }
 
-    /* ── Mobile: stack photo + ingredients vertically ── */
-    @media (max-width: 599px) {
+    /* ── Desktop: photo left | ingredients right ── */
+    @media (min-width: 600px) {
       .dt-split {
-        grid-template-columns: 1fr;
-      }
-      .dt-photo {
-        border-right: none;
+        display: grid; grid-template-columns: 55fr 45fr;
+        border-top: 1px solid var(--border-1);
         border-bottom: 1px solid var(--border-1);
-        max-height: 260px;
-        overflow: hidden;
       }
-      .dt-photo img { width:100%; height:100%; object-fit:cover; }
-      .dt-ing {
-        max-height: 180px;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-      }
-    }
-
-    /* ── Desktop ── */
-    @media (min-width: 768px) {
-      #screen-detail { overflow-y: auto; overflow-x: hidden; }
-      .detail-title { font-size: 30px; }
+      .dt-photo { border-right: 1px solid var(--border-1); }
+      .dt-ing { padding: 20px 20px; overflow-y: auto; max-height: 420px; }
+      .detail-title { font-size: 34px; }
+      .nyt-sec { padding: 14px 20px 12px; }
+      .dt-recipe .para-block { padding: 16px 20px; }
+      .dt-tips { padding-bottom: 60px; }
     }
 
 
@@ -1583,20 +1582,25 @@
         </div>
       </div>
 
-      <!-- 2. Split: Photo (left) | Ingredients (right) -->
+      <!-- 2. Photo (full width on mobile, left col on desktop) -->
       <div class="dt-split">
         <div class="dt-photo" id="noteHero">
           <div class="dt-photo-placeholder" id="noteHeroPlaceholder">🍳</div>
           <button class="dt-photo-btn" onclick="changeNoteCover()">📷 표지 변경</button>
         </div>
-        <div class="dt-ing" id="ingSection">
-          <div class="block-title">재료</div>
-          <div id="ingList"><span style="color:var(--text-3);font-size:13px">재료 없음</span></div>
-          <textarea id="dtIngEdit" class="dt-edit-area" style="display:none" placeholder="재료를 한 줄에 하나씩&#10;예) 당근 50g&#10;소금 약간"></textarea>
+
+        <!-- Ingredients -->
+        <div>
+          <div class="nyt-sec" id="ingHeader">INGREDIENTS</div>
+          <div class="dt-ing" id="ingSection">
+            <div id="ingList"><span style="color:var(--text-3);font-size:13px">재료 없음</span></div>
+            <textarea id="dtIngEdit" class="dt-edit-area" style="display:none" placeholder="재료를 한 줄에 하나씩&#10;예) 당근 50g&#10;소금 약간"></textarea>
+          </div>
         </div>
       </div>
 
-      <!-- 3. Recipe content -->
+      <!-- 3. Preparation steps -->
+      <div class="nyt-sec" id="prepHeader">PREPARATION</div>
       <div class="dt-recipe">
         <div class="detail-content" id="dtContent"></div>
         <textarea id="dtContentEdit" class="dt-edit-area" style="display:none" placeholder="레시피 내용을 입력하세요..."></textarea>
@@ -1604,7 +1608,7 @@
 
       <!-- 4. Tips -->
       <div class="dt-tips" id="tipsSection">
-        <div class="block-title">Tip <button class="tip-add-btn" onclick="addTipInline()">+</button></div>
+        <div class="nyt-sec nyt-sec-tip">TIP <button class="tip-add-btn" onclick="addTipInline()">+</button></div>
         <div id="tipsList"></div>
       </div>
     </div>
@@ -2839,11 +2843,17 @@ function openNote(id) {
   /* Content — paragraph blocks with inline attachments */
   const pa = n.paragraphAttachments || {};
   let html = '';
+  const isRecipe = n.type === 'recipe';
   if (n.content) {
+    let stepNum = 0;
     n.content.split('\n').filter(p=>p.trim()).forEach((p, i) => {
       const attachs = pa[i] || [];
+      // Strip leading numbers like "1. " "① " for clean re-numbering
+      const cleaned = p.replace(/^[\d①②③④⑤⑥⑦⑧⑨⑩]+[\.\)]\s*/, '').trim();
+      if (isRecipe) stepNum++;
       html += `<div class="para-block" data-idx="${i}">`;
-      html += `<p class="para-text">${esc(p)}</p>`;
+      if (isRecipe) html += `<div class="step-label">Step ${stepNum}</div>`;
+      html += `<p class="para-text">${esc(cleaned)}</p>`;
       attachs.forEach((a, ai) => {
         if (a.type === 'memo') {
           html += `<div class="para-memo-item"><span class="para-memo-text">✏️ ${esc(a.text)}</span><button class="para-attach-del" onclick="delParaAttach('${n.id}',${i},${ai})">×</button></div>`;
@@ -2878,23 +2888,31 @@ function openNote(id) {
     audioSec.style.display = 'none';
   }
 
-  /* Ingredients — always visible in split */
+  /* Ingredients */
+  const ingHeader = document.getElementById('ingHeader');
   if (n.ingredients?.length) {
-    document.getElementById('ingList').innerHTML = `<div class="ing-list">` +
-      n.ingredients.map(i => {
-        const m = i.match(/^(.+?)\s+([\d\/\.]+\s*[a-zA-Zg㎖ml스큰작약간]+.*)$/);
-        const name = m ? m[1] : i;
+    ingHeader.style.display = '';
+    document.getElementById('ingList').innerHTML =
+      n.ingredients.map(item => {
+        const m = item.match(/^(.+?)\s+([\d\/\.]+\s*[a-zA-Zg㎖ml스큰작약간]+.*)$/);
+        const name = m ? m[1] : item;
         const amt  = m ? m[2] : '';
         return `<div class="ing-row"><span class="ing-name">${esc(name)}</span>${amt ? `<span class="ing-amount">${esc(amt)}</span>` : ''}</div>`;
-      }).join('') + `</div>`;
+      }).join('');
   } else {
-    document.getElementById('ingList').innerHTML = `<span style="color:var(--text-3);font-size:13px">재료 없음</span>`;
+    ingHeader.style.display = 'none';
+    document.getElementById('ingList').innerHTML = '';
   }
 
-  /* Tips — always visible, with delete */
-  document.getElementById('tipsList').innerHTML = (n.tips?.length)
+  /* PREPARATION header visibility */
+  document.getElementById('prepHeader').style.display = n.content?.trim() ? '' : 'none';
+
+  /* Tips */
+  const hasTips = n.tips?.length;
+  document.getElementById('tipsSection').style.display = '';
+  document.getElementById('tipsList').innerHTML = hasTips
     ? n.tips.map((t, i) => `<div class="tip-item"><span style="flex:1">${esc(t)}</span><button class="tip-del" onclick="deleteTip('${n.id}',${i})">×</button></div>`).join('')
-    : `<span style="color:var(--text-3);font-size:13px">+ 버튼으로 팁 추가</span>`;
+    : `<span style="color:var(--text-3);font-size:13px;padding:8px 20px;display:block">+ 버튼으로 팁 추가</span>`;
 
   // Always reset to view mode on open
   document.getElementById('screen-detail').classList.remove('detail-editing');
