@@ -16,7 +16,6 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 
   <style>
     /* ═══════════════════════════════════════════
@@ -1722,9 +1721,8 @@ const firebaseConfig = {
   measurementId: "G-T4J7T6XMV4"
 };
 firebase.initializeApp(firebaseConfig);
-const auth    = firebase.auth();
-const db      = firebase.firestore();
-const storage = firebase.storage();
+const auth = firebase.auth();
+const db   = firebase.firestore();
 auth.setPersistence('local').catch(() => {});
 
 /* ───────────────── CONFIG ───────────────── */
@@ -1890,36 +1888,18 @@ async function loadNotesFromFirestore() {
     const localMap = Object.fromEntries(localNotes.map(n => [n.id, n]));
     S.notes = fsNotes.map(n => {
       const local = localMap[n.id] || {};
-      // For photos: prefer whichever source has actual image data (url or dataUrl)
-      const pickCover = () => {
-        if (n.coverPhoto) return n.coverPhoto;          // Firestore has Storage URL
-        if (local.coverPhoto) return local.coverPhoto;  // localStorage has dataUrl
-        return null;
-      };
-      const pickMedia = () => {
-        const fm = n.media || [];
-        const lm = local.media || [];
-        const fHas = fm.some(m => m.dataUrl);
-        const lHas = lm.some(m => m.dataUrl);
-        if (fHas) return fm;   // Firestore has Storage URLs → use them
-        if (lHas) return lm;   // localStorage has local dataUrls → use them
-        return fm.length ? fm : lm;
-      };
-      const pickPA = () => {
-        const fp = n.paragraphAttachments || {};
-        const lp = local.paragraphAttachments || {};
-        const fHas = Object.values(fp).flat().some(a => a.type==='photo' && a.dataUrl);
-        const lHas = Object.values(lp).flat().some(a => a.type==='photo' && a.dataUrl);
-        if (fHas) return fp;
-        if (lHas) return lp;
-        return Object.keys(fp).length ? fp : lp;
-      };
+      // Prefer whichever source has actual photo data
+      const hasCover  = src => src?.startsWith('data:') || src?.startsWith('http');
+      const hasImgUrl = arr => (arr||[]).some(m => m.type==='photo' && m.dataUrl);
+      const hasPAImg  = pa  => Object.values(pa||{}).flat().some(a => a.type==='photo' && a.dataUrl);
       return {
         ...n,
         audioBlob:            local.audioBlob || null,
-        coverPhoto:           pickCover(),
-        media:                pickMedia(),
-        paragraphAttachments: pickPA(),
+        coverPhoto:           hasCover(n.coverPhoto)  ? n.coverPhoto  : (local.coverPhoto || null),
+        media:                hasImgUrl(n.media)       ? n.media       : (local.media || n.media || []),
+        paragraphAttachments: hasPAImg(n.paragraphAttachments)
+                                ? n.paragraphAttachments
+                                : (local.paragraphAttachments || n.paragraphAttachments || {}),
       };
     });
     const fsIds = new Set(fsNotes.map(n => n.id));
@@ -1963,24 +1943,23 @@ async function migrateNotes() {
   }
 }
 
-/* ─── One-time migration: upload old base64 photos to Firebase Storage ─── */
+/* ─── One-time migration: compress & sync local photos to Firestore ─── */
 async function migratePhotosToStorage() {
   if (!S.currentUser) return;
-  // Find notes that still have local base64 photos (data: URLs)
-  const needsUpload = S.notes.filter(n => {
+  const needsSync = S.notes.filter(n => {
     if (n.coverPhoto?.startsWith('data:')) return true;
     if ((n.media||[]).some(m => m.type==='photo' && m.dataUrl?.startsWith('data:'))) return true;
     if (Object.values(n.paragraphAttachments||{}).flat()
         .some(a => a.type==='photo' && a.dataUrl?.startsWith('data:'))) return true;
     return false;
   });
-  if (!needsUpload.length) return;
-  console.log(`[PhotoMigration] ${needsUpload.length}개 노트 사진 Storage 업로드 중...`);
-  showToast(`☁️ 사진 ${needsUpload.length}개 노트 클라우드 동기화 중...`);
+  if (!needsSync.length) return;
+  console.log(`[PhotoMigration] ${needsSync.length}개 노트 사진 Firestore 동기화 중...`);
+  showToast(`☁️ 사진 ${needsSync.length}개 노트 동기화 중...`);
   let done = 0;
-  for (const n of needsUpload) {
+  for (const n of needsSync) {
     try {
-      await uploadLocalPhotos(n);   // replaces data: URLs with HTTPS URLs in-place
+      await compressNotePhotos(n);  // compress data: photos in-place
       const fsNote = stripBinaryFields(n);
       await db.collection('users').doc(S.currentUser.uid)
         .collection('notes').doc(n.id).set({
@@ -1988,78 +1967,62 @@ async function migratePhotosToStorage() {
           createdAt: n.createdAt || firebase.firestore.FieldValue.serverTimestamp()
         });
       done++;
+      console.log(`[PhotoMigration] ${done}/${needsSync.length} 완료`);
     } catch(e) {
       console.warn(`[PhotoMigration] ${n.id} 실패:`, e);
     }
   }
   saveToLocal();
-  renderNotes(); // refresh cards to show updated photos
+  renderNotes();
   showToast(`✅ 사진 동기화 완료 (${done}개 노트)`);
-  console.log(`[PhotoMigration] 완료: ${done}/${needsUpload.length}`);
+  console.log(`[PhotoMigration] 완료: ${done}/${needsSync.length}`);
 }
 
-/* ─── Firebase Storage upload helpers ─── */
-
-// Upload a base64 dataUrl to Firebase Storage; returns download URL
-async function uploadDataUrlToStorage(dataUrl, storagePath) {
-  const ref = storage.ref(storagePath);
-  const res = await fetch(dataUrl);
-  const blob = await res.blob();
-  await ref.put(blob, { contentType: 'image/jpeg' });
-  return await ref.getDownloadURL();
-}
-
-// For a note, upload any local (data:) photos to Storage and replace with HTTPS URLs
-async function uploadLocalPhotos(note) {
-  if (!S.currentUser) return;
-  const uid = S.currentUser.uid;
-  const nid = note.id;
-  const uploads = [];
-
-  // Cover photo
-  if (note.coverPhoto?.startsWith('data:')) {
-    uploads.push(
-      uploadDataUrlToStorage(note.coverPhoto, `photos/${uid}/${nid}/cover.jpg`)
-        .then(url => { note.coverPhoto = url; })
-        .catch(e => console.warn('[Storage] cover upload failed:', e))
-    );
-  }
-
-  // Media array
-  (note.media || []).forEach((m, i) => {
-    if (m.type === 'photo' && m.dataUrl?.startsWith('data:')) {
-      uploads.push(
-        uploadDataUrlToStorage(m.dataUrl, `photos/${uid}/${nid}/media_${i}.jpg`)
-          .then(url => { m.dataUrl = url; })
-          .catch(e => console.warn('[Storage] media upload failed:', e))
-      );
-    }
-  });
-
-  // Paragraph attachments
-  Object.entries(note.paragraphAttachments || {}).forEach(([paraIdx, items]) => {
-    items.forEach((a, ai) => {
-      if (a.type === 'photo' && a.dataUrl?.startsWith('data:')) {
-        uploads.push(
-          uploadDataUrlToStorage(a.dataUrl, `photos/${uid}/${nid}/para_${paraIdx}_${ai}.jpg`)
-            .then(url => { a.dataUrl = url; })
-            .catch(e => console.warn('[Storage] para photo upload failed:', e))
-        );
+/* ─── Photo compression for Firestore storage ─── */
+// Compress to max 400px, quality 0.55 → ~10-20KB base64, well under Firestore 1MB limit
+function compressForFirestore(dataUrl) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 400;
+      let w = img.width, h = img.height;
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+        else       { w = Math.round(w * MAX / h); h = MAX; }
       }
-    });
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(c.toDataURL('image/jpeg', 0.55));
+    };
+    img.onerror = () => resolve(dataUrl); // fallback: keep original
+    img.src = dataUrl;
   });
+}
 
-  if (uploads.length) await Promise.all(uploads);
+// Compress all photos in a note to Firestore-safe size
+async function compressNotePhotos(note) {
+  if (note.coverPhoto?.startsWith('data:')) {
+    note.coverPhoto = await compressForFirestore(note.coverPhoto);
+  }
+  for (const m of (note.media || [])) {
+    if (m.type === 'photo' && m.dataUrl?.startsWith('data:')) {
+      m.dataUrl = await compressForFirestore(m.dataUrl);
+    }
+  }
+  for (const items of Object.values(note.paragraphAttachments || {})) {
+    for (const a of items) {
+      if (a.type === 'photo' && a.dataUrl?.startsWith('data:')) {
+        a.dataUrl = await compressForFirestore(a.dataUrl);
+      }
+    }
+  }
 }
 
 async function saveNoteToFirestore(note) {
   if (!S.currentUser) return;
-
-  // Upload any local base64 photos to Firebase Storage first
-  // (replaces data: URLs with HTTPS storage URLs in-place)
-  try { await uploadLocalPhotos(note); } catch(e) { console.warn('[Storage] upload error:', e); }
-
-  // Strip remaining large binary (audio) — Storage URLs are kept
+  // Compress photos in-place before saving (safe for Firestore)
+  await compressNotePhotos(note);
   const fsNote = stripBinaryFields(note);
   const docData = {
     ...fsNote,
@@ -2071,38 +2034,13 @@ async function saveNoteToFirestore(note) {
   } catch(e) {
     console.warn('[Firestore] save failed, localStorage only:', e.message);
   }
-  // Cache to localStorage (now contains HTTPS URLs instead of heavy base64)
   saveToLocal();
 }
 
 function stripBinaryFields(note) {
   const n = { ...note };
-  // Remove audio blob only (still binary, can't go to Firestore)
+  // Only strip audio blob — photos are now compressed small enough for Firestore
   delete n.audioBlob;
-  // coverPhoto: keep if it's a Storage URL, strip if still local base64
-  if (n.coverPhoto?.startsWith('data:')) delete n.coverPhoto;
-  // media: keep Storage URLs, strip local dataUrls
-  if (n.media?.length) {
-    n.media = n.media.map(m => {
-      if (m.type === 'photo') {
-        return m.dataUrl?.startsWith('http') ? { type: 'photo', dataUrl: m.dataUrl } : { type: 'photo' };
-      }
-      return { type: m.type };
-    });
-  }
-  // paragraphAttachments: keep Storage URLs, strip local dataUrls
-  if (n.paragraphAttachments) {
-    const pa = {};
-    Object.entries(n.paragraphAttachments).forEach(([idx, items]) => {
-      pa[idx] = items.map(a => {
-        if (a.type === 'photo') {
-          return a.dataUrl?.startsWith('http') ? { type: 'photo', dataUrl: a.dataUrl } : { type: 'photo' };
-        }
-        return a;
-      });
-    });
-    n.paragraphAttachments = pa;
-  }
   return n;
 }
 
