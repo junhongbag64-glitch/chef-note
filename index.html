@@ -3072,115 +3072,147 @@ function printNote() {
   const n = S.notes.find(x => x.id === S.activeNote);
   if (!n) return;
 
-  const cover = n.coverPhoto || n.media?.[0]?.dataUrl || null;
-  const allTips = n.tips || [];
-  const mainTips = allTips.slice(0, 10);
-  const extraTips = allTips.slice(10);
-  const steps = (n.content || '').split('\n').filter(p => p.trim());
+  const cover    = n.coverPhoto || n.media?.[0]?.dataUrl || null;
+  const allTips  = n.tips || [];
+  const mainTips = allTips.slice(0, 8);
+  const extraTips = allTips.slice(8);
+  const steps    = (n.content || '').split('\n').filter(p => p.trim());
   const totalSteps = steps.length;
+  const pa = n.paragraphAttachments || {};
 
-  // Build ingredients HTML
+  /* ── Ingredients ── */
   const ingHtml = (n.ingredients || []).map(item => {
-    const m = item.match(/^(.+?)\s+([\d\/\.]+\s*[a-zA-Zg㎖ml스큰작약간]+.*)$/);
+    const m = item.match(/^(.+?)\s+([\d\/\.]+\s*[\S]*)$/);
     const name = m ? m[1] : item;
     const amt  = m ? m[2] : '';
-    return `<div class="p-ing">${esc(name)}${amt ? `<span class="p-amt">${esc(amt)}</span>` : ''}</div>`;
+    return `<div class="pi">${esc(name)}${amt ? `<span>${esc(amt)}</span>` : ''}</div>`;
   }).join('');
 
-  // Build steps HTML with inline extra tips
-  const pa = n.paragraphAttachments || {};
+  /* ── Steps with inline extra tips + step photos ── */
   let stepsHtml = '';
   steps.forEach((p, i) => {
-    const cleaned = p.replace(/^[\d①②③④⑤⑥⑦⑧⑨⑩]+[\.\)]\s*/, '').trim();
-    const stepNum = i + 1;
-    const attachs = pa[i] || [];
-    const photoAttachs = attachs.filter(a => a.type === 'photo' && a.dataUrl);
-    stepsHtml += `<div class="p-step">
-      <div class="p-step-num">Step ${stepNum}</div>
-      <div class="p-step-text">${esc(cleaned)}</div>`;
-    photoAttachs.forEach(a => {
-      stepsHtml += `<img class="p-step-photo" src="${a.dataUrl}" alt="">`;
-    });
+    const clean = p.replace(/^[\d①-⑩]+[\.\)]\s*/, '').trim();
+    const photos = (pa[i] || []).filter(a => a.type === 'photo' && a.dataUrl);
+    stepsHtml += `<div class="ps"><span class="psn">Step ${i+1}</span>${esc(clean)}`;
+    photos.forEach(a => { stepsHtml += `<img class="psimg" src="${a.dataUrl}" alt="">`; });
     stepsHtml += `</div>`;
-    // Insert extra tips
-    if (extraTips.length > 0 && totalSteps > 0) {
+    if (extraTips.length && totalSteps) {
       extraTips.forEach((tip, ti) => {
-        const insertAfter = Math.floor((ti + 1) * totalSteps / (extraTips.length + 1));
-        if (i === insertAfter - 1) {
-          stepsHtml += `<div class="p-inline-tip"><b>TIP</b> ${esc(tip)}</div>`;
-        }
+        if (i === Math.floor((ti+1)*totalSteps/(extraTips.length+1)) - 1)
+          stepsHtml += `<div class="ptip"><b>TIP</b>${esc(tip)}</div>`;
       });
     }
   });
 
-  // Build tips HTML
-  const tipsHtml = mainTips.map(t => `<div class="p-tip">${esc(t)}</div>`).join('');
+  /* ── Tips ── */
+  const tipsHtml = mainTips.map(t => `<p class="ptmain">${esc(t)}</p>`).join('');
+
+  /* ── Photo header style ── */
+  const headerStyle = cover
+    ? `background:url('${cover}') center/cover no-repeat`
+    : `background:linear-gradient(135deg,#2d4a1e 0%,#4E6035 50%,#6E8A4E 100%)`;
 
   const html = `<!DOCTYPE html><html lang="ko"><head>
-  <meta charset="UTF-8">
-  <title>${esc(n.title || '레시피')}</title>
-  <style>
-    @page { size: A4; margin: 1.8cm 2cm; }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Georgia', 'Noto Serif KR', serif; color: #111; font-size: 11pt; line-height: 1.6; }
+<meta charset="UTF-8"><title>${esc(n.title||'레시피')}</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Noto+Serif+KR:wght@400;600&display=swap" rel="stylesheet">
+<style>
+@page { size: A4 portrait; margin: 0; }
+*  { box-sizing:border-box; margin:0; padding:0; }
+html,body { width:210mm; height:297mm; overflow:hidden; background:#fff; }
+body { font-family:'Noto Serif KR','Georgia',serif; color:#111; }
 
-    /* ── Header: title left, photo right ── */
-    .p-header { display: grid; grid-template-columns: 1fr auto; gap: 20px; align-items: start; padding-bottom: 14px; border-bottom: 2px solid #111; margin-bottom: 0; }
-    .p-title { font-size: 22pt; font-weight: 700; line-height: 1.15; margin-bottom: 5px; }
-    .p-date { font-size: 9pt; color: #666; font-family: Arial, sans-serif; }
-    .p-cover { width: 180px; height: 130px; object-fit: cover; border-radius: 4px; display: block; }
-    .p-cover-placeholder { width: 180px; height: 130px; background: #eee; border-radius: 4px; }
+/* ── Page wrapper ── */
+#page { width:210mm; height:297mm; display:flex; flex-direction:column; overflow:hidden; }
 
-    /* ── Two column: ingredients | steps ── */
-    .p-body { display: grid; grid-template-columns: 35% 65%; gap: 0; margin-top: 0; }
-    .p-col-left { padding: 14px 20px 14px 0; border-right: 1px solid #ddd; }
-    .p-col-right { padding: 14px 0 14px 20px; }
+/* ── HEADER: full-width photo banner (27% height) ── */
+.ph { height:27%; flex-shrink:0; position:relative; ${headerStyle}; }
+.ph-overlay { position:absolute; inset:0;
+  background:linear-gradient(to bottom, rgba(0,0,0,.08) 0%, rgba(0,0,0,.65) 100%);
+  display:flex; flex-direction:column; justify-content:flex-end;
+  padding:0 28px 20px; }
+.ph-label { font-family:Arial,sans-serif; font-size:7pt; font-weight:800;
+  letter-spacing:3px; text-transform:uppercase; color:rgba(255,255,255,.75);
+  margin-bottom:6px; }
+.ph-title { font-family:'Playfair Display','Georgia',serif; font-size:26pt;
+  font-weight:700; color:#fff; line-height:1.1; }
+.ph-date { font-family:Arial,sans-serif; font-size:8.5pt; color:rgba(255,255,255,.7);
+  margin-top:5px; letter-spacing:.5px; }
 
-    /* ── Section headers ── */
-    .p-sec { font-family: Arial, sans-serif; font-size: 7.5pt; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; border-top: 2px solid #111; padding-top: 8px; margin-bottom: 10px; }
+/* ── BODY: 2-col grid (73% height) ── */
+.pb { flex:1; display:grid; grid-template-columns:36% 64%; overflow:hidden; }
 
-    /* ── Ingredients ── */
-    .p-ing { display: flex; justify-content: space-between; font-size: 10pt; padding: 4px 0; border-bottom: 1px solid #e8e8e8; gap: 8px; }
-    .p-amt { color: #555; white-space: nowrap; }
+/* ── Left col: Ingredients ── */
+.pl { padding:18px 18px 14px 24px; border-right:1px solid #d8d8d8;
+      overflow:hidden; display:flex; flex-direction:column; }
+.sec { font-family:Arial,sans-serif; font-size:7pt; font-weight:800;
+  letter-spacing:2.5px; text-transform:uppercase; color:#111;
+  border-top:2px solid #111; padding-top:7px; margin-bottom:10px; flex-shrink:0; }
+.pi { display:flex; justify-content:space-between; align-items:baseline;
+  font-size:9pt; padding:4.5px 0; border-bottom:1px solid #ebebeb;
+  font-family:'Noto Serif KR','Georgia',serif; gap:6px; }
+.pi span { color:#555; white-space:nowrap; font-size:8.5pt; }
 
-    /* ── Steps ── */
-    .p-step { margin-bottom: 12px; page-break-inside: avoid; }
-    .p-step-num { font-family: Arial, sans-serif; font-weight: 700; font-size: 9pt; margin-bottom: 2px; }
-    .p-step-text { font-size: 10.5pt; line-height: 1.65; }
-    .p-step-photo { max-width: 100%; max-height: 100px; object-fit: cover; border-radius: 4px; margin: 5px 0; display: block; }
+/* ── Right col: Preparation ── */
+.pr { padding:18px 24px 14px 20px; overflow:hidden;
+      display:flex; flex-direction:column; }
+.ps { margin-bottom:9px; font-size:9.5pt; line-height:1.6;
+      font-family:'Noto Serif KR','Georgia',serif; }
+.psn { font-family:Arial,sans-serif; font-weight:700; font-size:7.5pt;
+  display:block; margin-bottom:1px; letter-spacing:.5px; }
+.psimg { max-width:100%; max-height:55px; object-fit:cover;
+  border-radius:3px; margin:4px 0 2px; display:block; }
+.ptip { border-left:2.5px solid #4E6035; padding:4px 8px;
+  font-style:italic; font-size:8.5pt; color:#333; margin:6px 0; }
+.ptip b { font-style:normal; font-size:6.5pt; letter-spacing:1.5px;
+  text-transform:uppercase; color:#4E6035; display:block; margin-bottom:1px; }
 
-    /* ── Inline tip ── */
-    .p-inline-tip { border-left: 3px solid #4E6035; padding: 5px 8px; font-style: italic; font-size: 9.5pt; margin: 8px 0; color: #333; page-break-inside: avoid; }
-    .p-inline-tip b { font-style: normal; font-size: 7pt; letter-spacing: 1.5px; text-transform: uppercase; color: #4E6035; display: block; }
+/* ── Tips section: spans both cols at bottom ── */
+.ptrow { grid-column:1/-1; border-top:1px solid #d8d8d8;
+  padding:10px 24px 0; overflow:hidden; }
+.ptmain { font-style:italic; font-size:9pt; color:#333; line-height:1.55;
+  padding-left:10px; border-left:2.5px solid #4E6035; margin-bottom:5px; }
+</style></head><body>
+<div id="page">
 
-    /* ── Tips ── */
-    .p-tips-section { grid-column: 1 / -1; border-top: 1px solid #ddd; padding-top: 10px; margin-top: 4px; }
-    .p-tip { font-style: italic; font-size: 10pt; padding: 5px 0 5px 12px; border-left: 3px solid #4E6035; margin-bottom: 6px; page-break-inside: avoid; }
-  </style>
-</head><body>
-  <div class="p-header">
-    <div>
-      <div class="p-title">${esc(n.title || '제목 없음')}</div>
-      <div class="p-date">${esc(n.date || '')}</div>
+  <div class="ph">
+    <div class="ph-overlay">
+      <div class="ph-label">${esc(n.type==='recipe'?'레시피':'수업 노트')}</div>
+      <div class="ph-title">${esc(n.title||'제목 없음')}</div>
+      <div class="ph-date">${esc(n.date||'')}</div>
     </div>
-    ${cover ? `<img class="p-cover" src="${cover}" alt="">` : '<div class="p-cover-placeholder"></div>'}
   </div>
 
-  <div class="p-body">
-    <div class="p-col-left">
-      ${ingHtml ? `<div class="p-sec">Ingredients</div>${ingHtml}` : ''}
+  <div class="pb">
+    <div class="pl">
+      ${ingHtml ? `<div class="sec">Ingredients</div>${ingHtml}` : ''}
     </div>
-    <div class="p-col-right">
-      ${stepsHtml ? `<div class="p-sec">Preparation</div>${stepsHtml}` : ''}
+    <div class="pr">
+      ${stepsHtml ? `<div class="sec">Preparation</div>${stepsHtml}` : ''}
     </div>
-    ${tipsHtml ? `<div class="p-tips-section"><div class="p-sec">Tip</div>${tipsHtml}</div>` : ''}
+    ${tipsHtml ? `<div class="ptrow"><div class="sec" style="margin-top:0">Tip</div>${tipsHtml}</div>` : ''}
   </div>
+
+</div>
+<script>
+// Auto-scale to guarantee exactly 1 page
+window.onload = function() {
+  var page = document.getElementById('page');
+  var W = page.scrollWidth, H = page.scrollHeight;
+  var maxW = 794, maxH = 1123; // A4 at 96dpi
+  var scale = Math.min(1, maxW/W, maxH/H);
+  if (scale < 0.999) {
+    page.style.transformOrigin = 'top left';
+    page.style.transform = 'scale(' + scale + ')';
+    page.style.zoom = scale; // Chrome/Edge
+  }
+  setTimeout(function(){ window.focus(); window.print(); }, 400);
+};
+<\/script>
 </body></html>`;
 
   const win = window.open('', '_blank');
   win.document.write(html);
   win.document.close();
-  win.onload = () => { win.focus(); win.print(); };
 }
 
 function shareNote() {
