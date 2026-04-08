@@ -3107,11 +3107,6 @@ function printNote() {
   /* ── Tips ── */
   const tipsHtml = mainTips.map(t => `<p class="ptmain">${esc(t)}</p>`).join('');
 
-  /* ── Photo header style ── */
-  const headerStyle = cover
-    ? `background:url('${cover}') center/cover no-repeat`
-    : `background:linear-gradient(135deg,#2d4a1e 0%,#4E6035 50%,#6E8A4E 100%)`;
-
   const html = `<!DOCTYPE html><html lang="ko"><head>
 <meta charset="UTF-8"><title>${esc(n.title||'레시피')}</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Noto+Serif+KR:wght@400;600&display=swap" rel="stylesheet">
@@ -3124,62 +3119,61 @@ body { font-family:'Noto Serif KR','Georgia',serif; color:#111; }
 /* ── Page wrapper ── */
 #page { width:210mm; height:297mm; display:flex; flex-direction:column; overflow:hidden; }
 
-/* ── HEADER: full-width photo banner (27% height) ── */
-.ph { height:27%; flex-shrink:0; position:relative; ${headerStyle}; }
-.ph-overlay { position:absolute; inset:0;
-  background:linear-gradient(to bottom, rgba(0,0,0,.08) 0%, rgba(0,0,0,.65) 100%);
-  display:flex; flex-direction:column; justify-content:flex-end;
-  padding:0 28px 20px; }
-.ph-label { font-family:Arial,sans-serif; font-size:7pt; font-weight:800;
-  letter-spacing:3px; text-transform:uppercase; color:rgba(255,255,255,.75);
-  margin-bottom:6px; }
-.ph-title { font-family:'Playfair Display','Georgia',serif; font-size:26pt;
-  font-weight:700; color:#fff; line-height:1.1; }
-.ph-date { font-family:Arial,sans-serif; font-size:8.5pt; color:rgba(255,255,255,.7);
+/* ── PHOTO BANNER (24% height, only if photo exists) ── */
+.ph { flex-shrink:0; overflow:hidden; }
+.ph img { width:100%; height:100%; object-fit:cover; display:block; }
+
+/* ── TITLE BLOCK (white bg, black text) ── */
+.pt { flex-shrink:0; padding:14px 28px 12px; border-bottom:2px solid #111; background:#fff; }
+.pt-label { font-family:Arial,sans-serif; font-size:7pt; font-weight:800;
+  letter-spacing:3px; text-transform:uppercase; color:#888; margin-bottom:5px; }
+.pt-title { font-family:'Playfair Display','Georgia',serif; font-size:26pt;
+  font-weight:700; color:#111; line-height:1.1; }
+.pt-date { font-family:Arial,sans-serif; font-size:8.5pt; color:#666;
   margin-top:5px; letter-spacing:.5px; }
 
-/* ── BODY: 2-col grid (73% height) ── */
-.pb { flex:1; display:grid; grid-template-columns:36% 64%; overflow:hidden; }
+/* ── BODY: 2-col grid ── */
+.pb { flex:1; display:grid; grid-template-columns:36% 64%; overflow:hidden; min-height:0; }
 
 /* ── Left col: Ingredients ── */
-.pl { padding:18px 18px 14px 24px; border-right:1px solid #d8d8d8;
+.pl { padding:16px 16px 12px 24px; border-right:1px solid #d8d8d8;
       overflow:hidden; display:flex; flex-direction:column; }
 .sec { font-family:Arial,sans-serif; font-size:7pt; font-weight:800;
   letter-spacing:2.5px; text-transform:uppercase; color:#111;
   border-top:2px solid #111; padding-top:7px; margin-bottom:10px; flex-shrink:0; }
 .pi { display:flex; justify-content:space-between; align-items:baseline;
-  font-size:9pt; padding:4.5px 0; border-bottom:1px solid #ebebeb;
+  font-size:9pt; padding:4px 0; border-bottom:1px solid #ebebeb;
   font-family:'Noto Serif KR','Georgia',serif; gap:6px; }
 .pi span { color:#555; white-space:nowrap; font-size:8.5pt; }
 
 /* ── Right col: Preparation ── */
-.pr { padding:18px 24px 14px 20px; overflow:hidden;
+.pr { padding:16px 24px 12px 18px; overflow:hidden;
       display:flex; flex-direction:column; }
-.ps { margin-bottom:9px; font-size:9.5pt; line-height:1.6;
+.ps { margin-bottom:8px; font-size:9pt; line-height:1.6;
       font-family:'Noto Serif KR','Georgia',serif; }
-.psn { font-family:Arial,sans-serif; font-weight:700; font-size:7.5pt;
-  display:block; margin-bottom:1px; letter-spacing:.5px; }
-.psimg { max-width:100%; max-height:55px; object-fit:cover;
+.psn { font-family:Arial,sans-serif; font-weight:700; font-size:7pt;
+  display:block; margin-bottom:1px; letter-spacing:.5px; color:#111; }
+.psimg { max-width:100%; max-height:50px; object-fit:cover;
   border-radius:3px; margin:4px 0 2px; display:block; }
 .ptip { border-left:2.5px solid #4E6035; padding:4px 8px;
-  font-style:italic; font-size:8.5pt; color:#333; margin:6px 0; }
+  font-style:italic; font-size:8.5pt; color:#333; margin:5px 0; }
 .ptip b { font-style:normal; font-size:6.5pt; letter-spacing:1.5px;
   text-transform:uppercase; color:#4E6035; display:block; margin-bottom:1px; }
 
 /* ── Tips section: spans both cols at bottom ── */
 .ptrow { grid-column:1/-1; border-top:1px solid #d8d8d8;
-  padding:10px 24px 0; overflow:hidden; }
+  padding:8px 24px 0; overflow:hidden; }
 .ptmain { font-style:italic; font-size:9pt; color:#333; line-height:1.55;
   padding-left:10px; border-left:2.5px solid #4E6035; margin-bottom:5px; }
 </style></head><body>
 <div id="page">
 
-  <div class="ph">
-    <div class="ph-overlay">
-      <div class="ph-label">${esc(n.type==='recipe'?'레시피':'수업 노트')}</div>
-      <div class="ph-title">${esc(n.title||'제목 없음')}</div>
-      <div class="ph-date">${esc(n.date||'')}</div>
-    </div>
+  ${cover ? `<div class="ph" style="height:24%"><img src="${cover}" alt="대표사진"></div>` : ''}
+
+  <div class="pt">
+    <div class="pt-label">${esc(n.type==='recipe'?'레시피':'수업 노트')}</div>
+    <div class="pt-title">${esc(n.title||'제목 없음')}</div>
+    <div class="pt-date">${esc(n.date||'')}</div>
   </div>
 
   <div class="pb">
