@@ -3116,12 +3116,12 @@ function printNote() {
 html,body { width:210mm; height:297mm; overflow:hidden; background:#fff; }
 body { font-family:'Noto Serif KR','Georgia',serif; color:#111; }
 
-/* ── Page wrapper ── */
-#page { width:210mm; height:297mm; display:flex; flex-direction:column; overflow:hidden; }
+/* ── Page wrapper: natural height, will be scaled ── */
+#page { width:210mm; display:flex; flex-direction:column; }
 
-/* ── PHOTO BANNER (24% height, only if photo exists) ── */
-.ph { flex-shrink:0; overflow:hidden; }
-.ph img { width:100%; height:100%; object-fit:cover; display:block; }
+/* ── PHOTO BANNER ── */
+.ph { flex-shrink:0; max-height:220px; overflow:hidden; }
+.ph img { width:100%; height:220px; object-fit:cover; display:block; }
 
 /* ── TITLE BLOCK (white bg, black text) ── */
 .pt { flex-shrink:0; padding:14px 28px 12px; border-bottom:2px solid #111; background:#fff; }
@@ -3132,23 +3132,21 @@ body { font-family:'Noto Serif KR','Georgia',serif; color:#111; }
 .pt-date { font-family:Arial,sans-serif; font-size:8.5pt; color:#666;
   margin-top:5px; letter-spacing:.5px; }
 
-/* ── BODY: 2-col grid ── */
-.pb { flex:1; display:grid; grid-template-columns:36% 64%; overflow:hidden; min-height:0; }
+/* ── BODY: 2-col grid, natural height ── */
+.pb { display:grid; grid-template-columns:36% 64%; }
 
 /* ── Left col: Ingredients ── */
-.pl { padding:16px 16px 12px 24px; border-right:1px solid #d8d8d8;
-      overflow:hidden; display:flex; flex-direction:column; }
+.pl { padding:16px 16px 16px 24px; border-right:1px solid #d8d8d8; }
 .sec { font-family:Arial,sans-serif; font-size:7pt; font-weight:800;
   letter-spacing:2.5px; text-transform:uppercase; color:#111;
-  border-top:2px solid #111; padding-top:7px; margin-bottom:10px; flex-shrink:0; }
+  border-top:2px solid #111; padding-top:7px; margin-bottom:10px; }
 .pi { display:flex; justify-content:space-between; align-items:baseline;
   font-size:9pt; padding:4px 0; border-bottom:1px solid #ebebeb;
   font-family:'Noto Serif KR','Georgia',serif; gap:6px; }
 .pi span { color:#555; white-space:nowrap; font-size:8.5pt; }
 
 /* ── Right col: Preparation ── */
-.pr { padding:16px 24px 12px 18px; overflow:hidden;
-      display:flex; flex-direction:column; }
+.pr { padding:16px 24px 16px 18px; }
 .ps { margin-bottom:8px; font-size:9pt; line-height:1.6;
       font-family:'Noto Serif KR','Georgia',serif; }
 .psn { font-family:Arial,sans-serif; font-weight:700; font-size:7pt;
@@ -3161,8 +3159,7 @@ body { font-family:'Noto Serif KR','Georgia',serif; color:#111; }
   text-transform:uppercase; color:#4E6035; display:block; margin-bottom:1px; }
 
 /* ── Tips section: spans both cols at bottom ── */
-.ptrow { grid-column:1/-1; border-top:1px solid #d8d8d8;
-  padding:8px 24px 0; overflow:hidden; }
+.ptrow { grid-column:1/-1; border-top:1px solid #d8d8d8; padding:10px 24px 16px; }
 .ptmain { font-style:italic; font-size:9pt; color:#333; line-height:1.55;
   padding-left:10px; border-left:2.5px solid #4E6035; margin-bottom:5px; }
 </style></head><body>
@@ -3188,18 +3185,22 @@ body { font-family:'Noto Serif KR','Georgia',serif; color:#111; }
 
 </div>
 <script>
-// Auto-scale to guarantee exactly 1 page
 window.onload = function() {
   var page = document.getElementById('page');
-  var W = page.scrollWidth, H = page.scrollHeight;
-  var maxW = 794, maxH = 1123; // A4 at 96dpi
-  var scale = Math.min(1, maxW/W, maxH/H);
+  // A4 at 96dpi = 794 x 1123px
+  var A4H = 1123, A4W = 794;
+  var h = page.offsetHeight, w = page.offsetWidth;
+  var scale = Math.min(1, A4W / w, A4H / h);
   if (scale < 0.999) {
+    // shrink to fit — transforms from top-left corner
     page.style.transformOrigin = 'top left';
     page.style.transform = 'scale(' + scale + ')';
-    page.style.zoom = scale; // Chrome/Edge
+    // also set body height so print knows the page is 1 sheet
+    document.body.style.width  = A4W + 'px';
+    document.body.style.height = A4H + 'px';
+    document.body.style.overflow = 'hidden';
   }
-  setTimeout(function(){ window.focus(); window.print(); }, 400);
+  setTimeout(function(){ window.focus(); window.print(); }, 500);
 };
 <\/script>
 </body></html>`;
