@@ -1568,6 +1568,13 @@
           </svg>
         </button>
         <button class="icon-btn" id="editDoneBtn" onclick="saveEditMode()" style="display:none;color:var(--accent);font-size:13px;font-weight:700">완료</button>
+        <button class="icon-btn" onclick="printNote()" title="인쇄">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <polyline points="6 9 6 2 18 2 18 9"/>
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+            <rect x="6" y="14" width="12" height="8"/>
+          </svg>
+        </button>
         <button class="icon-btn" onclick="shareNote()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
             <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
@@ -1689,9 +1696,11 @@
 
   <!-- ═══════════════════ CROP MODAL ═══════════════════ -->
   <!-- ═══ PHOTO VIEWER ═══ -->
-  <div id="photoViewer" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.95);align-items:center;justify-content:center;flex-direction:column" onclick="closePhotoViewer()">
+  <div id="photoViewer" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.95);overflow:hidden;touch-action:none" onclick="closePhotoViewer()">
     <button onclick="closePhotoViewer()" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,.15);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:20px;cursor:pointer;z-index:2">×</button>
-    <img id="photoViewerImg" src="" style="max-width:100%;max-height:100vh;object-fit:contain;display:block" onclick="event.stopPropagation()">
+    <div id="photoViewerWrap" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;overflow:auto;-webkit-overflow-scrolling:touch" onclick="event.stopPropagation()">
+      <img id="photoViewerImg" src="" style="display:block;max-width:100%;max-height:100%;object-fit:contain;transform-origin:center;transition:transform .2s;cursor:zoom-in;user-select:none" onclick="pvToggleZoom(event)">
+    </div>
   </div>
 
   <div id="cropModal" style="display:none;position:fixed;inset:0;z-index:900;background:#000;flex-direction:column">
@@ -3059,6 +3068,121 @@ function updateFavIcon(on) {
   ico.style.stroke = on ? '#C0392B' : 'currentColor';
 }
 
+function printNote() {
+  const n = S.notes.find(x => x.id === S.activeNote);
+  if (!n) return;
+
+  const cover = n.coverPhoto || n.media?.[0]?.dataUrl || null;
+  const allTips = n.tips || [];
+  const mainTips = allTips.slice(0, 10);
+  const extraTips = allTips.slice(10);
+  const steps = (n.content || '').split('\n').filter(p => p.trim());
+  const totalSteps = steps.length;
+
+  // Build ingredients HTML
+  const ingHtml = (n.ingredients || []).map(item => {
+    const m = item.match(/^(.+?)\s+([\d\/\.]+\s*[a-zA-Zg㎖ml스큰작약간]+.*)$/);
+    const name = m ? m[1] : item;
+    const amt  = m ? m[2] : '';
+    return `<div class="p-ing">${esc(name)}${amt ? `<span class="p-amt">${esc(amt)}</span>` : ''}</div>`;
+  }).join('');
+
+  // Build steps HTML with inline extra tips
+  const pa = n.paragraphAttachments || {};
+  let stepsHtml = '';
+  steps.forEach((p, i) => {
+    const cleaned = p.replace(/^[\d①②③④⑤⑥⑦⑧⑨⑩]+[\.\)]\s*/, '').trim();
+    const stepNum = i + 1;
+    const attachs = pa[i] || [];
+    const photoAttachs = attachs.filter(a => a.type === 'photo' && a.dataUrl);
+    stepsHtml += `<div class="p-step">
+      <div class="p-step-num">Step ${stepNum}</div>
+      <div class="p-step-text">${esc(cleaned)}</div>`;
+    photoAttachs.forEach(a => {
+      stepsHtml += `<img class="p-step-photo" src="${a.dataUrl}" alt="">`;
+    });
+    stepsHtml += `</div>`;
+    // Insert extra tips
+    if (extraTips.length > 0 && totalSteps > 0) {
+      extraTips.forEach((tip, ti) => {
+        const insertAfter = Math.floor((ti + 1) * totalSteps / (extraTips.length + 1));
+        if (i === insertAfter - 1) {
+          stepsHtml += `<div class="p-inline-tip"><b>TIP</b> ${esc(tip)}</div>`;
+        }
+      });
+    }
+  });
+
+  // Build tips HTML
+  const tipsHtml = mainTips.map(t => `<div class="p-tip">${esc(t)}</div>`).join('');
+
+  const html = `<!DOCTYPE html><html lang="ko"><head>
+  <meta charset="UTF-8">
+  <title>${esc(n.title || '레시피')}</title>
+  <style>
+    @page { size: A4; margin: 1.8cm 2cm; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Georgia', 'Noto Serif KR', serif; color: #111; font-size: 11pt; line-height: 1.6; }
+
+    /* ── Header: title left, photo right ── */
+    .p-header { display: grid; grid-template-columns: 1fr auto; gap: 20px; align-items: start; padding-bottom: 14px; border-bottom: 2px solid #111; margin-bottom: 0; }
+    .p-title { font-size: 22pt; font-weight: 700; line-height: 1.15; margin-bottom: 5px; }
+    .p-date { font-size: 9pt; color: #666; font-family: Arial, sans-serif; }
+    .p-cover { width: 180px; height: 130px; object-fit: cover; border-radius: 4px; display: block; }
+    .p-cover-placeholder { width: 180px; height: 130px; background: #eee; border-radius: 4px; }
+
+    /* ── Two column: ingredients | steps ── */
+    .p-body { display: grid; grid-template-columns: 35% 65%; gap: 0; margin-top: 0; }
+    .p-col-left { padding: 14px 20px 14px 0; border-right: 1px solid #ddd; }
+    .p-col-right { padding: 14px 0 14px 20px; }
+
+    /* ── Section headers ── */
+    .p-sec { font-family: Arial, sans-serif; font-size: 7.5pt; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; border-top: 2px solid #111; padding-top: 8px; margin-bottom: 10px; }
+
+    /* ── Ingredients ── */
+    .p-ing { display: flex; justify-content: space-between; font-size: 10pt; padding: 4px 0; border-bottom: 1px solid #e8e8e8; gap: 8px; }
+    .p-amt { color: #555; white-space: nowrap; }
+
+    /* ── Steps ── */
+    .p-step { margin-bottom: 12px; page-break-inside: avoid; }
+    .p-step-num { font-family: Arial, sans-serif; font-weight: 700; font-size: 9pt; margin-bottom: 2px; }
+    .p-step-text { font-size: 10.5pt; line-height: 1.65; }
+    .p-step-photo { max-width: 100%; max-height: 100px; object-fit: cover; border-radius: 4px; margin: 5px 0; display: block; }
+
+    /* ── Inline tip ── */
+    .p-inline-tip { border-left: 3px solid #4E6035; padding: 5px 8px; font-style: italic; font-size: 9.5pt; margin: 8px 0; color: #333; page-break-inside: avoid; }
+    .p-inline-tip b { font-style: normal; font-size: 7pt; letter-spacing: 1.5px; text-transform: uppercase; color: #4E6035; display: block; }
+
+    /* ── Tips ── */
+    .p-tips-section { grid-column: 1 / -1; border-top: 1px solid #ddd; padding-top: 10px; margin-top: 4px; }
+    .p-tip { font-style: italic; font-size: 10pt; padding: 5px 0 5px 12px; border-left: 3px solid #4E6035; margin-bottom: 6px; page-break-inside: avoid; }
+  </style>
+</head><body>
+  <div class="p-header">
+    <div>
+      <div class="p-title">${esc(n.title || '제목 없음')}</div>
+      <div class="p-date">${esc(n.date || '')}</div>
+    </div>
+    ${cover ? `<img class="p-cover" src="${cover}" alt="">` : '<div class="p-cover-placeholder"></div>'}
+  </div>
+
+  <div class="p-body">
+    <div class="p-col-left">
+      ${ingHtml ? `<div class="p-sec">Ingredients</div>${ingHtml}` : ''}
+    </div>
+    <div class="p-col-right">
+      ${stepsHtml ? `<div class="p-sec">Preparation</div>${stepsHtml}` : ''}
+    </div>
+    ${tipsHtml ? `<div class="p-tips-section"><div class="p-sec">Tip</div>${tipsHtml}</div>` : ''}
+  </div>
+</body></html>`;
+
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+  win.onload = () => { win.focus(); win.print(); };
+}
+
 function shareNote() {
   const n = S.notes.find(x => x.id === S.activeNote);
   if (!n) return;
@@ -3434,15 +3558,63 @@ function onParaPhotoSelected(e) {
    EDIT MODE
 ═══════════════════════════════════════════ */
 /* ═══ PHOTO VIEWER ═══ */
+/* ─── Photo Viewer with pinch-zoom & double-tap ─── */
+let _pvScale = 1, _pvLastTap = 0, _pvPinchDist = 0;
+
 function openPhotoViewer(src) {
+  _pvScale = 1;
+  const img = document.getElementById('photoViewerImg');
+  img.src = src;
+  img.style.transform = 'scale(1)';
+  img.style.cursor = 'zoom-in';
   const v = document.getElementById('photoViewer');
-  document.getElementById('photoViewerImg').src = src;
-  v.style.display = 'flex';
+  v.style.display = 'block';
+  // Pinch-zoom touch handlers
+  const wrap = document.getElementById('photoViewerWrap');
+  wrap.ontouchstart = pvTouchStart;
+  wrap.ontouchmove  = pvTouchMove;
+  wrap.ontouchend   = pvTouchEnd;
 }
 function closePhotoViewer() {
   document.getElementById('photoViewer').style.display = 'none';
   document.getElementById('photoViewerImg').src = '';
+  _pvScale = 1;
 }
+function pvToggleZoom(e) {
+  const now = Date.now();
+  if (now - _pvLastTap < 280) { // double-tap
+    _pvScale = _pvScale > 1.2 ? 1 : 2.5;
+    pvApplyScale();
+  }
+  _pvLastTap = now;
+}
+function pvApplyScale() {
+  const img = document.getElementById('photoViewerImg');
+  img.style.transform = `scale(${_pvScale})`;
+  img.style.cursor = _pvScale > 1 ? 'zoom-out' : 'zoom-in';
+}
+function pvTouchStart(e) {
+  if (e.touches.length === 2) {
+    _pvPinchDist = Math.hypot(
+      e.touches[0].clientX - e.touches[1].clientX,
+      e.touches[0].clientY - e.touches[1].clientY
+    );
+    e.preventDefault();
+  }
+}
+function pvTouchMove(e) {
+  if (e.touches.length === 2) {
+    e.preventDefault();
+    const d = Math.hypot(
+      e.touches[0].clientX - e.touches[1].clientX,
+      e.touches[0].clientY - e.touches[1].clientY
+    );
+    _pvScale = Math.min(5, Math.max(0.5, _pvScale * (d / _pvPinchDist)));
+    _pvPinchDist = d;
+    pvApplyScale();
+  }
+}
+function pvTouchEnd(e) { /* keep _pvScale */ }
 
 let _editMode = false;
 
@@ -3462,13 +3634,12 @@ function enterEditMode() {
   ti.value = n.title || '';
   ti.style.display = 'block';
 
-  // Content: keep rendered paragraphs visible (for photo/memo add),
-  // show textarea BELOW for text editing
-  document.getElementById('dtContent').style.display = '';
+  // Content: hide rendered view, show textarea for editing
+  document.getElementById('dtContent').style.display = 'none';
   const ce = document.getElementById('dtContentEdit');
   ce.value = n.content || '';
   ce.style.display = 'block';
-  ce.style.minHeight = Math.max(160, ce.scrollHeight) + 'px';
+  ce.style.minHeight = Math.max(200, Math.min(ce.scrollHeight + 40, 600)) + 'px';
 
   // Ingredients
   document.getElementById('ingList').style.display = 'none';
