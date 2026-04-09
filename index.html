@@ -3113,7 +3113,7 @@ function printNote() {
 <style>
 @page { size: A4 portrait; margin: 0; }
 *  { box-sizing:border-box; margin:0; padding:0; }
-html,body { width:210mm; height:297mm; overflow:hidden; background:#fff; }
+html,body { width:210mm; background:#fff; }
 body { font-family:'Noto Serif KR','Georgia',serif; color:#111; }
 
 /* ── Page wrapper: natural height, will be scaled ── */
@@ -3185,22 +3185,32 @@ body { font-family:'Noto Serif KR','Georgia',serif; color:#111; }
 
 </div>
 <script>
-window.onload = function() {
+function doScale() {
   var page = document.getElementById('page');
-  // A4 at 96dpi = 794 x 1123px
-  var A4H = 1123, A4W = 794;
-  var h = page.offsetHeight, w = page.offsetWidth;
+  var A4W = 794, A4H = 1123; // A4 at 96dpi
+  var h = page.scrollHeight;
+  var w = page.scrollWidth;
   var scale = Math.min(1, A4W / w, A4H / h);
-  if (scale < 0.999) {
-    // shrink to fit — transforms from top-left corner
+  if (scale < 0.9999) {
     page.style.transformOrigin = 'top left';
     page.style.transform = 'scale(' + scale + ')';
-    // also set body height so print knows the page is 1 sheet
-    document.body.style.width  = A4W + 'px';
-    document.body.style.height = A4H + 'px';
+    // shrink body to scaled size so no extra blank page
+    document.body.style.width  = Math.ceil(w * scale) + 'px';
+    document.body.style.height = Math.ceil(h * scale) + 'px';
     document.body.style.overflow = 'hidden';
   }
-  setTimeout(function(){ window.focus(); window.print(); }, 500);
+  setTimeout(function(){ window.focus(); window.print(); }, 400);
+}
+
+window.onload = function() {
+  var imgs = document.images;
+  if (imgs.length === 0) { doScale(); return; }
+  var loaded = 0;
+  function check() { if (++loaded >= imgs.length) doScale(); }
+  for (var i = 0; i < imgs.length; i++) {
+    if (imgs[i].complete) { check(); }
+    else { imgs[i].onload = imgs[i].onerror = check; }
+  }
 };
 <\/script>
 </body></html>`;
