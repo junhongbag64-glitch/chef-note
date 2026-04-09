@@ -3116,11 +3116,11 @@ function printNote() {
 html, body { width:210mm; height:297mm; overflow:hidden; background:#fff; }
 body { font-family:'Noto Serif KR','Georgia',serif; color:#111; }
 
-/* ── Outer: hard A4, clips overflow — no scaling ── */
-#outer { width:210mm; height:297mm; overflow:hidden; display:flex; flex-direction:column; }
+/* ── Outer: hard A4 clip ── */
+#outer { width:210mm; height:297mm; overflow:hidden; }
 
-/* ── Inner: fills outer, flex column ── */
-#inner { width:100%; display:flex; flex-direction:column; flex:1; min-height:0; }
+/* ── Inner: natural height so JS can measure true content height ── */
+#inner { width:210mm; }
 
 /* ── PHOTO BANNER ── */
 .ph { flex-shrink:0; height:155px; overflow:hidden; }
@@ -3189,8 +3189,63 @@ body { font-family:'Noto Serif KR','Georgia',serif; color:#111; }
 </div><!-- #inner -->
 </div><!-- #outer -->
 <script>
-window.onload = function() {
+function trimAndPrint() {
+  var inner = document.getElementById('inner');
+  var A4H = 297 / 25.4 * 96; // 297mm → px at 96dpi ≈ 1122
+
+  // 1. Remove bottom-section tips (.ptmain) from last to first
+  function getList(sel) {
+    return Array.from(inner.querySelectorAll(sel));
+  }
+
+  function fits() { return inner.scrollHeight <= A4H + 2; }
+
+  // Remove .ptmain (bottom tip block) from last upward
+  var ptmains = getList('.ptmain');
+  for (var i = ptmains.length - 1; i >= 0 && !fits(); i--) {
+    ptmains[i].remove();
+  }
+
+  // If tip section is now empty, remove the whole .ptrow
+  var ptrow = inner.querySelector('.ptrow');
+  if (ptrow && ptrow.querySelectorAll('.ptmain').length === 0) {
+    ptrow.remove();
+  }
+
+  // 2. Still overflow? Remove inline tips (.ptip) from last to first
+  if (!fits()) {
+    var ptips = getList('.ptip');
+    for (var j = ptips.length - 1; j >= 0 && !fits(); j--) {
+      ptips[j].remove();
+    }
+  }
+
+  // 3. Still overflow? Shrink photo height (min 80px)
+  if (!fits()) {
+    var ph = inner.querySelector('.ph');
+    var phImg = inner.querySelector('.ph img');
+    if (ph) {
+      var h = 155;
+      while (!fits() && h > 80) {
+        h -= 10;
+        ph.style.height = h + 'px';
+        if (phImg) phImg.style.height = h + 'px';
+      }
+    }
+  }
+
   setTimeout(function(){ window.focus(); window.print(); }, 400);
+}
+
+window.onload = function() {
+  var imgs = document.images;
+  if (!imgs.length) { trimAndPrint(); return; }
+  var done = 0;
+  function check() { if (++done >= imgs.length) trimAndPrint(); }
+  for (var i = 0; i < imgs.length; i++) {
+    if (imgs[i].complete) check();
+    else { imgs[i].onload = imgs[i].onerror = check; }
+  }
 };
 <\/script>
 </body></html>`;
