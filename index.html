@@ -1064,6 +1064,60 @@
     }
     .modal-bg.center { align-items: center; }
     .modal-bg.on { display: flex; }
+
+    /* ── Upgrade modal ── */
+    .upgrade-sheet {
+      padding: 32px 24px calc(36px + var(--safe-b));
+      text-align: center;
+      position: relative;
+    }
+    .upgrade-close {
+      position: absolute; top: 16px; right: 16px;
+    }
+    .upgrade-icon {
+      font-size: 40px; margin-bottom: 14px;
+    }
+    .upgrade-title {
+      font-family: var(--f-serif);
+      font-size: 20px; font-weight: 700; color: var(--text-1);
+      margin-bottom: 10px;
+    }
+    .upgrade-sub {
+      font-size: 14px; color: var(--text-2); line-height: 1.6;
+      margin-bottom: 22px;
+    }
+    .upgrade-usage-bar { margin-bottom: 20px; text-align: left; }
+    .upgrade-usage-label {
+      display: flex; justify-content: space-between;
+      font-size: 12px; color: var(--text-2); margin-bottom: 6px;
+    }
+    .upgrade-usage-count { font-weight: 700; color: var(--danger); }
+    .upgrade-bar-track {
+      height: 6px; background: var(--border-1); border-radius: 99px; overflow: hidden;
+    }
+    .upgrade-bar-fill {
+      height: 100%; width: 100%; background: var(--danger); border-radius: 99px;
+    }
+    .upgrade-features {
+      background: var(--accent-lt); border-radius: var(--r-md);
+      padding: 14px 16px; margin-bottom: 22px; text-align: left;
+    }
+    .upgrade-feat {
+      font-size: 14px; color: var(--accent-dk); padding: 4px 0;
+      font-weight: 500;
+    }
+    .upgrade-cta {
+      width: 100%; padding: 16px;
+      background: var(--accent); color: #fff;
+      border: none; border-radius: var(--r-md);
+      font-family: var(--f-sans); font-size: 16px; font-weight: 700;
+      cursor: pointer; margin-bottom: 10px;
+    }
+    .upgrade-cta:active { background: var(--accent-dk); }
+    .upgrade-notice {
+      font-size: 12px; color: var(--text-3);
+    }
+
     .modal-sheet {
       background: var(--bg);
       border-radius: var(--r-xl) var(--r-xl) 0 0;
@@ -1750,6 +1804,40 @@
     </div>
   </div>
 
+  <!-- ═══════════════════ UPGRADE MODAL ═══════════════════ -->
+  <div class="modal-bg" id="upgradeModal">
+    <div class="modal-sheet upgrade-sheet">
+      <button class="icon-btn upgrade-close" onclick="closeUpgradeModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+
+      <div class="upgrade-icon">🍳</div>
+      <h2 class="upgrade-title">무료 플랜을 모두 사용했어요</h2>
+      <p class="upgrade-sub">무료 플랜은 노트 5개까지 만들 수 있어요.<br>Pro로 업그레이드하면 무제한으로 사용할 수 있어요.</p>
+
+      <div class="upgrade-usage-bar">
+        <div class="upgrade-usage-label">
+          <span>이번 달 사용량</span>
+          <span id="upgradeUsage" class="upgrade-usage-count">5 / 5</span>
+        </div>
+        <div class="upgrade-bar-track"><div class="upgrade-bar-fill"></div></div>
+      </div>
+
+      <div class="upgrade-features">
+        <div class="upgrade-feat">✓ 노트 무제한 생성</div>
+        <div class="upgrade-feat">✓ 모든 기기 동기화</div>
+        <div class="upgrade-feat">✓ 레시피 PDF 내보내기</div>
+      </div>
+
+      <button class="upgrade-cta" onclick="openCheckout()">
+        Pro 시작하기 · 월 9,900원
+      </button>
+      <p class="upgrade-notice">결제 완료 후 24시간 내 활성화됩니다</p>
+    </div>
+  </div>
+
   <!-- Hidden inputs -->
   <input type="file" id="photoIn" accept="image/*" style="display:none" onchange="handlePhoto(this)">
   <input type="file" id="videoIn" accept="video/*" style="display:none" onchange="handleVideo(this)">
@@ -1780,6 +1868,8 @@ auth.setPersistence('local').catch(() => {});
 /* ───────────────── CONFIG ───────────────── */
 const PROXY = 'https://empty-cherry-ab7c.junhongbag64.workers.dev';
 const ASM_DIRECT = 'https://api.assemblyai.com'; // direct upload for large files
+const LEMON_SQUEEZY_CHECKOUT_URL = 'https://chefnote.lemonsqueezy.com/buy/PLACEHOLDER'; // 결제 링크 교체
+const FREE_NOTE_LIMIT = 5;
 
 /* ───────────────── STATE ───────────────── */
 const S = {
@@ -1802,6 +1892,8 @@ const S = {
   playing:    false,
   profile:    { name:'', dept:'조리학과', sem:'1학기' },
   currentUser: null,
+  isPro:        false,
+  notesCreated: 0,
 
 };
 
@@ -1891,12 +1983,18 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         const doc = await db.collection('users').doc(user.uid).get();
         if (doc.exists) {
-          S.profile = { ...S.profile, ...doc.data() };
+          const data = doc.data();
+          S.profile = { ...S.profile, ...data };
+          S.isPro        = data.isPro        || false;
+          S.notesCreated = data.notesCreated || 0;
         } else {
           // First time Google login - save profile
           S.profile.name = user.displayName || user.email.split('@')[0];
+          S.isPro        = false;
+          S.notesCreated = 0;
           await db.collection('users').doc(user.uid).set({
-            name: S.profile.name, dept: S.profile.dept, sem: S.profile.sem
+            name: S.profile.name, dept: S.profile.dept, sem: S.profile.sem,
+            isPro: false, notesCreated: 0
           });
         }
       } catch {}
@@ -2059,6 +2157,38 @@ function stripBinaryFields(note) {
   // Only strip audio blob — photos are now compressed small enough for Firestore
   delete n.audioBlob;
   return n;
+}
+
+/* ── Pro 한도 체크 ── */
+function checkNoteLimit() {
+  if (S.isPro) return true;
+  if (S.notesCreated >= FREE_NOTE_LIMIT) {
+    showUpgradeModal();
+    return false;
+  }
+  return true;
+}
+
+async function incrementNotesCreated() {
+  S.notesCreated = (S.notesCreated || 0) + 1;
+  if (!S.currentUser) return;
+  try {
+    await db.collection('users').doc(S.currentUser.uid).update({
+      notesCreated: firebase.firestore.FieldValue.increment(1)
+    });
+  } catch(e) { console.warn('[Pro] increment failed', e); }
+}
+
+function showUpgradeModal() {
+  document.getElementById('upgradeUsage').textContent =
+    `${Math.min(S.notesCreated, FREE_NOTE_LIMIT)} / ${FREE_NOTE_LIMIT}`;
+  document.getElementById('upgradeModal').classList.add('on');
+}
+function closeUpgradeModal() {
+  document.getElementById('upgradeModal').classList.remove('on');
+}
+function openCheckout() {
+  window.open(LEMON_SQUEEZY_CHECKOUT_URL, '_blank');
 }
 
 async function deleteNoteFromFirestore(noteId) {
@@ -2290,6 +2420,7 @@ function updateRecCounts() {
 ═══════════════════════════════════════════ */
 async function onRecordingDone() {
   if (!S.chunks.length) { showToast('녹음 데이터가 없습니다'); return; }
+  if (!checkNoteLimit()) return;
 
   const dur    = Math.floor((Date.now() - S.recStart) / 1000);
   const mtype  = S.chunks[0]?.type || 'audio/webm';
@@ -2315,6 +2446,7 @@ async function onRecordingDone() {
     S.notes.unshift(note);
     S.memos = [];
     await saveNoteToFirestore(note);
+    await incrementNotesCreated();
     renderNotes();
     updateStats();
 
@@ -2576,6 +2708,7 @@ async function handleAudioUpload(inp) {
   const f = inp.files[0];
   inp.value = '';
   if (!f) return;
+  if (!checkNoteLimit()) return;
 
   const dur = 0; // unknown duration for uploaded files
   showProc('음성 인식 중...', `"${f.name}" 파일을 분석하고 있어요...`);
@@ -2596,6 +2729,7 @@ async function handleAudioUpload(inp) {
 
     S.notes.unshift(note);
     await saveNoteToFirestore(note);
+    await incrementNotesCreated();
     renderNotes();
     updateStats();
     hideProc();
@@ -2715,6 +2849,7 @@ function saveMemo() {
 async function convertMemoToNote() {
   const t = document.getElementById('memoTxt').value.trim();
   if (!t) { showToast('메모를 입력해주세요'); return; }
+  if (!checkNoteLimit()) return;
   document.getElementById('memoTxt').value = '';
   closeMemoModal();
 
@@ -2732,6 +2867,7 @@ async function convertMemoToNote() {
 
     S.notes.unshift(note);
     await saveNoteToFirestore(note);
+    await incrementNotesCreated();
     renderNotes();
     updateStats();
     hideProc();
