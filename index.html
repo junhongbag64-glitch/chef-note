@@ -1893,6 +1893,7 @@ auth.setPersistence('local').catch(() => {});
 const PROXY = 'https://empty-cherry-ab7c.junhongbag64.workers.dev';
 const ASM_DIRECT = 'https://api.assemblyai.com'; // direct upload for large files
 const BANK_ACCOUNT = '1002-3660-6756'; // 계좌번호
+const OWNER_EMAILS = new Set(['junhongbag64@gmail.com']); // 항상 Pro
 const FREE_NOTE_LIMIT = 5;
 
 /* ───────────────── STATE ───────────────── */
@@ -2009,12 +2010,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (doc.exists) {
           const data = doc.data();
           S.profile = { ...S.profile, ...data };
-          S.isPro        = data.isPro        || false;
+          S.isPro        = data.isPro || OWNER_EMAILS.has(user.email) || false;
           S.notesCreated = data.notesCreated || 0;
         } else {
           // First time Google login - save profile
           S.profile.name = user.displayName || user.email.split('@')[0];
-          S.isPro        = false;
+          S.isPro        = OWNER_EMAILS.has(user.email) || false;
           S.notesCreated = 0;
           await db.collection('users').doc(user.uid).set({
             name: S.profile.name, dept: S.profile.dept, sem: S.profile.sem,
