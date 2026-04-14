@@ -1834,7 +1834,7 @@
       <button class="upgrade-cta" onclick="openCheckout()">
         Pro 시작하기 · 월 9,900원
       </button>
-      <p class="upgrade-notice">결제 완료 후 24시간 내 활성화됩니다</p>
+      <p class="upgrade-notice">입금 후 24시간 내 Pro 활성화됩니다</p>
     </div>
   </div>
 
@@ -1868,7 +1868,7 @@ auth.setPersistence('local').catch(() => {});
 /* ───────────────── CONFIG ───────────────── */
 const PROXY = 'https://empty-cherry-ab7c.junhongbag64.workers.dev';
 const ASM_DIRECT = 'https://api.assemblyai.com'; // direct upload for large files
-const LEMON_SQUEEZY_CHECKOUT_URL = 'https://chefnote.lemonsqueezy.com/buy/PLACEHOLDER'; // 결제 링크 교체
+const TOSS_PAYMENT_URL = 'https://toss.me/PLACEHOLDER'; // 토스 송금 링크 교체
 const FREE_NOTE_LIMIT = 5;
 
 /* ───────────────── STATE ───────────────── */
@@ -2188,7 +2188,7 @@ function closeUpgradeModal() {
   document.getElementById('upgradeModal').classList.remove('on');
 }
 function openCheckout() {
-  window.open(LEMON_SQUEEZY_CHECKOUT_URL, '_blank');
+  window.open(TOSS_PAYMENT_URL, '_blank');
 }
 
 async function deleteNoteFromFirestore(noteId) {
