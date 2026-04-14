@@ -1106,14 +1106,32 @@
       font-size: 14px; color: var(--accent-dk); padding: 4px 0;
       font-weight: 500;
     }
-    .upgrade-cta {
-      width: 100%; padding: 16px;
-      background: var(--accent); color: #fff;
-      border: none; border-radius: var(--r-md);
-      font-family: var(--f-sans); font-size: 16px; font-weight: 700;
-      cursor: pointer; margin-bottom: 10px;
+    .upgrade-bank {
+      width: 100%; background: var(--accent); border-radius: var(--r-md);
+      padding: 16px 18px; margin-bottom: 10px; cursor: pointer;
+      text-align: left; transition: background .15s;
     }
-    .upgrade-cta:active { background: var(--accent-dk); }
+    .upgrade-bank:active { background: var(--accent-dk); }
+    .upgrade-bank-label {
+      font-size: 11px; font-weight: 700; color: rgba(255,255,255,.7);
+      letter-spacing: .5px; text-transform: uppercase; margin-bottom: 8px;
+    }
+    .upgrade-bank-info {
+      display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px;
+    }
+    .upgrade-bank-name {
+      font-size: 13px; color: rgba(255,255,255,.8); font-weight: 500;
+    }
+    .upgrade-bank-num {
+      font-size: 20px; font-weight: 800; color: #fff; letter-spacing: .5px;
+      font-family: var(--f-sans);
+    }
+    .upgrade-bank-holder {
+      font-size: 13px; color: rgba(255,255,255,.8);
+    }
+    .upgrade-bank-copy {
+      font-size: 11px; color: rgba(255,255,255,.6);
+    }
     .upgrade-notice {
       font-size: 12px; color: var(--text-3);
     }
@@ -1831,10 +1849,16 @@
         <div class="upgrade-feat">✓ 레시피 PDF 내보내기</div>
       </div>
 
-      <button class="upgrade-cta" onclick="openCheckout()">
-        Pro 시작하기 · 월 9,900원
-      </button>
-      <p class="upgrade-notice">입금 후 24시간 내 Pro 활성화됩니다</p>
+      <div class="upgrade-bank" onclick="copyBankAccount()">
+        <div class="upgrade-bank-label">Pro 업그레이드 · 월 9,900원</div>
+        <div class="upgrade-bank-info">
+          <span class="upgrade-bank-name">토스뱅크</span>
+          <span class="upgrade-bank-num">1002-3660-6756</span>
+          <span class="upgrade-bank-holder">박준홍</span>
+        </div>
+        <div class="upgrade-bank-copy">탭하여 계좌번호 복사</div>
+      </div>
+      <p class="upgrade-notice">9,900원 입금 후 24시간 내 Pro 활성화됩니다</p>
     </div>
   </div>
 
@@ -1868,7 +1892,7 @@ auth.setPersistence('local').catch(() => {});
 /* ───────────────── CONFIG ───────────────── */
 const PROXY = 'https://empty-cherry-ab7c.junhongbag64.workers.dev';
 const ASM_DIRECT = 'https://api.assemblyai.com'; // direct upload for large files
-const TOSS_PAYMENT_URL = 'https://toss.me/PLACEHOLDER'; // 토스 송금 링크 교체
+const BANK_ACCOUNT = '1002-3660-6756'; // 계좌번호
 const FREE_NOTE_LIMIT = 5;
 
 /* ───────────────── STATE ───────────────── */
@@ -2187,8 +2211,19 @@ function showUpgradeModal() {
 function closeUpgradeModal() {
   document.getElementById('upgradeModal').classList.remove('on');
 }
-function openCheckout() {
-  window.open(TOSS_PAYMENT_URL, '_blank');
+function copyBankAccount() {
+  navigator.clipboard.writeText(BANK_ACCOUNT)
+    .then(() => showToast('✅ 계좌번호가 복사됐어요'))
+    .catch(() => {
+      // fallback for older browsers
+      const el = document.createElement('textarea');
+      el.value = BANK_ACCOUNT;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+      showToast('✅ 계좌번호가 복사됐어요');
+    });
 }
 
 async function deleteNoteFromFirestore(noteId) {
