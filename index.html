@@ -539,6 +539,24 @@
       padding: 20px;
       display: flex; align-items: center; gap: 16px;
     }
+    /* Beta card — friendly green */
+    .beta-card {
+      background: linear-gradient(135deg, #4E6035 0%, #6E8A4E 100%);
+      border: none;
+      position: relative; overflow: hidden;
+    }
+    .beta-card::before {
+      content: ''; position: absolute; top: -40px; right: -30px;
+      width: 120px; height: 120px;
+      background: radial-gradient(circle, rgba(255,255,255,.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .beta-card .pro-eyebrow {
+      color: rgba(255,255,255,.8);
+      font-weight: 700; letter-spacing: 1px;
+    }
+    .beta-card .pro-title { color: #fff; }
+    .beta-card .pro-sub   { color: rgba(255,255,255,.85); }
     .pro-text { flex: 1; }
     .pro-eyebrow {
       font-size: 9px; font-weight: 700;
@@ -1792,13 +1810,12 @@
       <div class="stat-card"><div class="stat-num" id="sTh">0</div><div class="stat-lbl">이론</div></div>
     </div>
 
-    <div class="pro-card">
+    <div class="pro-card beta-card">
       <div class="pro-text">
-        <div class="pro-eyebrow">Pro 플랜</div>
-        <div class="pro-title">무제한 녹음 업그레이드</div>
-        <div class="pro-sub">AI 노트 자동화 · 무제한 저장</div>
+        <div class="pro-eyebrow">🎉 OPEN BETA</div>
+        <div class="pro-title">모든 기능 무료로 이용 중</div>
+        <div class="pro-sub">노트 무제한 · AI 변환 · 동기화 · PDF 내보내기</div>
       </div>
-      <button class="pro-btn" onclick="showUpgradeModal()">업그레이드</button>
     </div>
 
     <div class="settings-section">
