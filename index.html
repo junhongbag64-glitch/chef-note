@@ -1198,38 +1198,160 @@
     .btn-primary:active { background: var(--accent-dk); }
 
     /* ═══════════════════════════════════════════
-       AUTH SCREEN
+       AUTH SCREEN — Landing Style
     ═══════════════════════════════════════════ */
     #auth-screen {
       position: fixed; inset: 0; z-index: 9999;
-      background: var(--bg);
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      padding: 40px 32px;
+      background: linear-gradient(180deg, #FBFAF6 0%, #F3F0E8 100%);
+      overflow-y: auto; overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      padding: 0;
     }
     #auth-screen.hidden { display: none; }
-    .auth-logo {
+
+    .auth-container {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 56px 28px 80px;
+      display: flex; flex-direction: column;
+    }
+
+    /* ─── Brand ─── */
+    .auth-brand {
+      display: flex; align-items: center; gap: 9px;
+      margin-bottom: 48px;
+    }
+    .auth-brand-icon {
+      width: 32px; height: 32px;
+      background: var(--text-1);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,.1);
+    }
+    .auth-brand-name {
       font-family: var(--f-display);
-      font-size: 34px; font-weight: 700;
+      font-size: 22px; font-weight: 700;
+      color: var(--text-1); letter-spacing: -0.3px;
+    }
+    .auth-brand-name em {
+      font-style: italic; color: var(--accent); font-weight: 500;
+    }
+
+    /* ─── Hero ─── */
+    .auth-hero-tag {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 12px;
+      background: var(--accent-lt);
+      border-radius: 99px;
+      font-size: 12px; font-weight: 600; color: var(--accent-dk);
+      margin-bottom: 22px;
+      width: fit-content;
+    }
+    .auth-hero-tag::before {
+      content: '';
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--accent); flex-shrink: 0;
+    }
+    .auth-headline {
+      font-family: var(--f-display);
+      font-size: 42px; font-weight: 700;
+      line-height: 1.1; letter-spacing: -1px;
       color: var(--text-1);
-      margin-bottom: 6px;
+      margin-bottom: 18px;
     }
-    .auth-sub {
-      font-size: 14px; color: var(--text-3);
-      margin-bottom: 44px; text-align: center;
+    .auth-headline em {
+      font-style: italic; color: var(--accent);
+      font-weight: 500;
     }
-    .auth-tabs {
-      display: flex; gap: 0;
-      width: 100%; max-width: 360px;
-      background: var(--border-1);
+    .auth-tagline {
+      font-size: 16px; line-height: 1.6;
+      color: var(--text-2);
+      margin-bottom: 36px;
+    }
+
+    /* ─── Features ─── */
+    .auth-features {
+      display: flex; flex-direction: column; gap: 12px;
+      margin-bottom: 36px;
+    }
+    .auth-feat {
+      display: flex; align-items: center; gap: 14px;
+      padding: 16px 18px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-1);
       border-radius: var(--r-md);
-      padding: 3px; margin-bottom: 28px;
+    }
+    .auth-feat-ico {
+      width: 40px; height: 40px;
+      flex-shrink: 0;
+      background: var(--accent-lt);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+    }
+    .auth-feat-text { flex: 1; }
+    .auth-feat-title {
+      font-size: 14px; font-weight: 600;
+      color: var(--text-1);
+      margin-bottom: 2px;
+    }
+    .auth-feat-sub {
+      font-size: 12.5px; color: var(--text-2);
+      line-height: 1.45;
+    }
+
+    /* ─── CTA Block ─── */
+    .auth-cta-block {
+      display: flex; flex-direction: column; gap: 10px;
+      margin-bottom: 22px;
+    }
+    .auth-google-big {
+      width: 100%; padding: 17px;
+      background: var(--text-1); color: #fff;
+      border: none; border-radius: var(--r-md);
+      font-family: var(--f-sans); font-size: 15px; font-weight: 600;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      transition: transform .1s, opacity .2s;
+      box-shadow: 0 4px 14px rgba(14,14,12,.18);
+    }
+    .auth-google-big:active { transform: scale(0.99); opacity: 0.92; }
+    .auth-google-big svg {
+      width: 18px; height: 18px;
+      background: #fff; border-radius: 50%; padding: 2px;
+    }
+    .auth-email-toggle {
+      width: 100%; padding: 15px;
+      background: transparent;
+      border: 1.5px solid var(--border-1);
+      border-radius: var(--r-md);
+      font-family: var(--f-sans); font-size: 14px; font-weight: 500;
+      color: var(--text-2); cursor: pointer;
+      transition: all .15s;
+    }
+    .auth-email-toggle:active { background: var(--border-1); }
+
+    /* ─── Email Form (collapsed) ─── */
+    .auth-email-form {
+      margin-top: 4px;
+      padding: 20px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-1);
+      border-radius: var(--r-md);
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .auth-email-form.hidden { display: none; }
+    .auth-tabs {
+      display: flex;
+      background: var(--border-1);
+      border-radius: 10px;
+      padding: 3px; margin-bottom: 6px;
     }
     .auth-tab {
-      flex: 1; padding: 9px;
+      flex: 1; padding: 8px;
       border: none; background: none;
-      border-radius: 11px;
-      font-family: var(--f-sans); font-size: 14px; font-weight: 500;
+      border-radius: 8px;
+      font-family: var(--f-sans); font-size: 13px; font-weight: 500;
       color: var(--text-3); cursor: pointer; transition: all .2s;
     }
     .auth-tab.active {
@@ -1238,50 +1360,73 @@
       box-shadow: var(--sh-sm);
     }
     .auth-form {
-      width: 100%; max-width: 360px;
-      display: flex; flex-direction: column; gap: 12px;
+      display: flex; flex-direction: column; gap: 10px;
     }
+    .auth-form.hidden { display: none; }
     .auth-input {
-      width: 100%; padding: 14px 16px;
+      width: 100%; padding: 13px 14px;
       border: 1.5px solid var(--border-1);
-      border-radius: var(--r-md);
-      background: var(--bg-card);
-      font-family: var(--f-sans); font-size: 15px;
+      border-radius: 10px;
+      background: #fff;
+      font-family: var(--f-sans); font-size: 14px;
       color: var(--text-1); outline: none;
       transition: border-color .2s;
     }
     .auth-input:focus { border-color: var(--accent); }
     .auth-btn {
-      width: 100%; padding: 15px;
-      background: var(--text-1); color: #fff;
-      border: none; border-radius: var(--r-md);
-      font-family: var(--f-sans); font-size: 15px; font-weight: 600;
+      width: 100%; padding: 13px;
+      background: var(--accent); color: #fff;
+      border: none; border-radius: 10px;
+      font-family: var(--f-sans); font-size: 14px; font-weight: 600;
       cursor: pointer; transition: opacity .2s;
-      margin-top: 4px;
+      margin-top: 2px;
     }
-    .auth-btn:active { opacity: 0.8; }
-    .auth-divider {
-      display: flex; align-items: center; gap: 12px;
-      color: var(--text-3); font-size: 13px;
-      margin: 4px 0;
-    }
-    .auth-divider::before, .auth-divider::after {
-      content: ''; flex: 1; height: 1px; background: var(--border-1);
-    }
-    .auth-google {
-      width: 100%; padding: 14px;
-      background: var(--bg-card);
-      border: 1.5px solid var(--border-1);
-      border-radius: var(--r-md);
-      font-family: var(--f-sans); font-size: 15px; font-weight: 500;
-      color: var(--text-1); cursor: pointer;
-      display: flex; align-items: center; justify-content: center; gap: 10px;
-      transition: background .15s;
-    }
-    .auth-google:active { background: var(--border-1); }
+    .auth-btn:active { opacity: 0.85; }
     .auth-error {
-      font-size: 13px; color: var(--danger);
-      text-align: center; min-height: 18px;
+      font-size: 12.5px; color: var(--danger);
+      text-align: center; min-height: 16px;
+    }
+
+    /* ─── Trust Signals ─── */
+    .auth-trust {
+      display: flex; flex-direction: column; gap: 8px;
+      padding: 16px;
+      background: var(--bg-card);
+      border-radius: var(--r-md);
+      border: 1px solid var(--border-1);
+      margin-top: 6px;
+    }
+    .auth-trust-title {
+      font-size: 11px; font-weight: 700;
+      color: var(--text-3);
+      letter-spacing: 1.2px; text-transform: uppercase;
+      margin-bottom: 4px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .auth-trust-item {
+      display: flex; align-items: flex-start; gap: 10px;
+      font-size: 12.5px; color: var(--text-2);
+      line-height: 1.5;
+    }
+    .auth-trust-item svg {
+      width: 15px; height: 15px;
+      flex-shrink: 0; margin-top: 1px;
+      color: var(--accent);
+    }
+
+    .auth-footer {
+      margin-top: 28px;
+      text-align: center;
+      font-size: 12px; color: var(--text-3);
+      line-height: 1.5;
+    }
+    .auth-footer a {
+      color: var(--text-2); text-decoration: underline;
+    }
+
+    @media (min-width: 768px) {
+      .auth-headline { font-size: 48px; }
+      .auth-container { padding: 72px 28px 100px; }
     }
 
     /* Loading spinner */
@@ -1310,39 +1455,131 @@
   <div class="spinner"></div>
 </div>
 
-<!-- Auth screen -->
+<!-- Auth screen — Landing page style -->
 <div id="auth-screen" class="hidden">
-  <div class="auth-logo">ChefNote</div>
-  <div class="auth-sub">조리학과 수업 노트 자동화</div>
+  <div class="auth-container">
 
-  <div class="auth-tabs" style="max-width:360px;width:100%">
-    <button class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">로그인</button>
-    <button class="auth-tab" id="tab-signup" onclick="switchAuthTab('signup')">회원가입</button>
-  </div>
+    <!-- Brand -->
+    <div class="auth-brand">
+      <div class="auth-brand-icon">
+        <svg width="20" height="20" viewBox="0 0 30 30" fill="none">
+          <path d="M15 3C11.3 3 8.2 5.6 7.5 9.2C5.8 9.7 4.5 11.3 4.5 13.2C4.5 15.4 6.3 17.2 8.5 17.2H21.5C23.7 17.2 25.5 15.4 25.5 13.2C25.5 11.3 24.2 9.7 22.5 9.2C21.8 5.6 18.7 3 15 3Z" fill="#fff"/>
+          <path d="M8.5 19.5H21.5V25C21.5 25.6 21.1 26 20.5 26H9.5C8.9 26 8.5 25.6 8.5 25V19.5Z" fill="#6E8A4E"/>
+        </svg>
+      </div>
+      <div class="auth-brand-name">Chef<em>Note</em></div>
+    </div>
 
-  <div class="auth-form" id="auth-form-login">
-    <input class="auth-input" id="login-email" type="email" placeholder="이메일" autocomplete="email">
-    <input class="auth-input" id="login-pw" type="password" placeholder="비밀번호" autocomplete="current-password">
-    <div class="auth-error" id="login-err"></div>
-    <button class="auth-btn" onclick="emailLogin()">로그인</button>
-    <div class="auth-divider">또는</div>
-    <button class="auth-google" onclick="googleLogin()">
-      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.7 2.3 30.2 0 24 0 14.7 0 6.7 5.4 2.8 13.3l7.8 6C12.4 13.2 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.9 7.2l7.6 5.9c4.5-4.1 7.1-10.2 7.1-17.1z"/><path fill="#FBBC05" d="M10.6 28.7A14.6 14.6 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.8-6A23.9 23.9 0 0 0 0 24c0 3.9.9 7.5 2.6 10.7l8-6z"/><path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.6-5.9c-2 1.4-4.7 2.2-7.6 2.2-6.3 0-11.6-3.7-13.5-9l-8 6.1C6.7 42.6 14.7 48 24 48z"/></svg>
-      Google로 계속하기
-    </button>
-  </div>
+    <!-- Hero -->
+    <div class="auth-hero-tag">지금 무료로 시작</div>
+    <h1 class="auth-headline">
+      녹음만 하세요.<br>
+      <em>레시피 노트</em>는<br>
+      AI가 만듭니다.
+    </h1>
+    <p class="auth-tagline">
+      요리 수업 중 녹음만 하면 AI가 재료·조리법·팁을<br>
+      자동으로 정리해 아름다운 노트로 만들어드려요.
+    </p>
 
-  <div class="auth-form hidden" id="auth-form-signup">
-    <input class="auth-input" id="signup-name" type="text" placeholder="이름" autocomplete="name">
-    <input class="auth-input" id="signup-email" type="email" placeholder="이메일" autocomplete="email">
-    <input class="auth-input" id="signup-pw" type="password" placeholder="비밀번호 (6자 이상)" autocomplete="new-password">
-    <div class="auth-error" id="signup-err"></div>
-    <button class="auth-btn" onclick="emailSignup()">회원가입</button>
-    <div class="auth-divider">또는</div>
-    <button class="auth-google" onclick="googleLogin()">
-      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.7 2.3 30.2 0 24 0 14.7 0 6.7 5.4 2.8 13.3l7.8 6C12.4 13.2 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.9 7.2l7.6 5.9c4.5-4.1 7.1-10.2 7.1-17.1z"/><path fill="#FBBC05" d="M10.6 28.7A14.6 14.6 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.8-6A23.9 23.9 0 0 0 0 24c0 3.9.9 7.5 2.6 10.7l8-6z"/><path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.6-5.9c-2 1.4-4.7 2.2-7.6 2.2-6.3 0-11.6-3.7-13.5-9l-8 6.1C6.7 42.6 14.7 48 24 48z"/></svg>
-      Google로 계속하기
-    </button>
+    <!-- Features -->
+    <div class="auth-features">
+      <div class="auth-feat">
+        <div class="auth-feat-ico">🎙️</div>
+        <div class="auth-feat-text">
+          <div class="auth-feat-title">음성 자동 변환</div>
+          <div class="auth-feat-sub">녹음 → 정리된 레시피 노트로 자동 변환</div>
+        </div>
+      </div>
+      <div class="auth-feat">
+        <div class="auth-feat-ico">📖</div>
+        <div class="auth-feat-text">
+          <div class="auth-feat-title">매거진 스타일</div>
+          <div class="auth-feat-sub">NYT Cooking 같은 깔끔한 레이아웃과 PDF 내보내기</div>
+        </div>
+      </div>
+      <div class="auth-feat">
+        <div class="auth-feat-ico">☁️</div>
+        <div class="auth-feat-text">
+          <div class="auth-feat-title">모든 기기 동기화</div>
+          <div class="auth-feat-sub">폰, 태블릿, PC 어디서나 안전하게 접근</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CTA -->
+    <div class="auth-cta-block">
+      <button class="auth-google-big" onclick="googleLogin()">
+        <svg viewBox="0 0 48 48">
+          <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.7 2.3 30.2 0 24 0 14.7 0 6.7 5.4 2.8 13.3l7.8 6C12.4 13.2 17.7 9.5 24 9.5z"/>
+          <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.9 7.2l7.6 5.9c4.5-4.1 7.1-10.2 7.1-17.1z"/>
+          <path fill="#FBBC05" d="M10.6 28.7A14.6 14.6 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.8-6A23.9 23.9 0 0 0 0 24c0 3.9.9 7.5 2.6 10.7l8-6z"/>
+          <path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.6-5.9c-2 1.4-4.7 2.2-7.6 2.2-6.3 0-11.6-3.7-13.5-9l-8 6.1C6.7 42.6 14.7 48 24 48z"/>
+        </svg>
+        Google 계정으로 시작하기 · 무료
+      </button>
+
+      <button class="auth-email-toggle" onclick="toggleEmailForm()" id="emailToggleBtn">
+        이메일로 계속하기
+      </button>
+
+      <!-- Email form (collapsed by default) -->
+      <div class="auth-email-form hidden" id="emailFormBox">
+        <div class="auth-tabs">
+          <button class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">로그인</button>
+          <button class="auth-tab" id="tab-signup" onclick="switchAuthTab('signup')">회원가입</button>
+        </div>
+        <div class="auth-form" id="auth-form-login">
+          <input class="auth-input" id="login-email" type="email" placeholder="이메일" autocomplete="email">
+          <input class="auth-input" id="login-pw" type="password" placeholder="비밀번호" autocomplete="current-password">
+          <div class="auth-error" id="login-err"></div>
+          <button class="auth-btn" onclick="emailLogin()">로그인</button>
+        </div>
+        <div class="auth-form hidden" id="auth-form-signup">
+          <input class="auth-input" id="signup-name" type="text" placeholder="이름" autocomplete="name">
+          <input class="auth-input" id="signup-email" type="email" placeholder="이메일" autocomplete="email">
+          <input class="auth-input" id="signup-pw" type="password" placeholder="비밀번호 (6자 이상)" autocomplete="new-password">
+          <div class="auth-error" id="signup-err"></div>
+          <button class="auth-btn" onclick="emailSignup()">회원가입</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Trust Signals -->
+    <div class="auth-trust">
+      <div class="auth-trust-title">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+        보안 &amp; 프라이버시
+      </div>
+      <div class="auth-trust-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="11" width="18" height="11" rx="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+        <span>Google Firebase 엔터프라이즈 인프라에서 암호화 저장</span>
+      </div>
+      <div class="auth-trust-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 12l2 2 4-4"/>
+          <circle cx="12" cy="12" r="10"/>
+        </svg>
+        <span>비밀번호는 Firebase에서 해시 처리되어 저장되고, 개발자도 볼 수 없어요</span>
+      </div>
+      <div class="auth-trust-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <path d="M23 11l-2 2-2-2"/>
+        </svg>
+        <span>데이터는 본인만 접근 가능 · 언제든 삭제 요청 가능</span>
+      </div>
+    </div>
+
+    <div class="auth-footer">
+      계속 진행하면 <a href="#">서비스 약관</a>과 <a href="#">개인정보 처리방침</a>에 동의하는 것으로 간주됩니다.
+    </div>
   </div>
 </div>
 
@@ -1937,6 +2174,13 @@ function switchAuthTab(tab) {
   document.getElementById('auth-form-signup').classList.toggle('hidden', tab !== 'signup');
 }
 
+function toggleEmailForm() {
+  const box = document.getElementById('emailFormBox');
+  const btn = document.getElementById('emailToggleBtn');
+  const hidden = box.classList.toggle('hidden');
+  btn.textContent = hidden ? '이메일로 계속하기' : '이메일 로그인 접기';
+}
+
 async function emailLogin() {
   const email = document.getElementById('login-email').value.trim();
   const pw    = document.getElementById('login-pw').value;
@@ -2184,14 +2428,9 @@ function stripBinaryFields(note) {
   return n;
 }
 
-/* ── Pro 한도 체크 ── */
+/* ── Pro 한도 체크 (현재 전원 무료 무제한) ── */
 function checkNoteLimit() {
-  if (S.isPro) return true;
-  if (S.notesCreated >= FREE_NOTE_LIMIT) {
-    showUpgradeModal();
-    return false;
-  }
-  return true;
+  return true; // Pro 제한 비활성화 — 오픈 상태
 }
 
 async function incrementNotesCreated() {
