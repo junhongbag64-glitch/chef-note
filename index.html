@@ -2434,14 +2434,21 @@ async function saveNoteToFirestore(note) {
       .collection('notes').doc(note.id).set(docData);
   } catch(e) {
     console.warn('[Firestore] save failed, localStorage only:', e.message);
+    // Surface the failure so users know the note is device-only
+    showToast('⚠️ 클라우드 저장 실패 — 이 기기에만 저장됩니다');
   }
   saveToLocal();
 }
 
 function stripBinaryFields(note) {
   const n = { ...note };
-  // Only strip audio blob — photos are now compressed small enough for Firestore
+  // Strip audio blob (too large for Firestore)
   delete n.audioBlob;
+  // Strip video blobs from media — videos as base64 exceed Firestore 1MB limit
+  // Photos are kept (compressed to ~30-60KB each via compressForFirestore)
+  if (n.media) {
+    n.media = n.media.filter(m => m.type !== 'video');
+  }
   return n;
 }
 
@@ -2708,6 +2715,25 @@ function updateRecCounts() {
 }
 
 /* ═══════════════════════════════════════════
+   PROCESSING GUARD — prevents accidental close during AI processing
+═══════════════════════════════════════════ */
+let _processingGuardFn = null;
+function addProcessingGuard() {
+  _processingGuardFn = (e) => {
+    e.preventDefault();
+    e.returnValue = '노트를 생성하는 중입니다. 지금 닫으면 노트가 저장되지 않아요!';
+    return e.returnValue;
+  };
+  window.addEventListener('beforeunload', _processingGuardFn);
+}
+function removeProcessingGuard() {
+  if (_processingGuardFn) {
+    window.removeEventListener('beforeunload', _processingGuardFn);
+    _processingGuardFn = null;
+  }
+}
+
+/* ═══════════════════════════════════════════
    RECORDING COMPLETE → TRANSCRIBE → NOTE
 ═══════════════════════════════════════════ */
 async function onRecordingDone() {
@@ -2718,12 +2744,13 @@ async function onRecordingDone() {
   const mtype  = S.chunks[0]?.type || 'audio/webm';
   const blob   = new Blob(S.chunks, { type: mtype });
 
-  showProc('음성 인식 중...', 'AssemblyAI로 녹음을 변환하고 있어요...');
+  showProc('음성 인식 중...', 'AssemblyAI로 녹음을 변환하고 있어요...\n완료될 때까지 창을 닫지 마세요 ⚠️');
+  addProcessingGuard(); // warn user if they try to close during processing
 
   try {
     const transcript = await transcribeAudio(blob);
 
-    updateProc('노트 생성 중...', 'Claude가 수업 내용을 정리하고 있어요...');
+    updateProc('노트 생성 중...', 'Claude가 수업 내용을 정리하고 있어요...\n완료될 때까지 창을 닫지 마세요 ⚠️');
 
     const note = await generateNote(transcript, dur, [...S.memos]);
     note.id        = Date.now().toString();
@@ -2742,11 +2769,13 @@ async function onRecordingDone() {
     renderNotes();
     updateStats();
 
+    removeProcessingGuard();
     hideProc();
     showToast('✅ 노트가 생성되었습니다!');
     setTimeout(() => openNote(note.id), 600);
   } catch(err) {
     console.error('[NOTE]', err);
+    removeProcessingGuard();
     hideProc();
     showToast('❌ 노트 생성 실패: ' + (err.message || '오류'));
   }
@@ -3003,11 +3032,12 @@ async function handleAudioUpload(inp) {
   if (!checkNoteLimit()) return;
 
   const dur = 0; // unknown duration for uploaded files
-  showProc('음성 인식 중...', `"${f.name}" 파일을 분석하고 있어요...`);
+  showProc('음성 인식 중...', `"${f.name}" 파일을 분석하고 있어요...\n완료될 때까지 창을 닫지 마세요 ⚠️`);
+  addProcessingGuard();
 
   try {
     const transcript = await transcribeAudio(f);
-    updateProc('노트 생성 중...', 'Claude가 내용을 정리하고 있어요...');
+    updateProc('노트 생성 중...', 'Claude가 내용을 정리하고 있어요...\n완료될 때까지 창을 닫지 마세요 ⚠️');
     const note = await generateNote(transcript, dur);
     note.id        = Date.now().toString();
     note.date      = new Date().toLocaleDateString('ko-KR', { year:'numeric', month:'long', day:'numeric' });
@@ -3024,10 +3054,12 @@ async function handleAudioUpload(inp) {
     await incrementNotesCreated();
     renderNotes();
     updateStats();
+    removeProcessingGuard();
     hideProc();
     showToast('✅ 노트가 생성되었습니다!');
     setTimeout(() => openNote(note.id), 600);
   } catch(err) {
+    removeProcessingGuard();
     hideProc();
     showToast('❌ 변환 실패: ' + (err.message || '오류'));
   }
@@ -3145,7 +3177,8 @@ async function convertMemoToNote() {
   document.getElementById('memoTxt').value = '';
   closeMemoModal();
 
-  showProc('노트 생성 중...', 'Claude가 메모를 정리하고 있어요...');
+  showProc('노트 생성 중...', 'Claude가 메모를 정리하고 있어요...\n완료될 때까지 창을 닫지 마세요 ⚠️');
+  addProcessingGuard();
   try {
     const note = await generateNote(t, 0);
     note.id        = Date.now().toString();
@@ -3162,10 +3195,12 @@ async function convertMemoToNote() {
     await incrementNotesCreated();
     renderNotes();
     updateStats();
+    removeProcessingGuard();
     hideProc();
     showToast('✅ 노트가 생성되었습니다!');
     setTimeout(() => openNote(note.id), 600);
   } catch(err) {
+    removeProcessingGuard();
     hideProc();
     showToast('❌ 변환 실패: ' + (err.message || '오류'));
   }
