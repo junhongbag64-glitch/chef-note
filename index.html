@@ -225,10 +225,79 @@
     .note-card-date { font-size: 11.5px; color: var(--text-3); }
     .note-card-fav { font-size: 12px; color: var(--danger); }
 
-    /* Note list container */
+    /* Note list container — 2-column card grid */
     .note-list {
-      display: flex; flex-direction: column;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
       gap: 14px; padding: 0 16px;
+    }
+    .note-list .empty-state { grid-column: 1/-1; }
+
+    /* ─── Draft recovery banner ─── */
+    .draft-banner {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+      background: #1a1a1a; color: #fff;
+      padding: 14px 20px; font-size: 13.5px;
+      display: flex; align-items: center; gap: 10px;
+      transform: translateY(-100%); transition: transform .3s ease;
+    }
+    .draft-banner.visible { transform: translateY(0); }
+    .draft-banner-spinner {
+      width: 16px; height: 16px; border-radius: 50%;
+      border: 2px solid rgba(255,255,255,.3);
+      border-top-color: #fff;
+      animation: spin .7s linear infinite; flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─── Recipe tabs (inside note detail) ─── */
+    .recipe-tabs {
+      display: flex; gap: 0;
+      padding: 0 20px 0; margin-bottom: 0;
+      border-bottom: 1.5px solid var(--border-1);
+      overflow-x: auto; -webkit-overflow-scrolling: touch;
+    }
+    .recipe-tab {
+      background: none; border: none; cursor: pointer;
+      font-family: var(--f-sans); font-size: 13px; font-weight: 500;
+      color: var(--text-3); padding: 10px 16px 9px;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1.5px; white-space: nowrap;
+      transition: color .15s;
+    }
+    .recipe-tab.active {
+      color: var(--accent); border-bottom-color: var(--accent);
+      font-weight: 600;
+    }
+    .recipe-tab:hover { color: var(--text-1); }
+    .recipe-tab-add {
+      color: var(--accent); font-size: 18px; padding: 8px 12px 9px;
+    }
+
+    /* ─── Recipe section inside detail ─── */
+    .recipe-section-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 20px 4px;
+    }
+    .recipe-section-title {
+      font-family: var(--f-serif); font-size: 17px; font-weight: 700;
+      color: var(--text-1);
+    }
+    .recipe-section-badge {
+      font-size: 11px; font-weight: 500; color: var(--text-3);
+      background: var(--bg); border: 1px solid var(--border-1);
+      padding: 2px 8px; border-radius: var(--r-full);
+    }
+
+    /* ─── Home screen improvements ─── */
+    .home-greeting {
+      font-family: var(--f-display);
+      font-size: 22px; font-style: italic;
+      color: var(--text-1); padding: 4px 0 0;
+    }
+    .home-greeting-sub {
+      font-size: 12.5px; color: var(--text-3);
+      margin-top: 2px;
     }
 
     /* ─── Empty state ─── */
@@ -1603,6 +1672,12 @@
 
 <div id="app">
 
+  <!-- Draft recovery banner (shown when resuming unfinished recordings) -->
+  <div class="draft-banner" id="draftBanner">
+    <div class="draft-banner-spinner"></div>
+    <span id="draftBannerText">이전 녹음을 처리하는 중...</span>
+  </div>
+
   <!-- ═══════════════════ HOME ═══════════════════ -->
   <div id="screen-home" class="screen active">
 
@@ -1632,7 +1707,8 @@
           </button>
         </div>
       </div>
-      <div class="home-greeting">오늘도 맛있는 수업 🍽️</div>
+      <div class="home-greeting" id="homeGreeting">안녕하세요 👋</div>
+      <div class="home-greeting-sub" id="homeGreetingSub">오늘 수업도 기록해보세요</div>
     </div>
 
     <!-- Categories -->
@@ -1969,6 +2045,11 @@
           <button class="dt-photo-btn" onclick="changeNoteCover()">📷 표지 변경</button>
         </div>
 
+        <!-- Recipe tabs (shown when note has multiple recipes) -->
+        <div class="recipe-tabs" id="recipeTabs" style="display:none"></div>
+        <!-- Recipe title edit input (multi-recipe edit mode) -->
+        <input id="dtRecipeTitleInput" class="dt-title-input" type="text" placeholder="이 요리 이름" style="display:none;margin:8px 20px 0;font-size:15px">
+
         <!-- 4. Preparation steps -->
         <div class="nyt-sec" id="prepHeader">PREPARATION</div>
         <div class="dt-recipe">
@@ -2173,7 +2254,8 @@ const S = {
   currentUser: null,
   isPro:        false,
   notesCreated: 0,
-
+  activeRecipeIdx: 0,   // which recipe tab is active in detail view
+  editingRecipeIdx: 0,  // which recipe is being edited
 };
 
 /* ───────────────── SERVICE WORKER ───────────────── */
@@ -2285,13 +2367,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       } catch {}
       await loadNotesFromFirestore();
-      migrateNotes(); // fire-and-forget — don't block UI
+      await migrateNotes(); // upgrade old notes to multi-recipe format
       renderProfile();
       renderNotes();
       updateStats();
+      updateHomeGreeting();
       authScr.classList.add('hidden');
       appDiv.style.display = '';
       loading.classList.add('hidden');
+      // Check for any unfinished recordings saved before page close
+      checkAndResumeDrafts(); // fire-and-forget
     } else {
       S.currentUser = null;
       S.notes = [];
@@ -2346,29 +2431,62 @@ async function loadNotesFromFirestore() {
   }
 }
 
+/* ─── Multi-recipe helper ─── */
+// Returns the recipes array for a note, migrating old single-recipe format on the fly
+function getRecipes(n) {
+  if (n.recipes && n.recipes.length) return n.recipes;
+  // Legacy format: wrap fields in a single-recipe array
+  return [{
+    id: 'r0',
+    title: n.title || '레시피',
+    type: n.type || 'recipe',
+    classType: n.classType || (n.type === 'recipe' ? '실습' : '이론'),
+    ingredients: n.ingredients || [],
+    content: n.content || '',
+    tips: n.tips || [],
+    paragraphAttachments: n.paragraphAttachments || {},
+  }];
+}
+
 /* 노트 스키마 기본값 — 새 필드 추가 시 여기에만 추가하면 기존 노트 자동 마이그레이션 */
 const NOTE_SCHEMA = {
-  category:             null,
-  coverPhoto:           null,
-  paragraphAttachments: {},
-  media:                [],
-  memos:                [],
-  ingredients:          [],
-  tips:                 [],
-  favorite:             false,
-  audioBlob:            null,
+  category:  null,
+  coverPhoto: null,
+  media:     [],
+  memos:     [],
+  favorite:  false,
+  audioBlob: null,
+  recipes:   null,  // null means needs migration to multi-recipe
 };
 
 async function migrateNotes() {
   const toSave = [];
   S.notes.forEach(n => {
     let changed = false;
+
+    // Migrate old single-recipe fields into recipes[] array
+    if (!n.recipes) {
+      n.recipes = [{
+        id: 'r0',
+        title: n.title || '레시피',
+        type: n.type || 'recipe',
+        classType: n.classType || (n.type === 'recipe' ? '실습' : '이론'),
+        ingredients: n.ingredients || [],
+        content: n.content || '',
+        tips: n.tips || [],
+        paragraphAttachments: n.paragraphAttachments || {},
+      }];
+      changed = true;
+    }
+
+    // Add any missing top-level schema fields
     Object.entries(NOTE_SCHEMA).forEach(([key, defaultVal]) => {
-      if (!(key in n)) {
-        n[key] = JSON.parse(JSON.stringify(defaultVal)); // deep copy default
+      if (!(key in n) && defaultVal !== null) {
+        n[key] = JSON.parse(JSON.stringify(defaultVal));
         changed = true;
       }
     });
+
     if (changed) toSave.push(n);
   });
   if (toSave.length) {
@@ -2715,6 +2833,101 @@ function updateRecCounts() {
 }
 
 /* ═══════════════════════════════════════════
+   INDEXEDDB — Draft persistence
+   Saves raw audio blob before AI processing so we can recover if page closes
+═══════════════════════════════════════════ */
+function openDraftDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('chefnote-drafts', 1);
+    req.onupgradeneeded = e => {
+      e.target.result.createObjectStore('drafts', { keyPath: 'id' });
+    };
+    req.onsuccess = e => resolve(e.target.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function saveDraftToDB(draft) {
+  try {
+    const db = await openDraftDB();
+    await new Promise((res, rej) => {
+      const tx = db.transaction('drafts', 'readwrite');
+      tx.objectStore('drafts').put(draft);
+      tx.oncomplete = res; tx.onerror = () => rej(tx.error);
+    });
+  } catch(e) { console.warn('[Draft] save failed:', e); }
+}
+async function getAllDrafts() {
+  try {
+    const db = await openDraftDB();
+    return await new Promise((res, rej) => {
+      const tx = db.transaction('drafts', 'readonly');
+      const req = tx.objectStore('drafts').getAll();
+      req.onsuccess = () => res(req.result);
+      req.onerror = () => rej(req.error);
+    });
+  } catch(e) { return []; }
+}
+async function deleteDraftFromDB(id) {
+  try {
+    const db = await openDraftDB();
+    await new Promise((res, rej) => {
+      const tx = db.transaction('drafts', 'readwrite');
+      tx.objectStore('drafts').delete(id);
+      tx.oncomplete = res; tx.onerror = () => rej(tx.error);
+    });
+  } catch(e) { console.warn('[Draft] delete failed:', e); }
+}
+
+// Show/hide the draft recovery banner
+function showDraftBanner(text) {
+  const b = document.getElementById('draftBanner');
+  if (text) {
+    document.getElementById('draftBannerText').textContent = text;
+    b.classList.add('visible');
+  } else {
+    b.classList.remove('visible');
+  }
+}
+
+// Called after auth: check for any unfinished drafts and process them
+async function checkAndResumeDrafts() {
+  const drafts = await getAllDrafts();
+  if (!drafts.length) return;
+  showDraftBanner(`이전 녹음 ${drafts.length}개를 처리하는 중...`);
+  for (const draft of drafts) {
+    await processDraftToNote(draft);
+  }
+  showDraftBanner(null);
+}
+
+async function processDraftToNote(draft) {
+  try {
+    showDraftBanner(`녹음을 노트로 변환 중...`);
+    const transcript = await transcribeAudio(draft.audioBlob);
+    const note = await generateNote(transcript, draft.duration || 0, draft.memos || []);
+    note.id        = Date.now().toString();
+    note.date      = new Date().toLocaleDateString('ko-KR', { year:'numeric', month:'long', day:'numeric' });
+    note.timestamp = Date.now();
+    note.duration  = draft.duration || 0;
+    note.favorite  = false;
+    note.media     = draft.media || [];
+    note.audioBlob = null; // Skip audio storage for recovered drafts (keep it small)
+    note.memos     = draft.memos || [];
+    S.notes.unshift(note);
+    await saveNoteToFirestore(note);
+    await incrementNotesCreated();
+    await deleteDraftFromDB(draft.id);
+    renderNotes();
+    updateStats();
+    showToast('✅ 이전 녹음을 노트로 저장했어요!');
+  } catch(e) {
+    console.error('[Draft] process failed:', e);
+    await deleteDraftFromDB(draft.id); // Remove failed draft to prevent infinite retry
+    showToast('❌ 이전 녹음 처리 실패 — 건너뜁니다');
+  }
+}
+
+/* ═══════════════════════════════════════════
    PROCESSING GUARD — prevents accidental close during AI processing
 ═══════════════════════════════════════════ */
 let _processingGuardFn = null;
@@ -2744,13 +2957,25 @@ async function onRecordingDone() {
   const mtype  = S.chunks[0]?.type || 'audio/webm';
   const blob   = new Blob(S.chunks, { type: mtype });
 
-  showProc('음성 인식 중...', 'AssemblyAI로 녹음을 변환하고 있어요...\n완료될 때까지 창을 닫지 마세요 ⚠️');
+  // Save raw audio draft to IndexedDB BEFORE processing
+  // This allows recovery if the page closes during AI processing
+  const draftId = 'draft_' + Date.now();
+  await saveDraftToDB({
+    id: draftId,
+    audioBlob: blob,
+    media: [...S.media],
+    memos: [...S.memos],
+    duration: dur,
+    timestamp: Date.now(),
+  });
+
+  showProc('음성 인식 중...', 'AssemblyAI로 녹음을 변환하고 있어요...\n닫아도 다음 접속 시 자동 복구됩니다 ✓');
   addProcessingGuard(); // warn user if they try to close during processing
 
   try {
     const transcript = await transcribeAudio(blob);
 
-    updateProc('노트 생성 중...', 'Claude가 수업 내용을 정리하고 있어요...\n완료될 때까지 창을 닫지 마세요 ⚠️');
+    updateProc('노트 생성 중...', 'Claude가 수업 내용을 정리하고 있어요...\n닫아도 다음 접속 시 자동 복구됩니다 ✓');
 
     const note = await generateNote(transcript, dur, [...S.memos]);
     note.id        = Date.now().toString();
@@ -2766,6 +2991,7 @@ async function onRecordingDone() {
     S.memos = [];
     await saveNoteToFirestore(note);
     await incrementNotesCreated();
+    await deleteDraftFromDB(draftId); // ✅ Successfully saved — remove draft
     renderNotes();
     updateStats();
 
@@ -2776,8 +3002,9 @@ async function onRecordingDone() {
   } catch(err) {
     console.error('[NOTE]', err);
     removeProcessingGuard();
+    // Draft stays in IndexedDB — will be recovered on next session
     hideProc();
-    showToast('❌ 노트 생성 실패: ' + (err.message || '오류'));
+    showToast('❌ 노트 생성 실패 — 다음 접속 시 자동 복구 시도합니다');
   }
 }
 
@@ -2917,20 +3144,28 @@ ${memoSection}
 ${transcript}
 """
 
-이 수업 내용을 분석해 아래 JSON 형식 **만** 반환하세요. 다른 텍스트나 마크다운 코드 블록 없이 순수 JSON만 반환하세요.${memos.length ? ' 메모에 언급된 내용을 content와 tips에 반드시 반영하세요.' : ''}
+이 수업 내용을 분석해 아래 JSON 형식 **만** 반환하세요. 다른 텍스트나 마크다운 코드 블록 없이 순수 JSON만 반환하세요.${memos.length ? ' 메모에 언급된 내용을 반드시 반영하세요.' : ''}
+
+한 수업에서 여러 요리/레시피를 다루는 경우, recipes 배열에 각각 분리해서 넣어주세요. (예: 토마토 소스와 알르망제 소스를 함께 배웠다면 recipes에 2개)
 
 {
-  "type": "recipe" 또는 "theory",
-  "title": "수업/요리명 (간결하게)",
-  "classType": "실습" 또는 "이론",
-  "content": "수업 핵심 내용 요약 (3-6 문단, 줄바꿈 \\n 사용)",
-  "ingredients": ["재료명 (용량/수량)"] (recipe 타입만, theory는 빈 배열),
-  "tips": ["교수님이 강조한 팁"] (없으면 빈 배열)
+  "title": "수업 제목 (날짜나 전체 수업명, 간결하게)",
+  "recipes": [
+    {
+      "title": "요리/레시피명 (없으면 수업 제목과 동일하게)",
+      "type": "recipe" 또는 "theory",
+      "classType": "실습" 또는 "이론",
+      "content": "핵심 내용/조리 순서 (단계별, 줄바꿈 \\n 사용, 각 줄이 한 단계)",
+      "ingredients": ["재료명 (용량/수량)"],
+      "tips": ["교수님이 강조한 팁이나 주의사항"]
+    }
+  ]
 }
 
 판단 기준:
 - 실제 조리/요리/실습 관련이면 "recipe"
-- 이론·역사·영양학·위생·서비스 등이면 "theory"`;
+- 이론·역사·영양학·위생·서비스 등이면 "theory"
+- 여러 요리가 명확히 구분된다면 반드시 여러 recipes로 분리할 것`;
 
   /* Claude API — Worker 프록시 경유 (AI Gateway 사용) */
   let raw = '';
@@ -2964,19 +3199,46 @@ ${transcript}
   try {
     const m = raw.match(/\{[\s\S]*\}/);
     const clean = m ? m[0] : raw.replace(/```[\w]*\n?/g, '').trim();
-    return JSON.parse(clean.replace(/\r?\n/g, ' '));
-} catch (e) {
-      console.error('[Claude] JSON 파싱 실패:', e.message, raw.slice(0, 300));
-      return fallbackNote(dur);
+    const parsed = JSON.parse(clean);
+
+    // Normalize: ensure `recipes` array exists with proper structure
+    if (!parsed.recipes || !Array.isArray(parsed.recipes)) {
+      // Old format fallback: wrap single recipe fields into recipes array
+      parsed.recipes = [{
+        id: 'r0',
+        title: parsed.title || '레시피',
+        type: parsed.type || 'recipe',
+        classType: parsed.classType || '실습',
+        ingredients: parsed.ingredients || [],
+        content: parsed.content || '',
+        tips: parsed.tips || [],
+        paragraphAttachments: {},
+      }];
+    } else {
+      // Assign IDs to recipes
+      parsed.recipes = parsed.recipes.map((r, i) => ({
+        id: 'r' + i,
+        paragraphAttachments: {},
+        ...r,
+      }));
+    }
+    return parsed;
+  } catch (e) {
+    console.error('[Claude] JSON 파싱 실패:', e.message, raw.slice(0, 300));
+    return fallbackNote(dur);
   }
 }
 
 function fallbackNote(dur) {
   const d = new Date().toLocaleDateString('ko-KR');
   return {
-    type: 'theory', title: `수업 노트 ${d}`,
-    classType: '이론', content: '노트를 자동 생성하지 못했습니다.',
-    ingredients: [], tips: [],
+    title: `수업 노트 ${d}`,
+    recipes: [{
+      id: 'r0', title: `수업 노트 ${d}`,
+      type: 'theory', classType: '이론',
+      content: '노트를 자동 생성하지 못했습니다.',
+      ingredients: [], tips: [], paragraphAttachments: {},
+    }],
   };
 }
 
@@ -3010,12 +3272,17 @@ function smartExtract(transcript, dur) {
   const title = sentences[0]?.slice(0, 20).trim() || `수업 노트 ${d}`;
 
   return {
-    type: isRecipe ? 'recipe' : 'theory',
     title,
-    classType: isRecipe ? '실습' : '이론',
-    content,
-    ingredients,
-    tips,
+    recipes: [{
+      id: 'r0',
+      title,
+      type: isRecipe ? 'recipe' : 'theory',
+      classType: isRecipe ? '실습' : '이론',
+      content,
+      ingredients,
+      tips,
+      paragraphAttachments: {},
+    }],
   };
 }
 
@@ -3230,19 +3497,28 @@ function renderList(id, notes) {
 }
 
 function noteCardHTML(n) {
-  const coverSrc = n.coverPhoto || n.media?.[0]?.dataUrl || null;
-  const emoji = n.type === 'recipe' ? '🍳' : '📖';
+  const recipes = getRecipes(n);
+  const coverSrc = n.coverPhoto || recipes[0]?.coverPhoto || n.media?.[0]?.dataUrl || null;
+  const rCount = recipes.length;
+  const hasRecipe = recipes.some(r => r.type === 'recipe');
+  const hasTheory = recipes.some(r => r.type === 'theory');
+  const badgeTxt = rCount > 1 ? `${rCount}가지 요리` : (hasRecipe ? '레시피' : '이론');
+  const badgeCls = hasRecipe ? 'badge-recipe' : 'badge-theory';
+
+  // No-photo placeholder: gradient with first letter
+  const initials = (n.title || '?').charAt(0).toUpperCase();
+  const colors = ['#4E6035','#8B5E3C','#2C5282','#744210','#553C9A'];
+  const colorIdx = n.id ? Math.abs(n.id.charCodeAt(0) % colors.length) : 0;
   const photoEl = coverSrc
     ? `<img src="${coverSrc}" alt="" loading="lazy">`
-    : `<div class="note-card-photo-placeholder">${emoji}</div>`;
-  const cls = n.type === 'recipe' ? 'badge-recipe' : 'badge-theory';
-  const lbl = n.type === 'recipe' ? '레시피' : '이론';
+    : `<div class="note-card-photo-placeholder" style="background:${colors[colorIdx]};color:#fff;font-family:var(--f-display);font-size:32px;font-style:italic">${initials}</div>`;
+
   const fav = n.favorite ? '<span class="note-card-fav">♥</span>' : '';
   return `<div class="note-card" onclick="openNote('${n.id}')">
     <div class="note-card-photo">
       ${photoEl}
       <div class="note-card-photo-overlay"></div>
-      <div class="note-card-badge-wrap"><span class="badge ${cls}">${lbl}</span></div>
+      <div class="note-card-badge-wrap"><span class="badge ${badgeCls}">${badgeTxt}</span></div>
     </div>
     <div class="note-card-body">
       <div class="note-card-title">${esc(n.title)}</div>
@@ -3272,11 +3548,17 @@ function filterNotes() {
 
 function getFiltered(q = '') {
   return S.notes.filter(n => {
-    if (curFilter === 'recipe'  && n.type !== 'recipe')  return false;
-    if (curFilter === 'theory'  && n.type !== 'theory')  return false;
-    if (curFilter === 'fav'     && !n.favorite)           return false;
+    const recipes = getRecipes(n);
+    const hasRecipe = recipes.some(r => r.type === 'recipe');
+    const hasTheory = recipes.some(r => r.type === 'theory');
+    if (curFilter === 'recipe' && !hasRecipe) return false;
+    if (curFilter === 'theory' && !hasTheory) return false;
+    if (curFilter === 'fav' && !n.favorite)   return false;
     if (q) {
-      const hay = `${n.title} ${n.content || ''} ${(n.ingredients||[]).join(' ')}`.toLowerCase();
+      const recipeText = recipes.map(r =>
+        `${r.title || ''} ${r.content || ''} ${(r.ingredients||[]).join(' ')} ${(r.tips||[]).join(' ')}`
+      ).join(' ');
+      const hay = `${n.title} ${recipeText}`.toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
@@ -3296,7 +3578,11 @@ function handleSearch(q) {
   }
   const ql   = q.toLowerCase();
   const hits = S.notes.filter(n => {
-    const t = `${n.title} ${n.content||''} ${(n.ingredients||[]).join(' ')}`.toLowerCase();
+    const recipes = getRecipes(n);
+    const recipeText = recipes.map(r =>
+      `${r.title||''} ${r.content||''} ${(r.ingredients||[]).join(' ')}`
+    ).join(' ');
+    const t = `${n.title} ${recipeText}`.toLowerCase();
     return t.includes(ql);
   });
   if (!hits.length) {
@@ -3311,31 +3597,90 @@ function handleSearch(q) {
 /* ═══════════════════════════════════════════
    NOTE DETAIL
 ═══════════════════════════════════════════ */
+/* ─── Render a single recipe's steps into HTML ─── */
+function renderRecipeStepsHTML(n, recipe, ri) {
+  const pa = recipe.paragraphAttachments || {};
+  const isRec = recipe.type === 'recipe';
+  const steps = recipe.content ? recipe.content.split('\n').filter(p => p.trim()) : [];
+  const allTips = recipe.tips || [];
+  const mainTips = allTips.slice(0, 10);
+  const extraTips = allTips.slice(10);
+  const totalSteps = steps.length;
+  let html = '';
+
+  if (steps.length) {
+    let stepNum = 0;
+    steps.forEach((p, i) => {
+      const attachs = pa[i] || [];
+      const cleaned = p.replace(/^[\d①②③④⑤⑥⑦⑧⑨⑩]+[\.\)]\s*/, '').trim();
+      if (isRec) stepNum++;
+      html += `<div class="para-block" data-idx="${i}">`;
+      if (isRec) html += `<div class="step-label">Step ${stepNum}</div>`;
+      html += `<p class="para-text">${esc(cleaned)}</p>`;
+      attachs.forEach((a, ai) => {
+        if (a.type === 'memo')
+          html += `<div class="para-memo-item"><span class="para-memo-text">✏️ ${esc(a.text)}</span><button class="para-attach-del" onclick="delParaAttach('${n.id}',${ri},${i},${ai})">×</button></div>`;
+        else if (a.type === 'photo')
+          html += `<div class="para-photo-item"><img src="${a.dataUrl}" alt="사진" loading="lazy" onclick="openPhotoViewer('${a.dataUrl}')"><button class="para-photo-del" onclick="delParaAttach('${n.id}',${ri},${i},${ai})">×</button></div>`;
+      });
+      html += `<button class="para-add-btn" onclick="toggleParaAdd('${ri}_${i}')">+ 메모·사진</button>`;
+      html += `<div class="para-attach-actions" id="pac-${ri}_${i}">`;
+      html += `<button class="para-attach-btn" onclick="addParaMemo('${n.id}',${ri},${i})">✏️ 메모</button>`;
+      html += `<button class="para-attach-btn" onclick="addParaPhoto('${n.id}',${ri},${i})">📷 사진</button>`;
+      html += `</div></div>`;
+      if (extraTips.length && totalSteps) {
+        extraTips.forEach((tip, ti) => {
+          const insertAfter = Math.floor((ti + 1) * totalSteps / (extraTips.length + 1));
+          if (i === insertAfter - 1)
+            html += `<div class="inline-tip"><span class="inline-tip-label">TIP</span>${esc(tip)}</div>`;
+        });
+      }
+    });
+  }
+
+  // Tips section
+  html += `<div class="nyt-sec nyt-sec-tip" style="margin-top:20px">TIP <button class="tip-add-btn" onclick="addTipInline('${n.id}',${ri})">+</button></div>`;
+  html += `<div id="tipsList-${ri}">`;
+  html += mainTips.length
+    ? mainTips.map((t, i) => `<div class="tip-item"><span style="flex:1">${esc(t)}</span><button class="tip-del" onclick="deleteTip('${n.id}',${ri},${i})">×</button></div>`).join('')
+    : `<span style="color:var(--text-3);font-size:13px;padding:8px 20px;display:block">+ 버튼으로 팁 추가</span>`;
+  html += `</div>`;
+
+  return html;
+}
+
 function openNote(id) {
   const n = S.notes.find(x => x.id === id);
   if (!n) return;
   S.activeNote = id;
+  S.activeRecipeIdx = 0;
 
-  /* Type label */
+  // Ensure recipes array exists (migration on the fly)
+  if (!n.recipes) {
+    n.recipes = getRecipes(n);
+  }
+  const recipes = n.recipes;
+  const activeR = recipes[0];
+
+  /* Type label — reflects dominant type */
   const lbl = document.getElementById('dtTypeLbl');
-  lbl.textContent = n.type === 'recipe' ? '레시피' : '이론';
-  lbl.className   = `detail-type-lbl ${n.type === 'recipe' ? 'recipe' : 'theory'}`;
+  const hasRecipe = recipes.some(r => r.type === 'recipe');
+  lbl.textContent = recipes.length > 1 ? `${recipes.length}가지 요리` : (hasRecipe ? '레시피' : '이론');
+  lbl.className   = `detail-type-lbl ${hasRecipe ? 'recipe' : 'theory'}`;
 
   document.getElementById('dtTitle').textContent = n.title;
   document.getElementById('dtDate').textContent  = n.date;
-  document.getElementById('dtClass').textContent = n.classType || (n.type === 'recipe' ? '실습' : '이론');
+  document.getElementById('dtClass').textContent = activeR?.classType || '실습';
 
-  const d = n.duration || 0;
-  document.getElementById('dtDur').textContent = `${String(Math.floor(d/60)).padStart(2,'0')}:${String(d%60).padStart(2,'0')}`;
-
+  const dur = n.duration || 0;
+  document.getElementById('dtDur').textContent = `${String(Math.floor(dur/60)).padStart(2,'0')}:${String(dur%60).padStart(2,'0')}`;
   updateFavIcon(n.favorite);
 
-  /* Photo (dt-split left) */
+  /* Photo */
   const heroEl = document.getElementById('noteHero');
   const heroPH = document.getElementById('noteHeroPlaceholder');
-  const existingImg = heroEl.querySelector('img.hero-img');
-  if (existingImg) existingImg.remove();
-  const coverSrc = n.coverPhoto || n.media?.[0]?.dataUrl || null;
+  heroEl.querySelector('img.hero-img')?.remove();
+  const coverSrc = n.coverPhoto || recipes[0]?.coverPhoto || n.media?.[0]?.dataUrl || null;
   if (coverSrc) {
     heroPH.style.display = 'none';
     const img = document.createElement('img');
@@ -3343,111 +3688,55 @@ function openNote(id) {
     heroEl.insertBefore(img, heroEl.firstChild);
   } else {
     heroPH.style.display = '';
-    heroPH.textContent = n.type === 'recipe' ? '🍳' : '📖';
+    heroPH.textContent = hasRecipe ? '🍳' : '📖';
   }
 
-  /* Category chip */
-  const catChip = document.getElementById('dtCatChip');
+  /* Category */
   document.getElementById('dtCatLabel').textContent = n.category || '카테고리 없음';
-  catChip.style.display = n.category ? 'inline-flex' : 'inline-flex';
-
-  /* Distribute tips: first 10 go to TIP section, extras go inline between steps */
-  const allTips    = n.tips || [];
-  const mainTips   = allTips.slice(0, 10);
-  const extraTips  = allTips.slice(10);  // tips beyond 10
-
-  /* Content — paragraph blocks with inline attachments */
-  const pa = n.paragraphAttachments || {};
-  let html = '';
-  const isRecipe = n.type === 'recipe';
-  const steps = n.content ? n.content.split('\n').filter(p => p.trim()) : [];
-  const totalSteps = steps.length;
-  if (n.content) {
-    let stepNum = 0;
-    steps.forEach((p, i) => {
-      const attachs = pa[i] || [];
-      // Strip leading numbers like "1. " "① " for clean re-numbering
-      const cleaned = p.replace(/^[\d①②③④⑤⑥⑦⑧⑨⑩]+[\.\)]\s*/, '').trim();
-      if (isRecipe) stepNum++;
-      html += `<div class="para-block" data-idx="${i}">`;
-      if (isRecipe) html += `<div class="step-label">Step ${stepNum}</div>`;
-      html += `<p class="para-text">${esc(cleaned)}</p>`;
-      attachs.forEach((a, ai) => {
-        if (a.type === 'memo') {
-          html += `<div class="para-memo-item"><span class="para-memo-text">✏️ ${esc(a.text)}</span><button class="para-attach-del" onclick="delParaAttach('${n.id}',${i},${ai})">×</button></div>`;
-        } else if (a.type === 'photo') {
-          html += `<div class="para-photo-item"><img src="${a.dataUrl}" alt="사진" loading="lazy" onclick="openPhotoViewer('${a.dataUrl}')"><button class="para-photo-del" onclick="delParaAttach('${n.id}',${i},${ai})">×</button></div>`;
-        }
-      });
-      html += `<button class="para-add-btn" onclick="toggleParaAdd(${i})">+ 메모·사진</button>`;
-      html += `<div class="para-attach-actions" id="pac-${i}">`;
-      html += `<button class="para-attach-btn" onclick="addParaMemo('${n.id}',${i})">✏️ 메모</button>`;
-      html += `<button class="para-attach-btn" onclick="addParaPhoto('${n.id}',${i})">📷 사진</button>`;
-      html += `</div>`;
-      html += `</div>`;
-
-      // Insert extra tips (beyond 10) evenly distributed between steps
-      if (extraTips.length > 0 && totalSteps > 0) {
-        extraTips.forEach((tip, ti) => {
-          // Place after step at position floor((ti+1) * totalSteps / (extraTips.length+1))
-          const insertAfter = Math.floor((ti + 1) * totalSteps / (extraTips.length + 1));
-          if (i === insertAfter - 1) {
-            html += `<div class="inline-tip"><span class="inline-tip-label">TIP</span>${esc(tip)}</div>`;
-          }
-        });
-      }
-    });
-  }
-  if (n.memos?.length) {
-    n.memos.forEach(m => { html += `<div class="para-memo-item"><span class="para-memo-text">✏️ ${esc(m)}</span></div>`; });
-  }
-  if (n.media?.length) {
-    n.media.forEach(m => {
-      if (m.type === 'photo') html += `<img src="${m.dataUrl}" alt="수업 사진" loading="lazy" onclick="openPhotoViewer('${m.dataUrl}')" style="cursor:pointer;width:100%;border-radius:var(--r-md);margin-bottom:12px">`;
-    });
-  }
-  document.getElementById('dtContent').innerHTML = html;
 
   /* Audio */
   const audioSec = document.getElementById('audioSection');
-  if (n.audioBlob) {
-    audioSec.style.display = 'block';
-    setupAudio(n.audioBlob, n.duration);
+  if (n.audioBlob) { audioSec.style.display = 'block'; setupAudio(n.audioBlob, n.duration); }
+  else              { audioSec.style.display = 'none'; }
+
+  /* Recipe tabs (only if multiple recipes) */
+  const tabsEl = document.getElementById('recipeTabs');
+  if (recipes.length > 1) {
+    tabsEl.style.display = 'flex';
+    tabsEl.innerHTML = recipes.map((r, i) =>
+      `<button class="recipe-tab ${i === 0 ? 'active' : ''}" onclick="switchRecipeTab('${n.id}',${i})">${esc(r.title)}</button>`
+    ).join('') + `<button class="recipe-tab recipe-tab-add" onclick="addRecipeToNote('${n.id}')" title="레시피 추가">＋</button>`;
   } else {
-    audioSec.style.display = 'none';
+    tabsEl.style.display = 'none';
   }
 
-  /* Ingredients */
-  const ingHeader = document.getElementById('ingHeader');
-  if (n.ingredients?.length) {
-    ingHeader.style.display = '';
-    document.getElementById('ingList').innerHTML =
-      n.ingredients.map(item => {
-        const m = item.match(/^(.+?)\s+([\d\/\.]+\s*[a-zA-Zg㎖ml스큰작약간]+.*)$/);
-        const name = m ? m[1] : item;
-        const amt  = m ? m[2] : '';
-        return `<div class="ing-row"><span class="ing-name">${esc(name)}</span>${amt ? `<span class="ing-amount">${esc(amt)}</span>` : ''}</div>`;
-      }).join('');
-  } else {
-    ingHeader.style.display = 'none';
-    document.getElementById('ingList').innerHTML = '';
+  /* Ingredients (from first/active recipe) */
+  renderIngredients(activeR);
+
+  /* Steps + Tips into dtContent */
+  document.getElementById('prepHeader').style.display = activeR?.content?.trim() ? '' : 'none';
+  document.getElementById('dtContent').innerHTML = renderRecipeStepsHTML(n, activeR, 0);
+
+  /* Hide static tip section (tips are now rendered inside dtContent) */
+  const tipsSec = document.getElementById('tipsSection');
+  if (tipsSec) tipsSec.style.display = 'none';
+
+  /* Media photos (class-level, shown at bottom) */
+  if (n.media?.length) {
+    let mHtml = '';
+    n.media.forEach(m => {
+      if (m.type === 'photo') mHtml += `<img src="${m.dataUrl}" alt="수업 사진" loading="lazy" onclick="openPhotoViewer('${m.dataUrl}')" style="cursor:pointer;width:100%;border-radius:var(--r-md);margin-bottom:12px">`;
+    });
+    document.getElementById('dtContent').innerHTML += mHtml;
   }
 
-  /* PREPARATION header visibility */
-  document.getElementById('prepHeader').style.display = n.content?.trim() ? '' : 'none';
-
-  /* Tips — show max 10 in TIP section; extras were distributed inline above */
-  document.getElementById('tipsSection').style.display = '';
-  document.getElementById('tipsList').innerHTML = mainTips.length
-    ? mainTips.map((t, i) => `<div class="tip-item"><span style="flex:1">${esc(t)}</span><button class="tip-del" onclick="deleteTip('${n.id}',${i})">×</button></div>`).join('')
-    : `<span style="color:var(--text-3);font-size:13px;padding:8px 20px;display:block">+ 버튼으로 팁 추가</span>`;
-
-  // Always reset to view mode on open
+  /* Reset to view mode */
   document.getElementById('screen-detail').classList.remove('detail-editing');
   document.getElementById('editBtn').style.display = 'flex';
   document.getElementById('editDoneBtn').style.display = 'none';
   document.getElementById('dtTitle').style.display = '';
   document.getElementById('dtTitleInput').style.display = 'none';
+  document.getElementById('dtRecipeTitleInput').style.display = 'none';
   document.getElementById('dtContent').style.display = '';
   document.getElementById('dtContentEdit').style.display = 'none';
   document.getElementById('ingList').style.display = '';
@@ -3456,6 +3745,65 @@ function openNote(id) {
   const det = document.getElementById('screen-detail');
   det.scrollTop = 0;
   det.classList.add('open');
+}
+
+/* Switch which recipe tab is active */
+function switchRecipeTab(noteId, ri) {
+  const n = S.notes.find(x => x.id === noteId);
+  if (!n || !n.recipes) return;
+  S.activeRecipeIdx = ri;
+  const recipe = n.recipes[ri];
+
+  // Update tab active state
+  document.querySelectorAll('.recipe-tab').forEach((t, i) => {
+    t.classList.toggle('active', i === ri);
+  });
+
+  // Re-render ingredients and steps for this recipe
+  renderIngredients(recipe);
+  document.getElementById('prepHeader').style.display = recipe?.content?.trim() ? '' : 'none';
+  document.getElementById('dtContent').innerHTML = renderRecipeStepsHTML(n, recipe, ri);
+  document.getElementById('screen-detail').scrollTop = 0;
+}
+
+/* Render ingredients for a recipe object */
+function renderIngredients(recipe) {
+  const ingHeader = document.getElementById('ingHeader');
+  const ingList   = document.getElementById('ingList');
+  if (recipe?.ingredients?.length) {
+    ingHeader.style.display = '';
+    ingList.innerHTML = recipe.ingredients.map(item => {
+      const m = item.match(/^(.+?)\s+([\d\/\.]+\s*[a-zA-Zg㎖ml스큰작약간]+.*)$/);
+      const name = m ? m[1] : item;
+      const amt  = m ? m[2] : '';
+      return `<div class="ing-row"><span class="ing-name">${esc(name)}</span>${amt ? `<span class="ing-amount">${esc(amt)}</span>` : ''}</div>`;
+    }).join('');
+  } else {
+    ingHeader.style.display = 'none';
+    ingList.innerHTML = '';
+  }
+}
+
+/* Add a new empty recipe to the note */
+function addRecipeToNote(noteId) {
+  const n = S.notes.find(x => x.id === noteId);
+  if (!n || !n.recipes) return;
+  const newR = {
+    id: 'r' + Date.now(),
+    title: '새 레시피',
+    type: 'recipe',
+    classType: '실습',
+    ingredients: [],
+    content: '',
+    tips: [],
+    paragraphAttachments: {},
+  };
+  n.recipes.push(newR);
+  saveNoteToFirestore(n);
+  S.activeRecipeIdx = n.recipes.length - 1;
+  openNote(noteId);
+  // Auto-enter edit mode for new recipe
+  setTimeout(() => enterEditMode(), 300);
 }
 
 function closeDetail() {
@@ -3763,10 +4111,26 @@ function secretLogoTap() {
 
 function updateStats() {
   const t = S.notes.length;
-  const r = S.notes.filter(n => n.type === 'recipe').length;
+  const r = S.notes.filter(n => {
+    const recs = getRecipes(n);
+    return recs.some(r => r.type === 'recipe');
+  }).length;
   document.getElementById('sTot').textContent = t;
   document.getElementById('sRec').textContent = r;
   document.getElementById('sTh').textContent  = t - r;
+}
+
+function updateHomeGreeting() {
+  const name = S.profile?.name || '';
+  const hr = new Date().getHours();
+  const greet = hr < 12 ? '좋은 아침이에요' : hr < 18 ? '안녕하세요' : '좋은 저녁이에요';
+  const el = document.getElementById('homeGreeting');
+  const sub = document.getElementById('homeGreetingSub');
+  if (el) el.textContent = name ? `${greet}, ${name} 👋` : `${greet} 👋`;
+  if (sub) {
+    const cnt = S.notes.length;
+    sub.textContent = cnt ? `레시피 ${cnt}개 보관 중 · 오늘도 맛있는 수업을` : '첫 번째 레시피를 녹음해보세요';
+  }
 }
 
 function editProfile() {
@@ -4037,47 +4401,50 @@ function onCoverPhotoSelected(e) {
 /* ─── Paragraph inline attachments ─── */
 let _paraTarget = null;
 
-function toggleParaAdd(idx) {
-  const el = document.getElementById('pac-' + idx);
+function toggleParaAdd(key) {
+  const el = document.getElementById('pac-' + key);
   if (!el) return;
   const isOpen = el.classList.contains('open');
   document.querySelectorAll('.para-attach-actions').forEach(e => e.classList.remove('open'));
   if (!isOpen) el.classList.add('open');
 }
 
-function addParaMemo(noteId, paraIdx) {
+function addParaMemo(noteId, recipeIdx, paraIdx) {
   const text = prompt('메모 입력:');
   if (!text || !text.trim()) return;
   const n = S.notes.find(x => x.id === noteId);
-  if (!n) return;
-  if (!n.paragraphAttachments) n.paragraphAttachments = {};
-  if (!n.paragraphAttachments[paraIdx]) n.paragraphAttachments[paraIdx] = [];
-  n.paragraphAttachments[paraIdx].push({ type: 'memo', text: text.trim() });
+  if (!n || !n.recipes) return;
+  const recipe = n.recipes[recipeIdx];
+  if (!recipe) return;
+  if (!recipe.paragraphAttachments) recipe.paragraphAttachments = {};
+  if (!recipe.paragraphAttachments[paraIdx]) recipe.paragraphAttachments[paraIdx] = [];
+  recipe.paragraphAttachments[paraIdx].push({ type: 'memo', text: text.trim() });
   saveNoteToFirestore(n);
   openNote(noteId);
   if (_editMode) enterEditMode();
 }
 
-function addParaPhoto(noteId, paraIdx) {
-  _paraTarget = { noteId: noteId, paraIdx: paraIdx };
+function addParaPhoto(noteId, recipeIdx, paraIdx) {
+  _paraTarget = { noteId, recipeIdx, paraIdx };
   document.getElementById('paraPhotoInput').click();
 }
 
 function onParaPhotoSelected(e) {
   const file = e.target.files[0];
   if (!file || !_paraTarget) return;
-  const noteId  = _paraTarget.noteId;
-  const paraIdx = _paraTarget.paraIdx;
+  const { noteId, recipeIdx, paraIdx } = _paraTarget;
   _paraTarget = null;
   e.target.value = '';
   const reader = new FileReader();
   reader.onload = function(ev) {
     openCropModal(ev.target.result, (cropped) => {
       const n = S.notes.find(x => x.id === noteId);
-      if (!n) return;
-      if (!n.paragraphAttachments) n.paragraphAttachments = {};
-      if (!n.paragraphAttachments[paraIdx]) n.paragraphAttachments[paraIdx] = [];
-      n.paragraphAttachments[paraIdx].push({ type: 'photo', dataUrl: cropped });
+      if (!n || !n.recipes) return;
+      const recipe = n.recipes[recipeIdx];
+      if (!recipe) return;
+      if (!recipe.paragraphAttachments) recipe.paragraphAttachments = {};
+      if (!recipe.paragraphAttachments[paraIdx]) recipe.paragraphAttachments[paraIdx] = [];
+      recipe.paragraphAttachments[paraIdx].push({ type: 'photo', dataUrl: cropped });
       saveNoteToFirestore(n);
       openNote(noteId);
       if (_editMode) enterEditMode();
@@ -4152,45 +4519,64 @@ let _editMode = false;
 
 function enterEditMode() {
   const n = S.notes.find(x => x.id === S.activeNote);
-  if (!n) return;
+  if (!n || !n.recipes) return;
   _editMode = true;
+  S.editingRecipeIdx = S.activeRecipeIdx || 0;
+  const recipe = n.recipes[S.editingRecipeIdx];
 
   // Nav swap
   document.getElementById('editBtn').style.display = 'none';
   document.getElementById('editDoneBtn').style.display = 'flex';
   document.getElementById('screen-detail').classList.add('detail-editing');
 
-  // Title
+  // Class title edit
   document.getElementById('dtTitle').style.display = 'none';
-  const ti = document.getElementById('dtTitleInput');
-  ti.value = n.title || '';
-  ti.style.display = 'block';
+  document.getElementById('dtTitleInput').value = n.title || '';
+  document.getElementById('dtTitleInput').style.display = 'block';
 
-  // Content: hide rendered view, show textarea for editing
+  // Recipe name edit (only shown when editing a specific recipe)
+  const rTitleInput = document.getElementById('dtRecipeTitleInput');
+  rTitleInput.value = recipe?.title || '';
+  rTitleInput.style.display = n.recipes.length > 1 ? 'block' : 'none';
+  rTitleInput.placeholder = '이 레시피 이름';
+
+  // Steps / content
   document.getElementById('dtContent').style.display = 'none';
   const ce = document.getElementById('dtContentEdit');
-  ce.value = n.content || '';
+  ce.value = recipe?.content || '';
   ce.style.display = 'block';
   ce.style.minHeight = Math.max(200, Math.min(ce.scrollHeight + 40, 600)) + 'px';
 
   // Ingredients
   document.getElementById('ingList').style.display = 'none';
   const ie = document.getElementById('dtIngEdit');
-  ie.value = (n.ingredients || []).join('\n');
+  ie.value = (recipe?.ingredients || []).join('\n');
   ie.style.display = 'block';
 }
 
 function saveEditMode() {
   const n = S.notes.find(x => x.id === S.activeNote);
-  if (!n) return;
+  if (!n || !n.recipes) return;
+  const ri = S.editingRecipeIdx || 0;
+  const recipe = n.recipes[ri];
 
+  // Save class title
   const titleVal = document.getElementById('dtTitleInput').value.trim();
   if (titleVal) n.title = titleVal;
 
-  n.content = document.getElementById('dtContentEdit').value.trim();
+  // Save recipe name (if shown)
+  const rTitleInput = document.getElementById('dtRecipeTitleInput');
+  if (rTitleInput.style.display !== 'none') {
+    const rTitle = rTitleInput.value.trim();
+    if (rTitle && recipe) recipe.title = rTitle;
+  }
 
-  const ingRaw = document.getElementById('dtIngEdit').value.trim();
-  n.ingredients = ingRaw ? ingRaw.split('\n').map(s => s.trim()).filter(Boolean) : [];
+  // Save recipe steps + ingredients
+  if (recipe) {
+    recipe.content = document.getElementById('dtContentEdit').value.trim();
+    const ingRaw = document.getElementById('dtIngEdit').value.trim();
+    recipe.ingredients = ingRaw ? ingRaw.split('\n').map(s => s.trim()).filter(Boolean) : [];
+  }
 
   saveNoteToFirestore(n);
   showToast('✅ 저장됨');
@@ -4204,34 +4590,37 @@ function saveEditMode() {
   openNote(n.id); // re-render in view mode
 }
 
-function addTipInline() {
+function addTipInline(noteId, recipeIdx) {
   const text = prompt('Tip 추가:');
   if (!text || !text.trim()) return;
-  const n = S.notes.find(x => x.id === S.activeNote);
-  if (!n) return;
-  if (!n.tips) n.tips = [];
-  n.tips.push(text.trim());
-  saveNoteToFirestore(n);
-  openNote(n.id);
-  if (_editMode) enterEditMode();
-}
-
-function deleteTip(noteId, idx) {
   const n = S.notes.find(x => x.id === noteId);
-  if (!n || !n.tips) return;
-  n.tips.splice(idx, 1);
+  if (!n || !n.recipes) return;
+  const recipe = n.recipes[recipeIdx];
+  if (!recipe) return;
+  if (!recipe.tips) recipe.tips = [];
+  recipe.tips.push(text.trim());
   saveNoteToFirestore(n);
   openNote(noteId);
-  if (_editMode) enterEditMode();
 }
 
-function delParaAttach(noteId, paraIdx, attachIdx) {
+function deleteTip(noteId, recipeIdx, idx) {
   const n = S.notes.find(x => x.id === noteId);
-  if (!n || !n.paragraphAttachments || !n.paragraphAttachments[paraIdx]) return;
-  n.paragraphAttachments[paraIdx].splice(attachIdx, 1);
+  if (!n || !n.recipes) return;
+  const recipe = n.recipes[recipeIdx];
+  if (!recipe || !recipe.tips) return;
+  recipe.tips.splice(idx, 1);
   saveNoteToFirestore(n);
   openNote(noteId);
-  if (_editMode) enterEditMode();
+}
+
+function delParaAttach(noteId, recipeIdx, paraIdx, attachIdx) {
+  const n = S.notes.find(x => x.id === noteId);
+  if (!n || !n.recipes) return;
+  const recipe = n.recipes[recipeIdx];
+  if (!recipe?.paragraphAttachments?.[paraIdx]) return;
+  recipe.paragraphAttachments[paraIdx].splice(attachIdx, 1);
+  saveNoteToFirestore(n);
+  openNote(noteId);
 }
 </script>
 <input type="file" id="coverPhotoInput" accept="image/*" style="display:none" onchange="onCoverPhotoSelected(event)">
