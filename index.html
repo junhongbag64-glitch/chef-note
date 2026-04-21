@@ -22,16 +22,16 @@
        DESIGN TOKENS
     ═══════════════════════════════════════════ */
     :root {
-      --bg:          #F8F7F4;
-      --bg-card:     #FFFFFF;
-      --bg-elevated: #FDFCF9;
-      --text-1:      #0E0E0C;
-      --text-2:      #6B6A67;
-      --text-3:      #AEACA7;
-      --border-1:    #E4E2DC;
-      --border-2:    #CCCAC4;
+      --bg:          #FAF6EF;
+      --bg-card:     #FEFCF7;
+      --bg-elevated: #FFF9F0;
+      --text-1:      #1A1814;
+      --text-2:      #6B6860;
+      --text-3:      #ABA89F;
+      --border-1:    #E8E3DA;
+      --border-2:    #CEC9BF;
       --accent:      #4E6035;
-      --accent-lt:   #EAF0E1;
+      --accent-lt:   #EBF1E2;
       --accent-dk:   #3A4A28;
       --accent-mid:  #6E8A4E;
       --danger:      #C0392B;
@@ -108,7 +108,7 @@
       width: 100%; max-width: 430px;
       height: calc(var(--tab-h) + var(--safe-b));
       padding-bottom: var(--safe-b);
-      background: rgba(248,247,244,.96);
+      background: rgba(250,246,239,.97);
       backdrop-filter: blur(24px) saturate(180%);
       -webkit-backdrop-filter: blur(24px) saturate(180%);
       border-top: 1px solid var(--border-1);
@@ -145,7 +145,7 @@
     ═══════════════════════════════════════════ */
     .sticky-header {
       position: sticky; top: 0; z-index: 20;
-      background: rgba(248,247,244,.94);
+      background: rgba(250,246,239,.96);
       backdrop-filter: blur(20px) saturate(180%);
       -webkit-backdrop-filter: blur(20px) saturate(180%);
     }
@@ -174,23 +174,30 @@
     .badge-recipe { background: var(--accent-lt); color: var(--accent); }
     .badge-theory { background: #F0EEE8; color: var(--text-2); }
 
-    /* ─── NOTE CARD — Apple Notes list style ─── */
-    /* ── Mela-style note card ── */
+    /* ─── NOTE CARD — recipe notebook style ─── */
     .note-card {
       background: var(--bg-card);
-      border-radius: 18px;
+      border-radius: 16px;
       overflow: hidden;
       cursor: pointer;
-      box-shadow: 0 2px 16px rgba(0,0,0,.08);
-      transition: transform .15s, box-shadow .15s;
+      box-shadow: 0 2px 12px rgba(30,24,14,.09), 0 1px 3px rgba(30,24,14,.06);
+      transition: transform .18s cubic-bezier(.22,.68,0,1.2), box-shadow .18s;
       -webkit-tap-highlight-color: transparent;
+      position: relative;
     }
-    .note-card:active { transform: scale(.97); box-shadow: 0 1px 6px rgba(0,0,0,.07); }
+    .note-card:active { transform: scale(.96); box-shadow: 0 1px 6px rgba(0,0,0,.07); }
+
+    /* Colored accent bar at top — set via CSS custom property --nc */
+    .note-card-top-bar {
+      height: 5px;
+      background: var(--nc, var(--accent));
+      flex-shrink: 0;
+    }
 
     .note-card-photo {
-      width: 100%; height: 200px;
+      width: 100%; height: 192px;
       position: relative; overflow: hidden;
-      background: #f0ede8;
+      background: #ede9e1;
     }
     .note-card-photo img {
       width: 100%; height: 100%; object-fit: cover; display: block;
@@ -198,23 +205,23 @@
     .note-card-photo-placeholder {
       width: 100%; height: 100%;
       display: flex; align-items: center; justify-content: center;
-      font-size: 48px;
+      font-size: 44px;
     }
     .note-card-photo-overlay {
       position: absolute; inset: 0;
-      background: linear-gradient(to bottom, transparent 40%, rgba(0,0,0,.18));
+      background: linear-gradient(to bottom, transparent 45%, rgba(0,0,0,.20));
     }
     .note-card-badge-wrap {
       position: absolute; top: 10px; left: 12px;
     }
 
     .note-card-body {
-      padding: 14px 16px 16px;
+      padding: 12px 14px 14px;
     }
     .note-card-title {
       font-family: var(--f-serif);
-      font-size: 16px; font-weight: 700;
-      color: var(--text-1); line-height: 1.35;
+      font-size: 15px; font-weight: 700;
+      color: var(--text-1); line-height: 1.4;
       margin-bottom: 6px;
       display: -webkit-box; -webkit-line-clamp: 2;
       -webkit-box-orient: vertical; overflow: hidden;
@@ -222,7 +229,7 @@
     .note-card-meta {
       display: flex; align-items: center; gap: 8px;
     }
-    .note-card-date { font-size: 11.5px; color: var(--text-3); }
+    .note-card-date { font-size: 11px; color: var(--text-3); }
     .note-card-fav { font-size: 12px; color: var(--danger); }
 
     /* Note list container — 2-column card grid */
@@ -692,10 +699,11 @@
       display: flex; align-items: center; justify-content: space-between;
       padding: 14px 16px;
       position: sticky; top: 0; z-index: 10;
-      background: rgba(248,247,244,.94);
+      background: rgba(250,246,239,.96);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
       border-bottom: 1px solid var(--border-1);
+      border-top: 4px solid var(--nc, var(--accent));
     }
     .detail-nav-r { display: flex; gap: 2px; }
 
@@ -779,8 +787,8 @@
     .dt-photo-placeholder {
       width: 100%; height: 220px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 52px;
-      background: linear-gradient(135deg,#eef3e8,#c8ddb0);
+      font-size: 56px;
+      background: var(--nc, linear-gradient(135deg,#4E6035,#6E8A4E));
     }
     .dt-photo-btn {
       position: absolute; bottom: 10px; right: 10px;
@@ -989,6 +997,70 @@
       font-family: var(--f-sans); cursor: pointer;
     }
 
+
+    /* ═══════ NOTE CUSTOMIZER (color + icon picker) ═══════ */
+    .note-customizer-overlay {
+      position: fixed; inset: 0; z-index: 500;
+      background: rgba(0,0,0,.45);
+      display: flex; align-items: flex-end;
+      opacity: 0; pointer-events: none;
+      transition: opacity .25s;
+    }
+    .note-customizer-overlay.open { opacity: 1; pointer-events: auto; }
+    .note-customizer-sheet {
+      background: var(--bg-card);
+      border-radius: 24px 24px 0 0;
+      padding: 0 0 40px;
+      width: 100%; max-height: 70vh; overflow-y: auto;
+    }
+    .note-customizer-handle {
+      width: 36px; height: 4px; background: var(--border-2);
+      border-radius: 2px; margin: 14px auto 20px;
+    }
+    .note-customizer-title {
+      font-family: var(--f-serif); font-size: 18px; font-weight: 700;
+      color: var(--text-1); padding: 0 20px 16px;
+      border-bottom: 1px solid var(--border-1);
+    }
+    .nc-section { padding: 16px 20px 0; }
+    .nc-section-label {
+      font-size: 10.5px; font-weight: 700;
+      color: var(--text-3); letter-spacing: 1.2px;
+      text-transform: uppercase; margin-bottom: 12px;
+    }
+    .nc-color-grid {
+      display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 8px;
+    }
+    .nc-color-swatch {
+      width: 36px; height: 36px; border-radius: 50%;
+      cursor: pointer; border: 2.5px solid transparent;
+      transition: transform .15s, border-color .15s;
+      flex-shrink: 0;
+    }
+    .nc-color-swatch:active { transform: scale(.88); }
+    .nc-color-swatch.selected { border-color: var(--text-1); transform: scale(1.1); }
+    .nc-icon-grid {
+      display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px;
+    }
+    .nc-icon-btn {
+      width: 44px; height: 44px; border-radius: 12px;
+      background: var(--bg); border: 1.5px solid var(--border-1);
+      font-size: 22px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all .15s;
+    }
+    .nc-icon-btn:active { background: var(--border-1); }
+    .nc-icon-btn.selected { border-color: var(--accent); background: var(--accent-lt); }
+    /* Detail header customize button */
+    .dt-customize-btn {
+      display: flex; align-items: center; gap: 5px;
+      background: none; border: 1px solid var(--border-1);
+      border-radius: var(--r-full); color: var(--text-3);
+      font-size: 11.5px; font-family: var(--f-sans);
+      padding: 4px 12px; cursor: pointer;
+      transition: all .15s; margin-top: 10px;
+    }
+    .dt-customize-btn:active { background: var(--border-1); }
 
     /* ═══════ CATEGORY CARDS ═══════ */
     .cat-grid {
@@ -1374,11 +1446,11 @@
     .btn-primary:active { background: var(--accent-dk); }
 
     /* ═══════════════════════════════════════════
-       AUTH SCREEN — Landing Style
+       AUTH SCREEN — Product Landing Page
     ═══════════════════════════════════════════ */
     #auth-screen {
       position: fixed; inset: 0; z-index: 9999;
-      background: linear-gradient(180deg, #FBFAF6 0%, #F3F0E8 100%);
+      background: #FAF6EF;
       overflow-y: auto; overflow-x: hidden;
       -webkit-overflow-scrolling: touch;
       padding: 0;
@@ -1388,91 +1460,187 @@
     .auth-container {
       max-width: 480px;
       margin: 0 auto;
-      padding: 56px 28px 80px;
+      padding: 0 0 80px;
       display: flex; flex-direction: column;
+    }
+
+    /* ─── Top nav bar ─── */
+    .auth-topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 28px 0;
+      margin-bottom: 0;
+    }
+
+    /* ─── Hero section (full-bleed, warm gradient) ─── */
+    .auth-hero-section {
+      background: linear-gradient(160deg, #2D3B1E 0%, #3E5426 60%, #5E7A3A 100%);
+      padding: 48px 28px 52px;
+      position: relative; overflow: hidden;
+    }
+    .auth-hero-section::before {
+      content: '';
+      position: absolute; top: -60px; right: -80px;
+      width: 300px; height: 300px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,255,255,.06) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .auth-hero-section::after {
+      content: '';
+      position: absolute; bottom: -40px; left: -60px;
+      width: 200px; height: 200px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(180,220,100,.08) 0%, transparent 70%);
+      pointer-events: none;
     }
 
     /* ─── Brand ─── */
     .auth-brand {
       display: flex; align-items: center; gap: 9px;
-      margin-bottom: 48px;
+      margin-bottom: 0;
     }
     .auth-brand-icon {
-      width: 32px; height: 32px;
-      background: var(--text-1);
+      width: 34px; height: 34px;
+      background: rgba(255,255,255,.15);
       border-radius: 10px;
       display: flex; align-items: center; justify-content: center;
-      box-shadow: 0 2px 8px rgba(0,0,0,.1);
+      backdrop-filter: blur(4px);
     }
     .auth-brand-name {
       font-family: var(--f-display);
       font-size: 22px; font-weight: 700;
-      color: var(--text-1); letter-spacing: -0.3px;
+      color: #fff; letter-spacing: -0.3px;
     }
     .auth-brand-name em {
-      font-style: italic; color: var(--accent); font-weight: 500;
+      font-style: italic; color: #A8CF6E; font-weight: 500;
     }
 
-    /* ─── Hero ─── */
+    /* ─── Hero text ─── */
     .auth-hero-tag {
       display: inline-flex; align-items: center; gap: 6px;
       padding: 6px 12px;
-      background: var(--accent-lt);
+      background: rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.18);
       border-radius: 99px;
-      font-size: 12px; font-weight: 600; color: var(--accent-dk);
-      margin-bottom: 22px;
+      font-size: 12px; font-weight: 600; color: rgba(255,255,255,.9);
+      margin-top: 36px; margin-bottom: 20px;
       width: fit-content;
     }
     .auth-hero-tag::before {
       content: '';
       width: 6px; height: 6px; border-radius: 50%;
-      background: var(--accent); flex-shrink: 0;
+      background: #A8CF6E; flex-shrink: 0;
     }
     .auth-headline {
       font-family: var(--f-display);
-      font-size: 42px; font-weight: 700;
-      line-height: 1.1; letter-spacing: -1px;
-      color: var(--text-1);
-      margin-bottom: 18px;
+      font-size: 44px; font-weight: 700;
+      line-height: 1.08; letter-spacing: -1.2px;
+      color: #fff;
+      margin-bottom: 16px;
     }
     .auth-headline em {
-      font-style: italic; color: var(--accent);
+      font-style: italic; color: #A8CF6E;
       font-weight: 500;
     }
     .auth-tagline {
-      font-size: 16px; line-height: 1.6;
-      color: var(--text-2);
-      margin-bottom: 36px;
+      font-size: 15px; line-height: 1.65;
+      color: rgba(255,255,255,.72);
+      margin-bottom: 32px;
+    }
+
+    /* ─── Mockup preview card (inside hero) ─── */
+    .auth-mockup-wrap {
+      position: relative;
+      margin: 0 0 0;
+    }
+    .auth-mockup-card {
+      background: #FEFCF7;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 12px 40px rgba(0,0,0,.28), 0 4px 12px rgba(0,0,0,.18);
+      transform: perspective(600px) rotateX(3deg);
+      transform-origin: bottom center;
+    }
+    .auth-mockup-photo {
+      height: 90px;
+      background: linear-gradient(135deg, #4E6035, #6E8A4E);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 36px;
+    }
+    .auth-mockup-body { padding: 12px 14px 14px; }
+    .auth-mockup-eyebrow {
+      font-size: 8px; font-weight: 800;
+      letter-spacing: 2px; text-transform: uppercase;
+      color: #4E6035; margin-bottom: 4px;
+    }
+    .auth-mockup-title {
+      font-family: var(--f-display);
+      font-size: 15px; font-weight: 700; color: #1A1814;
+      margin-bottom: 8px;
+    }
+    .auth-mockup-line {
+      height: 8px; background: #EDE9E1; border-radius: 4px;
+      margin-bottom: 5px;
+    }
+    .auth-mockup-line.short { width: 60%; }
+    .auth-mockup-line.medium { width: 80%; }
+    .auth-mockup-step {
+      display: flex; align-items: center; gap: 6px; margin-top: 8px;
+    }
+    .auth-mockup-step-num {
+      width: 18px; height: 18px; border-radius: 50%;
+      background: #4E6035; color: #fff;
+      font-size: 9px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .auth-mockup-step-text {
+      height: 8px; flex: 1; background: #EDE9E1; border-radius: 4px;
+    }
+    /* AI badge floating over mockup */
+    .auth-mockup-badge {
+      position: absolute; bottom: -12px; right: 12px;
+      background: #1A1814; color: #fff;
+      font-size: 11px; font-weight: 600;
+      padding: 6px 12px; border-radius: 20px;
+      display: flex; align-items: center; gap: 6px;
+      box-shadow: 0 4px 12px rgba(0,0,0,.3);
+      white-space: nowrap;
+    }
+    .auth-mockup-badge::before { content: '✨'; font-size: 12px; }
+
+    /* ─── Content section (below hero) ─── */
+    .auth-content-section {
+      padding: 40px 28px 0;
     }
 
     /* ─── Features ─── */
     .auth-features {
-      display: flex; flex-direction: column; gap: 12px;
-      margin-bottom: 36px;
+      display: flex; flex-direction: column; gap: 10px;
+      margin-bottom: 32px;
     }
     .auth-feat {
       display: flex; align-items: center; gap: 14px;
-      padding: 16px 18px;
+      padding: 14px 16px;
       background: var(--bg-card);
       border: 1px solid var(--border-1);
       border-radius: var(--r-md);
+      box-shadow: 0 1px 4px rgba(30,24,14,.05);
     }
     .auth-feat-ico {
-      width: 40px; height: 40px;
+      width: 38px; height: 38px;
       flex-shrink: 0;
       background: var(--accent-lt);
       border-radius: 10px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 20px;
+      font-size: 19px;
     }
     .auth-feat-text { flex: 1; }
     .auth-feat-title {
-      font-size: 14px; font-weight: 600;
+      font-size: 13.5px; font-weight: 600;
       color: var(--text-1);
       margin-bottom: 2px;
     }
     .auth-feat-sub {
-      font-size: 12.5px; color: var(--text-2);
+      font-size: 12px; color: var(--text-2);
       line-height: 1.45;
     }
 
@@ -1489,7 +1657,7 @@
       cursor: pointer;
       display: flex; align-items: center; justify-content: center; gap: 10px;
       transition: transform .1s, opacity .2s;
-      box-shadow: 0 4px 14px rgba(14,14,12,.18);
+      box-shadow: 0 4px 18px rgba(14,14,12,.22);
     }
     .auth-google-big:active { transform: scale(0.99); opacity: 0.92; }
     .auth-google-big svg {
@@ -1497,7 +1665,7 @@
       background: #fff; border-radius: 50%; padding: 2px;
     }
     .auth-email-toggle {
-      width: 100%; padding: 15px;
+      width: 100%; padding: 14px;
       background: transparent;
       border: 1.5px solid var(--border-1);
       border-radius: var(--r-md);
@@ -1573,7 +1741,7 @@
       margin-top: 6px;
     }
     .auth-trust-title {
-      font-size: 11px; font-weight: 700;
+      font-size: 10.5px; font-weight: 700;
       color: var(--text-3);
       letter-spacing: 1.2px; text-transform: uppercase;
       margin-bottom: 4px;
@@ -1581,7 +1749,7 @@
     }
     .auth-trust-item {
       display: flex; align-items: flex-start; gap: 10px;
-      font-size: 12.5px; color: var(--text-2);
+      font-size: 12px; color: var(--text-2);
       line-height: 1.5;
     }
     .auth-trust-item svg {
@@ -1591,18 +1759,18 @@
     }
 
     .auth-footer {
-      margin-top: 28px;
+      margin-top: 24px;
       text-align: center;
-      font-size: 12px; color: var(--text-3);
+      font-size: 11.5px; color: var(--text-3);
       line-height: 1.5;
     }
     .auth-footer a {
       color: var(--text-2); text-decoration: underline;
     }
 
-    @media (min-width: 768px) {
-      .auth-headline { font-size: 48px; }
-      .auth-container { padding: 72px 28px 100px; }
+    @media (min-width: 480px) {
+      .auth-headline { font-size: 50px; }
+      .auth-hero-section { padding: 56px 28px 60px; }
     }
 
     /* Loading spinner */
@@ -1631,131 +1799,162 @@
   <div class="spinner"></div>
 </div>
 
-<!-- Auth screen — Landing page style -->
+<!-- Auth screen — Product Landing Page -->
 <div id="auth-screen" class="hidden">
   <div class="auth-container">
 
-    <!-- Brand -->
-    <div class="auth-brand">
-      <div class="auth-brand-icon">
-        <svg width="20" height="20" viewBox="0 0 30 30" fill="none">
-          <path d="M15 3C11.3 3 8.2 5.6 7.5 9.2C5.8 9.7 4.5 11.3 4.5 13.2C4.5 15.4 6.3 17.2 8.5 17.2H21.5C23.7 17.2 25.5 15.4 25.5 13.2C25.5 11.3 24.2 9.7 22.5 9.2C21.8 5.6 18.7 3 15 3Z" fill="#fff"/>
-          <path d="M8.5 19.5H21.5V25C21.5 25.6 21.1 26 20.5 26H9.5C8.9 26 8.5 25.6 8.5 25V19.5Z" fill="#6E8A4E"/>
-        </svg>
+    <!-- ── Hero Section (dark green) ── -->
+    <div class="auth-hero-section">
+
+      <!-- Top nav -->
+      <div class="auth-topbar" style="padding:0 0 0">
+        <div class="auth-brand">
+          <div class="auth-brand-icon">
+            <svg width="20" height="20" viewBox="0 0 30 30" fill="none">
+              <path d="M15 3C11.3 3 8.2 5.6 7.5 9.2C5.8 9.7 4.5 11.3 4.5 13.2C4.5 15.4 6.3 17.2 8.5 17.2H21.5C23.7 17.2 25.5 15.4 25.5 13.2C25.5 11.3 24.2 9.7 22.5 9.2C21.8 5.6 18.7 3 15 3Z" fill="#fff"/>
+              <path d="M8.5 19.5H21.5V25C21.5 25.6 21.1 26 20.5 26H9.5C8.9 26 8.5 25.6 8.5 25V19.5Z" fill="#A8CF6E"/>
+            </svg>
+          </div>
+          <div class="auth-brand-name">Chef<em>Note</em></div>
+        </div>
+        <div style="font-size:11px;color:rgba(255,255,255,.5);background:rgba(255,255,255,.1);padding:5px 10px;border-radius:20px;border:1px solid rgba(255,255,255,.15)">무료 오픈 베타</div>
       </div>
-      <div class="auth-brand-name">Chef<em>Note</em></div>
-    </div>
 
-    <!-- Hero -->
-    <div class="auth-hero-tag">지금 무료로 시작</div>
-    <h1 class="auth-headline">
-      녹음만 하세요.<br>
-      <em>레시피 노트</em>는<br>
-      AI가 만듭니다.
-    </h1>
-    <p class="auth-tagline">
-      요리 수업 중 녹음만 하면 AI가 재료·조리법·팁을<br>
-      자동으로 정리해 아름다운 노트로 만들어드려요.
-    </p>
+      <!-- Headline -->
+      <div class="auth-hero-tag">요리학도를 위한 AI 노트</div>
+      <h1 class="auth-headline">
+        녹음 한 번,<br>
+        <em>완성된 레시피</em>
+      </h1>
+      <p class="auth-tagline">
+        수업 중 녹음만 하면 AI가 재료·조리법·팁을<br>자동 정리해 아름다운 노트로 만들어줘요.
+      </p>
 
-    <!-- Features -->
-    <div class="auth-features">
-      <div class="auth-feat">
-        <div class="auth-feat-ico">🎙️</div>
-        <div class="auth-feat-text">
-          <div class="auth-feat-title">음성 자동 변환</div>
-          <div class="auth-feat-sub">녹음 → 정리된 레시피 노트로 자동 변환</div>
+      <!-- Mockup preview card -->
+      <div class="auth-mockup-wrap">
+        <div class="auth-mockup-card">
+          <div class="auth-mockup-photo">🍳</div>
+          <div class="auth-mockup-body">
+            <div class="auth-mockup-eyebrow">RECIPE · 실습</div>
+            <div class="auth-mockup-title">브라운 소스</div>
+            <div class="auth-mockup-line medium"></div>
+            <div class="auth-mockup-line short"></div>
+            <div class="auth-mockup-step">
+              <div class="auth-mockup-step-num">1</div>
+              <div class="auth-mockup-step-text"></div>
+            </div>
+            <div class="auth-mockup-step">
+              <div class="auth-mockup-step-num">2</div>
+              <div class="auth-mockup-step-text" style="width:70%"></div>
+            </div>
+          </div>
+        </div>
+        <div class="auth-mockup-badge">AI가 자동 생성</div>
+      </div>
+    </div><!-- /auth-hero-section -->
+
+    <!-- ── Content Section ── -->
+    <div class="auth-content-section">
+
+      <!-- CTA first — most important action -->
+      <div class="auth-cta-block" style="margin-bottom:28px;margin-top:0">
+        <button class="auth-google-big" onclick="googleLogin()">
+          <svg viewBox="0 0 48 48">
+            <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.7 2.3 30.2 0 24 0 14.7 0 6.7 5.4 2.8 13.3l7.8 6C12.4 13.2 17.7 9.5 24 9.5z"/>
+            <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.9 7.2l7.6 5.9c4.5-4.1 7.1-10.2 7.1-17.1z"/>
+            <path fill="#FBBC05" d="M10.6 28.7A14.6 14.6 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.8-6A23.9 23.9 0 0 0 0 24c0 3.9.9 7.5 2.6 10.7l8-6z"/>
+            <path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.6-5.9c-2 1.4-4.7 2.2-7.6 2.2-6.3 0-11.6-3.7-13.5-9l-8 6.1C6.7 42.6 14.7 48 24 48z"/>
+          </svg>
+          Google로 무료 시작하기
+        </button>
+
+        <button class="auth-email-toggle" onclick="toggleEmailForm()" id="emailToggleBtn">
+          이메일로 계속하기
+        </button>
+
+        <!-- Email form (collapsed by default) -->
+        <div class="auth-email-form hidden" id="emailFormBox">
+          <div class="auth-tabs">
+            <button class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">로그인</button>
+            <button class="auth-tab" id="tab-signup" onclick="switchAuthTab('signup')">회원가입</button>
+          </div>
+          <div class="auth-form" id="auth-form-login">
+            <input class="auth-input" id="login-email" type="email" placeholder="이메일" autocomplete="email">
+            <input class="auth-input" id="login-pw" type="password" placeholder="비밀번호" autocomplete="current-password">
+            <div class="auth-error" id="login-err"></div>
+            <button class="auth-btn" onclick="emailLogin()">로그인</button>
+          </div>
+          <div class="auth-form hidden" id="auth-form-signup">
+            <input class="auth-input" id="signup-name" type="text" placeholder="이름" autocomplete="name">
+            <input class="auth-input" id="signup-email" type="email" placeholder="이메일" autocomplete="email">
+            <input class="auth-input" id="signup-pw" type="password" placeholder="비밀번호 (6자 이상)" autocomplete="new-password">
+            <div class="auth-error" id="signup-err"></div>
+            <button class="auth-btn" onclick="emailSignup()">회원가입</button>
+          </div>
         </div>
       </div>
-      <div class="auth-feat">
-        <div class="auth-feat-ico">📖</div>
-        <div class="auth-feat-text">
-          <div class="auth-feat-title">매거진 스타일</div>
-          <div class="auth-feat-sub">NYT Cooking 같은 깔끔한 레이아웃과 PDF 내보내기</div>
+
+      <!-- Section divider -->
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px">
+        <div style="flex:1;height:1px;background:var(--border-1)"></div>
+        <span style="font-size:11px;color:var(--text-3);font-weight:600;letter-spacing:.5px">ChefNote가 하는 일</span>
+        <div style="flex:1;height:1px;background:var(--border-1)"></div>
+      </div>
+
+      <!-- Features -->
+      <div class="auth-features">
+        <div class="auth-feat">
+          <div class="auth-feat-ico">🎙️</div>
+          <div class="auth-feat-text">
+            <div class="auth-feat-title">음성 → 레시피 자동 변환</div>
+            <div class="auth-feat-sub">수업 녹음이 재료·조리법·팁이 분리된 노트로 변환돼요</div>
+          </div>
+        </div>
+        <div class="auth-feat">
+          <div class="auth-feat-ico">🎨</div>
+          <div class="auth-feat-text">
+            <div class="auth-feat-title">나만의 레시피 노트 꾸미기</div>
+            <div class="auth-feat-sub">색상·아이콘으로 노트를 개성 있게 커스터마이징</div>
+          </div>
+        </div>
+        <div class="auth-feat">
+          <div class="auth-feat-ico">☁️</div>
+          <div class="auth-feat-text">
+            <div class="auth-feat-title">모든 기기 동기화</div>
+            <div class="auth-feat-sub">폰, 태블릿, PC 어디서든 내 레시피에 접근</div>
+          </div>
         </div>
       </div>
-      <div class="auth-feat">
-        <div class="auth-feat-ico">☁️</div>
-        <div class="auth-feat-text">
-          <div class="auth-feat-title">모든 기기 동기화</div>
-          <div class="auth-feat-sub">폰, 태블릿, PC 어디서나 안전하게 접근</div>
+
+      <!-- Trust Signals -->
+      <div class="auth-trust">
+        <div class="auth-trust-title">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          보안 &amp; 프라이버시
+        </div>
+        <div class="auth-trust-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="11" width="18" height="11" rx="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+          <span>Google Firebase 엔터프라이즈 인프라에서 암호화 저장</span>
+        </div>
+        <div class="auth-trust-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 12l2 2 4-4"/>
+            <circle cx="12" cy="12" r="10"/>
+          </svg>
+          <span>데이터는 본인만 접근 가능 · 언제든 삭제 요청 가능</span>
         </div>
       </div>
-    </div>
 
-    <!-- CTA -->
-    <div class="auth-cta-block">
-      <button class="auth-google-big" onclick="googleLogin()">
-        <svg viewBox="0 0 48 48">
-          <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.7 2.3 30.2 0 24 0 14.7 0 6.7 5.4 2.8 13.3l7.8 6C12.4 13.2 17.7 9.5 24 9.5z"/>
-          <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.9 7.2l7.6 5.9c4.5-4.1 7.1-10.2 7.1-17.1z"/>
-          <path fill="#FBBC05" d="M10.6 28.7A14.6 14.6 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.8-6A23.9 23.9 0 0 0 0 24c0 3.9.9 7.5 2.6 10.7l8-6z"/>
-          <path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.6-5.9c-2 1.4-4.7 2.2-7.6 2.2-6.3 0-11.6-3.7-13.5-9l-8 6.1C6.7 42.6 14.7 48 24 48z"/>
-        </svg>
-        Google 계정으로 시작하기 · 무료
-      </button>
+      <div class="auth-footer">
+        계속 진행하면 <a href="#">서비스 약관</a>과 <a href="#">개인정보 처리방침</a>에 동의합니다.
+      </div>
+    </div><!-- /auth-content-section -->
 
-      <button class="auth-email-toggle" onclick="toggleEmailForm()" id="emailToggleBtn">
-        이메일로 계속하기
-      </button>
-
-      <!-- Email form (collapsed by default) -->
-      <div class="auth-email-form hidden" id="emailFormBox">
-        <div class="auth-tabs">
-          <button class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">로그인</button>
-          <button class="auth-tab" id="tab-signup" onclick="switchAuthTab('signup')">회원가입</button>
-        </div>
-        <div class="auth-form" id="auth-form-login">
-          <input class="auth-input" id="login-email" type="email" placeholder="이메일" autocomplete="email">
-          <input class="auth-input" id="login-pw" type="password" placeholder="비밀번호" autocomplete="current-password">
-          <div class="auth-error" id="login-err"></div>
-          <button class="auth-btn" onclick="emailLogin()">로그인</button>
-        </div>
-        <div class="auth-form hidden" id="auth-form-signup">
-          <input class="auth-input" id="signup-name" type="text" placeholder="이름" autocomplete="name">
-          <input class="auth-input" id="signup-email" type="email" placeholder="이메일" autocomplete="email">
-          <input class="auth-input" id="signup-pw" type="password" placeholder="비밀번호 (6자 이상)" autocomplete="new-password">
-          <div class="auth-error" id="signup-err"></div>
-          <button class="auth-btn" onclick="emailSignup()">회원가입</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Trust Signals -->
-    <div class="auth-trust">
-      <div class="auth-trust-title">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-        </svg>
-        보안 &amp; 프라이버시
-      </div>
-      <div class="auth-trust-item">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="3" y="11" width="18" height="11" rx="2"/>
-          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-        </svg>
-        <span>Google Firebase 엔터프라이즈 인프라에서 암호화 저장</span>
-      </div>
-      <div class="auth-trust-item">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M9 12l2 2 4-4"/>
-          <circle cx="12" cy="12" r="10"/>
-        </svg>
-        <span>비밀번호는 Firebase에서 해시 처리되어 저장되고, 개발자도 볼 수 없어요</span>
-      </div>
-      <div class="auth-trust-item">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-          <circle cx="9" cy="7" r="4"/>
-          <path d="M23 11l-2 2-2-2"/>
-        </svg>
-        <span>데이터는 본인만 접근 가능 · 언제든 삭제 요청 가능</span>
-      </div>
-    </div>
-
-    <div class="auth-footer">
-      계속 진행하면 <a href="#">서비스 약관</a>과 <a href="#">개인정보 처리방침</a>에 동의하는 것으로 간주됩니다.
-    </div>
   </div>
 </div>
 
@@ -1814,14 +2013,14 @@
 
     <!-- Recent notes -->
     <div class="sec-header">
-      <span class="sec-title">최근 노트</span>
+      <span class="sec-title">최근 레시피</span>
       <span class="sec-more" onclick="switchTab('archive')">전체 보기</span>
     </div>
     <div class="note-list" id="homeList" style="padding-bottom:100px">
       <div class="empty-state">
-        <div class="empty-icon">📓</div>
-        <div class="empty-title">아직 노트가 없어요</div>
-        <div class="empty-desc">아래 마이크 버튼을 눌러<br>수업을 녹음해보세요</div>
+        <div class="empty-icon">🎙️</div>
+        <div class="empty-title">첫 레시피를 기록해봐요</div>
+        <div class="empty-desc">아래 버튼으로 수업을 녹음하면<br>AI가 자동으로 정리해줘요</div>
       </div>
     </div>
 
@@ -2090,11 +2289,17 @@
       <div class="dt-col-left">
 
         <!-- 1. Title block -->
-        <div class="dt-header">
-          <button class="cat-chip" id="dtCatChip" onclick="changeCategoryPrompt()">
-            <span id="dtCatLabel">카테고리 없음</span>
-          </button>
-          <div class="detail-type-lbl" id="dtTypeLbl">레시피</div>
+        <div class="dt-header" id="dtHeader">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <button class="cat-chip" id="dtCatChip" onclick="changeCategoryPrompt()">
+              <span id="dtCatLabel">카테고리 없음</span>
+            </button>
+            <button class="dt-customize-btn" id="dtCustomizeBtn" onclick="openNoteCustomizer()">
+              <span id="dtNoteIcon" style="font-size:13px">🍳</span>
+              꾸미기
+            </button>
+          </div>
+          <div class="detail-type-lbl" id="dtTypeLbl" style="margin-top:8px">레시피</div>
           <div class="detail-title" id="dtTitle">노트 제목</div>
           <input id="dtTitleInput" class="dt-title-input" type="text" placeholder="제목 입력">
           <div class="detail-meta">
@@ -2320,6 +2525,23 @@ const ASM_DIRECT = 'https://api.assemblyai.com'; // direct upload for large file
 const BANK_ACCOUNT = '1002-3660-6756'; // 계좌번호
 const OWNER_EMAILS = new Set(['junhongbag64@gmail.com']); // 항상 Pro
 const FREE_NOTE_LIMIT = 5;
+
+/* ───────────────── NOTE CUSTOMIZATION PALETTE ───────────────── */
+const NOTE_COLORS = [
+  '#5C7A3E', // sage green (default)
+  '#E05A3A', // tomato
+  '#F07748', // pumpkin
+  '#E8A920', // golden
+  '#3A8A7E', // teal
+  '#4A76B5', // cornflower
+  '#5B5FA0', // periwinkle
+  '#8B5CA0', // amethyst
+  '#D85A7A', // rose
+  '#A03860', // wine
+  '#8B5E3C', // cognac
+  '#5A6E7A', // slate
+];
+const NOTE_ICONS = ['🍳','🥘','🍜','🥗','🍰','🥩','🍣','🍕','🫕','🥟','🍱','🫙','🧆','🥐','🧁','🫒'];
 
 /* ───────────────── STATE ───────────────── */
 const S = {
@@ -3595,16 +3817,19 @@ function noteCardHTML(n) {
   const badgeTxt = rCount > 1 ? `${rCount}가지 요리` : (hasRecipe ? '레시피' : '이론');
   const badgeCls = hasRecipe ? 'badge-recipe' : 'badge-theory';
 
-  // No-photo placeholder: gradient with first letter
-  const initials = (n.title || '?').charAt(0).toUpperCase();
-  const colors = ['#4E6035','#8B5E3C','#2C5282','#744210','#553C9A'];
-  const colorIdx = n.id ? Math.abs(n.id.charCodeAt(0) % colors.length) : 0;
+  // Deterministic accent color and icon (based on note id) — overridden by user-set values
+  const idNum = n.id ? Math.abs(n.id.slice(-4).split('').reduce((a,c) => a + c.charCodeAt(0), 0)) : 0;
+  const accentColor = n.noteColor || NOTE_COLORS[idNum % NOTE_COLORS.length];
+  const noteIcon    = n.noteIcon  || NOTE_ICONS[idNum % NOTE_ICONS.length];
+
+  // No-photo placeholder: colored bg + large emoji icon
   const photoEl = coverSrc
     ? `<img src="${coverSrc}" alt="" loading="lazy">`
-    : `<div class="note-card-photo-placeholder" style="background:${colors[colorIdx]};color:#fff;font-family:var(--f-display);font-size:32px;font-style:italic">${initials}</div>`;
+    : `<div class="note-card-photo-placeholder" style="background:${accentColor}">${noteIcon}</div>`;
 
   const fav = n.favorite ? '<span class="note-card-fav">♥</span>' : '';
-  return `<div class="note-card" onclick="openNote('${n.id}')">
+  return `<div class="note-card" style="--nc:${accentColor}" onclick="openNote('${n.id}')">
+    <div class="note-card-top-bar"></div>
     <div class="note-card-photo">
       ${photoEl}
       <div class="note-card-photo-overlay"></div>
@@ -3758,6 +3983,22 @@ function openNote(id) {
   lbl.textContent = recipes.length > 1 ? `${recipes.length}가지 요리` : (hasRecipe ? '레시피' : '이론');
   lbl.className   = `detail-type-lbl ${hasRecipe ? 'recipe' : 'theory'}`;
 
+  /* Note color & icon customization */
+  const idNum = n.id ? Math.abs(n.id.slice(-4).split('').reduce((a,c) => a + c.charCodeAt(0), 0)) : 0;
+  const noteColor = n.noteColor || NOTE_COLORS[idNum % NOTE_COLORS.length];
+  const noteIcon  = n.noteIcon  || NOTE_ICONS[idNum % NOTE_ICONS.length];
+  // Color the detail nav strip
+  const detailEl = document.getElementById('screen-detail');
+  detailEl.style.setProperty('--nc', noteColor);
+  // Show icon in customize button
+  const iconEl = document.getElementById('dtNoteIcon');
+  if (iconEl) iconEl.textContent = noteIcon;
+  // Color the photo placeholder with note color (will be overridden below if needed)
+  const heroPH2 = document.getElementById('noteHeroPlaceholder');
+  if (heroPH2) {
+    heroPH2.style.background = noteColor;
+  }
+
   document.getElementById('dtTitle').textContent = n.title;
   document.getElementById('dtDate').textContent  = n.date;
   document.getElementById('dtClass').textContent = activeR?.classType || '실습';
@@ -3778,7 +4019,8 @@ function openNote(id) {
     heroEl.insertBefore(img, heroEl.firstChild);
   } else {
     heroPH.style.display = '';
-    heroPH.textContent = hasRecipe ? '🍳' : '📖';
+    heroPH.textContent = noteIcon;
+    heroPH.style.background = noteColor;
   }
 
   /* Category */
@@ -4218,6 +4460,75 @@ function splitRecipeToNote(noteId, recipeIdx) {
   saveNoteToFirestore(newNote);
   renderNotes();
   showToast(`✅ "${recipe.title}" 별도 노트로 저장됐어요`);
+}
+
+/* ═══════════════════════════════════════════
+   NOTE CUSTOMIZER — color + icon picker
+═══════════════════════════════════════════ */
+function openNoteCustomizer() {
+  const n = S.notes.find(x => x.id === S.activeNote);
+  if (!n) return;
+
+  // Build color grid
+  const cGrid = document.getElementById('ncColorGrid');
+  cGrid.innerHTML = NOTE_COLORS.map(c =>
+    `<div class="nc-color-swatch ${n.noteColor === c ? 'selected' : ''}"
+       style="background:${c}"
+       onclick="setNoteColor('${c}')"></div>`
+  ).join('');
+
+  // Build icon grid
+  const iGrid = document.getElementById('ncIconGrid');
+  iGrid.innerHTML = NOTE_ICONS.map(ic =>
+    `<button class="nc-icon-btn ${n.noteIcon === ic ? 'selected' : ''}"
+       onclick="setNoteIcon('${ic}')">${ic}</button>`
+  ).join('');
+
+  document.getElementById('noteCustomizerOverlay').classList.add('open');
+}
+
+function closeNoteCustomizerOnBg(e) {
+  if (e.target === document.getElementById('noteCustomizerOverlay'))
+    document.getElementById('noteCustomizerOverlay').classList.remove('open');
+}
+
+function setNoteColor(color) {
+  const n = S.notes.find(x => x.id === S.activeNote);
+  if (!n) return;
+  n.noteColor = color;
+  saveNoteToFirestore(n);
+  // Update swatch selection
+  document.querySelectorAll('.nc-color-swatch').forEach(s => {
+    s.classList.toggle('selected', s.style.background === color || s.style.backgroundColor === color);
+  });
+  // Update detail view
+  document.getElementById('screen-detail').style.setProperty('--nc', color);
+  const heroPH = document.getElementById('noteHeroPlaceholder');
+  if (heroPH?.style.display !== 'none') {
+    heroPH.style.background = color;
+  }
+  renderNotes(); // Update cards
+  showToast('🎨 색상이 변경됐어요');
+}
+
+function setNoteIcon(icon) {
+  const n = S.notes.find(x => x.id === S.activeNote);
+  if (!n) return;
+  n.noteIcon = icon;
+  saveNoteToFirestore(n);
+  // Update icon button selection
+  document.querySelectorAll('.nc-icon-btn').forEach(b => {
+    b.classList.toggle('selected', b.textContent === icon);
+  });
+  // Update detail view icon display
+  const iconEl = document.getElementById('dtNoteIcon');
+  if (iconEl) iconEl.textContent = icon;
+  const heroPH = document.getElementById('noteHeroPlaceholder');
+  if (heroPH?.style.display !== 'none') {
+    heroPH.textContent = icon;
+  }
+  renderNotes(); // Update cards
+  showToast(`${icon} 아이콘이 변경됐어요`);
 }
 
 async function deleteCurrentNote() {
@@ -4907,6 +5218,26 @@ function delParaAttach(noteId, recipeIdx, paraIdx, attachIdx) {
 <input type="file" id="profilePhotoInput" accept="image/*" style="display:none" onchange="onProfilePhotoSelected(event)">
 <input type="file" id="coverPhotoInput" accept="image/*" style="display:none" onchange="onCoverPhotoSelected(event)">
 <input type="file" id="paraPhotoInput" accept="image/*" style="display:none" onchange="onParaPhotoSelected(event)">
+
+<!-- ═══════════════════ NOTE CUSTOMIZER MODAL ═══════════════════ -->
+<div class="note-customizer-overlay" id="noteCustomizerOverlay" onclick="closeNoteCustomizerOnBg(event)">
+  <div class="note-customizer-sheet">
+    <div class="note-customizer-handle"></div>
+    <div class="note-customizer-title">노트 꾸미기</div>
+
+    <!-- Color picker -->
+    <div class="nc-section">
+      <div class="nc-section-label">색상</div>
+      <div class="nc-color-grid" id="ncColorGrid"></div>
+    </div>
+
+    <!-- Icon picker -->
+    <div class="nc-section" style="margin-top:16px">
+      <div class="nc-section-label">아이콘</div>
+      <div class="nc-icon-grid" id="ncIconGrid"></div>
+    </div>
+  </div>
+</div>
 </body>
 </html>
 
