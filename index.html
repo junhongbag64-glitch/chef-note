@@ -874,30 +874,119 @@
     }
     .dt-edit-area:focus { border-color: var(--accent); }
 
-    /* ── Desktop: left col (title+ingredients) | right col (photo+steps+tips) ── */
+    /* ── Desktop: title full-width top, then left=ingredients / right=photo+steps ── */
     @media (min-width: 768px) {
-      /* Reset mobile order — grid handles layout */
-      .dt-header, .dt-photo, .dt-ing-wrapper, #prepHeader, .dt-recipe, .dt-tips { order: unset; }
-      /* Single-scroll 2-col grid: both cols flow in the same scroll context */
+      /* Reset mobile order */
+      .dt-header, .dt-photo, .dt-ing-wrapper, #prepHeader, .dt-recipe, .dt-tips,
+      #recipeTabs, #dtRecipeTitleInput { order: unset; }
+
+      /* Grid: cols are transparent (display:contents), grid places children */
       .detail-body {
         display: grid;
-        grid-template-columns: 36fr 64fr;
+        grid-template-columns: 320px 1fr;
         align-items: start;
         flex: 1;
       }
-      .dt-col-left {
-        display: flex; flex-direction: column;
-        border-right: 1px solid var(--border-1);
-        /* NO sticky, NO separate scroll — everything scrolls as one page */
+      .dt-col-left, .dt-col-right { display: contents; }
+
+      /* Title block: spans BOTH columns — no more vertical overflow */
+      .dt-header {
+        grid-column: 1 / -1;
+        padding: 28px 32px 22px;
+        border-bottom: 1px solid var(--border-1);
       }
-      .dt-col-right { display: flex; flex-direction: column; }
-      .dt-header { padding: 32px 28px 24px 24px; border-bottom: 1px solid var(--border-1); }
-      .detail-title { font-size: 36px; line-height: 1.1; }
+      .detail-title { font-size: 24px; line-height: 1.25; word-break: break-word; }
+
+      /* Recipe tabs: full width */
+      #recipeTabs    { grid-column: 1 / -1; }
+      #dtRecipeTitleInput { grid-column: 1 / -1; margin: 8px 32px 0; }
+
+      /* Left column: only ingredients */
+      .dt-ing-wrapper {
+        grid-column: 1;
+        border-right: 1px solid var(--border-1);
+        min-height: 200px;
+        padding-bottom: 80px;
+      }
+
+      /* Right column: photo, steps, tips */
+      .dt-photo          { grid-column: 2; border-bottom: 1px solid var(--border-1); }
+      #prepHeader        { grid-column: 2; padding: 16px 24px 12px; }
+      .dt-recipe         { grid-column: 2; }
+      #tipsSection       { grid-column: 2; }
+      .dt-recipe .para-block { padding: 16px 24px; }
+
       .nyt-sec { padding: 16px 24px 12px; }
       .dt-ing { padding: 0 24px 24px; overflow-y: visible; max-height: none; }
-      .dt-photo { border-bottom: 1px solid var(--border-1); }
-      .dt-recipe .para-block { padding: 16px 24px; }
-      .dt-tips { padding: 0 0 80px; }
+    }
+
+    /* ── Profile edit modal ── */
+    .profile-modal-overlay {
+      position: fixed; inset: 0; z-index: 500;
+      background: rgba(0,0,0,.45);
+      display: flex; align-items: flex-end;
+      opacity: 0; pointer-events: none;
+      transition: opacity .25s;
+    }
+    .profile-modal-overlay.open { opacity: 1; pointer-events: auto; }
+    .profile-modal {
+      background: var(--bg-card);
+      border-radius: 24px 24px 0 0;
+      padding: 0 0 32px;
+      width: 100%; max-height: 90vh; overflow-y: auto;
+    }
+    .profile-modal-handle {
+      width: 36px; height: 4px; background: var(--border-2);
+      border-radius: 2px; margin: 14px auto 20px;
+    }
+    .profile-modal-title {
+      font-family: var(--f-serif); font-size: 18px; font-weight: 700;
+      color: var(--text-1); padding: 0 24px 16px;
+      border-bottom: 1px solid var(--border-1);
+    }
+    .profile-photo-row {
+      display: flex; flex-direction: column; align-items: center;
+      padding: 24px 24px 16px; gap: 10px;
+    }
+    .profile-photo-edit {
+      width: 80px; height: 80px; border-radius: 50%;
+      overflow: hidden; background: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; position: relative;
+    }
+    .profile-photo-edit img { width: 100%; height: 100%; object-fit: cover; }
+    .profile-photo-edit-icon {
+      position: absolute; inset: 0;
+      background: rgba(0,0,0,.4); display: flex; align-items: center; justify-content: center;
+      opacity: 0; transition: opacity .2s; border-radius: 50%;
+      color: #fff; font-size: 20px;
+    }
+    .profile-photo-edit:hover .profile-photo-edit-icon { opacity: 1; }
+    .profile-photo-label {
+      font-size: 12px; color: var(--accent); font-weight: 500;
+    }
+    .profile-field-group { padding: 0 24px; display: flex; flex-direction: column; gap: 14px; }
+    .profile-field {
+      display: flex; flex-direction: column; gap: 5px;
+    }
+    .profile-field label {
+      font-size: 11.5px; font-weight: 500; color: var(--text-3);
+      text-transform: uppercase; letter-spacing: .5px;
+    }
+    .profile-field input {
+      border: 1.5px solid var(--border-1); border-radius: 10px;
+      padding: 11px 14px; font-size: 15px; font-family: var(--f-sans);
+      color: var(--text-1); background: var(--bg); outline: none;
+      transition: border-color .15s;
+    }
+    .profile-field input:focus { border-color: var(--accent); }
+    .profile-modal-save {
+      margin: 24px 24px 0;
+      width: calc(100% - 48px);
+      background: var(--accent); color: #fff;
+      border: none; border-radius: 14px;
+      padding: 15px; font-size: 16px; font-weight: 600;
+      font-family: var(--f-sans); cursor: pointer;
     }
 
 
@@ -1867,12 +1956,13 @@
   <div id="screen-profile" class="screen">
     <div class="sticky-header" id="profile-header">
       <div class="profile-top">
-        <div class="avatar" id="profileAvatar">김</div>
-        <div class="profile-info">
+        <div class="avatar" id="profileAvatar" onclick="openProfileModal()" style="cursor:pointer;overflow:hidden">김</div>
+        <div class="profile-info" style="flex:1">
           <div class="profile-name" id="profileName">김조리</div>
           <div class="profile-sub" id="profileSub">조리학과 · 3학기</div>
+          <div class="profile-sub" id="profileSchool" style="display:none"></div>
         </div>
-        <button class="icon-btn" onclick="editProfile()">
+        <button class="icon-btn" onclick="openProfileModal()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
             <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
           </svg>
@@ -2361,8 +2451,8 @@ document.addEventListener('DOMContentLoaded', () => {
           S.isPro        = OWNER_EMAILS.has(user.email) || false;
           S.notesCreated = 0;
           await db.collection('users').doc(user.uid).set({
-            name: S.profile.name, dept: S.profile.dept, sem: S.profile.sem,
-            isPro: false, notesCreated: 0
+            name: S.profile.name, school: '', dept: S.profile.dept, sem: S.profile.sem,
+            role: '', photoURL: null, isPro: false, notesCreated: 0
           });
         }
       } catch {}
@@ -3705,7 +3795,9 @@ function openNote(id) {
     tabsEl.style.display = 'flex';
     tabsEl.innerHTML = recipes.map((r, i) =>
       `<button class="recipe-tab ${i === 0 ? 'active' : ''}" onclick="switchRecipeTab('${n.id}',${i})">${esc(r.title)}</button>`
-    ).join('') + `<button class="recipe-tab recipe-tab-add" onclick="addRecipeToNote('${n.id}')" title="레시피 추가">＋</button>`;
+    ).join('')
+    + `<button class="recipe-tab recipe-tab-add" onclick="addRecipeToNote('${n.id}')" title="레시피 추가">＋</button>`
+    + `<button class="recipe-tab" style="color:var(--text-3);font-size:11px;white-space:nowrap" onclick="splitRecipeToNote('${n.id}',${S.activeRecipeIdx})" title="이 레시피를 별도 노트로">↗ 분리</button>`;
   } else {
     tabsEl.style.display = 'none';
   }
@@ -4066,11 +4158,66 @@ window.onload = function() {
 function shareNote() {
   const n = S.notes.find(x => x.id === S.activeNote);
   if (!n) return;
+  const recipes = getRecipes(n);
+
+  let text = `📒 ${n.title}\n${n.date || ''}\n\n`;
+  recipes.forEach((r, i) => {
+    if (recipes.length > 1) text += `── ${r.title} ──\n\n`;
+    if (r.ingredients?.length) {
+      text += `재료\n${r.ingredients.map(x => `• ${x}`).join('\n')}\n\n`;
+    }
+    if (r.content?.trim()) {
+      const steps = r.content.split('\n').filter(s => s.trim());
+      text += `조리법\n${steps.map((s, i) => `${i + 1}. ${s.replace(/^[\d①②③④⑤]+[\.\)]\s*/, '')}`).join('\n')}\n\n`;
+    }
+    if (r.tips?.length) {
+      text += `포인트\n${r.tips.map(t => `💡 ${t}`).join('\n')}\n\n`;
+    }
+  });
+  text = text.trimEnd();
+
   if (navigator.share) {
-    navigator.share({ title: n.title, text: n.content || '' }).catch(() => {});
+    navigator.share({ title: n.title, text }).catch(() => {
+      navigator.clipboard?.writeText(text).then(() => showToast('✅ 클립보드에 복사됐어요'));
+    });
   } else {
-    navigator.clipboard?.writeText(n.content || '').then(() => showToast('클립보드에 복사됨'));
+    navigator.clipboard?.writeText(text)
+      .then(() => showToast('✅ 클립보드에 복사됐어요'))
+      .catch(() => {
+        const el = document.createElement('textarea');
+        el.value = text; document.body.appendChild(el); el.select();
+        document.execCommand('copy'); document.body.removeChild(el);
+        showToast('✅ 복사됐어요');
+      });
   }
+}
+
+/* ── Split active recipe into a separate note ── */
+function splitRecipeToNote(noteId, recipeIdx) {
+  const n = S.notes.find(x => x.id === noteId);
+  if (!n || !n.recipes) return;
+  if (n.recipes.length < 2) { showToast('레시피가 1개뿐이에요 — 분리할 대상이 없어요'); return; }
+  if (!confirm(`"${n.recipes[recipeIdx]?.title}"을 별도 노트로 저장할까요?`)) return;
+
+  const recipe = n.recipes[recipeIdx];
+  const newNote = {
+    id: Date.now().toString(),
+    title: recipe.title,
+    date: n.date,
+    timestamp: Date.now(),
+    duration: 0,
+    favorite: false,
+    coverPhoto: recipe.coverPhoto || null,
+    media: [],
+    memos: [],
+    audioBlob: null,
+    category: n.category || null,
+    recipes: [{ ...recipe, id: 'r0' }],
+  };
+  S.notes.unshift(newNote);
+  saveNoteToFirestore(newNote);
+  renderNotes();
+  showToast(`✅ "${recipe.title}" 별도 노트로 저장됐어요`);
 }
 
 async function deleteCurrentNote() {
@@ -4090,10 +4237,105 @@ async function deleteCurrentNote() {
 ═══════════════════════════════════════════ */
 function renderProfile() {
   const p = S.profile;
-  document.getElementById('profileName').textContent  = p.name;
-  document.getElementById('profileSub').textContent   = `${p.dept} · ${p.sem}`;
-  document.getElementById('profileAvatar').textContent = p.name[0] || '?';
+  document.getElementById('profileName').textContent = p.name || '';
+
+  // Sub line: dept + role or sem
+  const sub = [p.dept, p.role || p.sem].filter(Boolean).join(' · ');
+  document.getElementById('profileSub').textContent = sub;
+
+  // School line
+  const schoolEl = document.getElementById('profileSchool');
+  if (p.school) {
+    schoolEl.textContent = p.school;
+    schoolEl.style.display = '';
+  } else {
+    schoolEl.style.display = 'none';
+  }
+
+  // Avatar: photo or initial
+  const av = document.getElementById('profileAvatar');
+  if (p.photoURL) {
+    av.innerHTML = `<img src="${p.photoURL}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+  } else {
+    av.innerHTML = p.name?.[0]?.toUpperCase() || '?';
+  }
 }
+
+/* ── Profile modal ── */
+function openProfileModal() {
+  const p = S.profile;
+  document.getElementById('pmName').value   = p.name   || '';
+  document.getElementById('pmSchool').value = p.school || '';
+  document.getElementById('pmDept').value   = p.dept   || '';
+  document.getElementById('pmRole').value   = p.role   || p.sem || '';
+
+  // Set modal avatar
+  const mav = document.getElementById('profileModalAvatar');
+  if (p.photoURL) {
+    mav.innerHTML = `<img src="${p.photoURL}" style="width:100%;height:100%;object-fit:cover">`;
+  } else {
+    mav.textContent = p.name?.[0]?.toUpperCase() || '?';
+    mav.style.background = 'var(--accent)';
+  }
+
+  document.getElementById('profileModalOverlay').classList.add('open');
+}
+
+function closeProfileModal(e) {
+  if (!e || e.target === document.getElementById('profileModalOverlay')) {
+    document.getElementById('profileModalOverlay').classList.remove('open');
+  }
+}
+
+function saveProfileModal() {
+  S.profile.name   = document.getElementById('pmName').value.trim()   || S.profile.name;
+  S.profile.school = document.getElementById('pmSchool').value.trim();
+  S.profile.dept   = document.getElementById('pmDept').value.trim()   || S.profile.dept;
+  S.profile.role   = document.getElementById('pmRole').value.trim();
+
+  saveProfileToFirestore();
+  renderProfile();
+  updateHomeGreeting();
+  closeProfileModal();
+  showToast('✅ 프로필 저장됨');
+}
+
+function onProfilePhotoSelected(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  e.target.value = '';
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    // Compress before storing
+    const img = new Image();
+    img.onload = function() {
+      const max = 400;
+      let w = img.width, h = img.height;
+      if (w > max || h > max) {
+        if (w > h) { h = Math.round(h * max / w); w = max; }
+        else       { w = Math.round(w * max / h); h = max; }
+      }
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      const compressed = c.toDataURL('image/jpeg', 0.8);
+      S.profile.photoURL = compressed;
+
+      // Update modal avatar
+      const mav = document.getElementById('profileModalAvatar');
+      mav.innerHTML = `<img src="${compressed}" style="width:100%;height:100%;object-fit:cover">`;
+
+      // Save to Firestore
+      saveProfileToFirestore();
+      renderProfile();
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+/* Legacy compat (replaced by modal) */
+function editProfile() { openProfileModal(); }
 
 /* 숨겨진 업로드 — 로고 3번 탭 */
 let _logoTaps = 0, _logoTimer = null;
@@ -4623,8 +4865,48 @@ function delParaAttach(noteId, recipeIdx, paraIdx, attachIdx) {
   openNote(noteId);
 }
 </script>
+<!-- ═══════════════════ PROFILE EDIT MODAL ═══════════════════ -->
+<div class="profile-modal-overlay" id="profileModalOverlay" onclick="closeProfileModal(event)">
+  <div class="profile-modal">
+    <div class="profile-modal-handle"></div>
+    <div class="profile-modal-title">프로필 편집</div>
+
+    <!-- Photo upload row -->
+    <div class="profile-photo-row">
+      <div class="profile-photo-edit" onclick="document.getElementById('profilePhotoInput').click()">
+        <div id="profileModalAvatar" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:700;color:#fff;font-family:var(--f-display)"></div>
+        <div class="profile-photo-edit-icon">📷</div>
+      </div>
+      <div class="profile-photo-label">사진 변경</div>
+    </div>
+
+    <!-- Fields -->
+    <div class="profile-field-group">
+      <div class="profile-field">
+        <label>이름</label>
+        <input id="pmName" type="text" placeholder="홍길동">
+      </div>
+      <div class="profile-field">
+        <label>학교 / 소속</label>
+        <input id="pmSchool" type="text" placeholder="한국조리대학교">
+      </div>
+      <div class="profile-field">
+        <label>학과 / 부서</label>
+        <input id="pmDept" type="text" placeholder="조리학과">
+      </div>
+      <div class="profile-field">
+        <label>학년 / 직위</label>
+        <input id="pmRole" type="text" placeholder="3학년 / 수석 셰프">
+      </div>
+    </div>
+
+    <button class="profile-modal-save" onclick="saveProfileModal()">저장</button>
+  </div>
+</div>
+
+<input type="file" id="profilePhotoInput" accept="image/*" style="display:none" onchange="onProfilePhotoSelected(event)">
 <input type="file" id="coverPhotoInput" accept="image/*" style="display:none" onchange="onCoverPhotoSelected(event)">
-  <input type="file" id="paraPhotoInput" accept="image/*" style="display:none" onchange="onParaPhotoSelected(event)">
+<input type="file" id="paraPhotoInput" accept="image/*" style="display:none" onchange="onParaPhotoSelected(event)">
 </body>
 </html>
 
