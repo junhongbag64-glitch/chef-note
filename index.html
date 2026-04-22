@@ -1670,6 +1670,39 @@
       padding: 40px 28px 0;
     }
 
+    /* ─── Auth Install Nudge ─── */
+    .auth-install-nudge {
+      background: var(--bg-elevated);
+      border: 1.5px solid var(--border-1);
+      border-radius: 16px;
+      padding: 16px 18px;
+      margin-bottom: 0;
+    }
+    .ain-header {
+      display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px;
+    }
+    .ain-icon { font-size: 28px; flex-shrink: 0; line-height: 1; }
+    .ain-title { font-size: 14px; font-weight: 700; color: var(--text-1); margin-bottom: 3px; }
+    .ain-sub { font-size: 12px; color: var(--text-2); line-height: 1.4; }
+    .ain-steps { display: flex; flex-direction: column; gap: 10px; }
+    .ain-step {
+      display: flex; align-items: flex-start; gap: 10px;
+      font-size: 13px; color: var(--text-1); line-height: 1.5;
+    }
+    .ain-step-num {
+      min-width: 22px; height: 22px; border-radius: 50%;
+      background: var(--accent); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 1px;
+    }
+    .ain-install-btn {
+      width: 100%; padding: 13px;
+      background: var(--accent); color: #fff;
+      border: none; border-radius: 12px;
+      font-size: 15px; font-weight: 700; cursor: pointer;
+      margin-top: 4px;
+    }
+
     /* ─── Features ─── */
     .auth-features {
       display: flex; flex-direction: column; gap: 10px;
@@ -1953,8 +1986,11 @@
         </div>
       </div>
 
+      <!-- Mobile PWA install nudge (KakaoTalk / iOS / Android Chrome) -->
+      <div class="auth-install-nudge" id="authInstallNudge" style="display:none"></div>
+
       <!-- Section divider -->
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;margin-top:24px">
         <div style="flex:1;height:1px;background:var(--border-1)"></div>
         <span style="font-size:11px;color:var(--text-3);font-weight:600;letter-spacing:.5px">ChefNote가 하는 일</span>
         <div style="flex:1;height:1px;background:var(--border-1)"></div>
@@ -1970,10 +2006,10 @@
           </div>
         </div>
         <div class="auth-feat">
-          <div class="auth-feat-ico">🎨</div>
+          <div class="auth-feat-ico">📸</div>
           <div class="auth-feat-text">
-            <div class="auth-feat-title">나만의 레시피 노트 꾸미기</div>
-            <div class="auth-feat-sub">색상·아이콘으로 노트를 개성 있게 커스터마이징</div>
+            <div class="auth-feat-title">사진·메모 함께 저장</div>
+            <div class="auth-feat-sub">완성 요리 사진과 메모를 노트에 바로 추가할 수 있어요</div>
           </div>
         </div>
         <div class="auth-feat">
@@ -2637,16 +2673,22 @@ if ('serviceWorker' in navigator) {
 let _pwaPrompt = null;
 
 // Detect environment
-const _isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+const _ua = navigator.userAgent;
+const _isIOS = /iPad|iPhone|iPod/.test(_ua) && !window.MSStream;
+const _isAndroid = /Android/.test(_ua);
 const _isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
                       window.navigator.standalone === true;
 const _isInBrowser = !_isStandalone;
+// In-app browsers: KakaoTalk, Naver, Line, Instagram, Facebook, etc.
+const _isInAppBrowser = /KAKAOTALK|NAVER|Line\/|Instagram|FBAN|FB_IAB|Twitter|Snapchat|Weibo|MicroMessenger/i.test(_ua)
+  || (/wv\)/.test(_ua) && _isAndroid); // Android WebView flag
 
 // Capture the Android install prompt
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   _pwaPrompt = e;
   maybeShowInstallBar();
+  updateAuthInstallNudge(); // also update auth screen nudge if visible
 });
 
 // After Android install
@@ -2690,10 +2732,10 @@ function closeIOSSheet(e) {
     document.getElementById('iosInstallOverlay')?.classList.remove('open');
 }
 
-// Check for iOS: show banner even without beforeinstallprompt
+// Init auth screen install nudge + iOS bottom bar
 window.addEventListener('DOMContentLoaded', () => {
-  if (_isIOS && _isInBrowser) {
-    // iOS Safari: only show if not already added to home screen
+  initAuthInstallNudge();
+  if (_isIOS && _isInBrowser && !_isInAppBrowser) {
     maybeShowInstallBarIOS();
   }
 });
@@ -2713,6 +2755,90 @@ function maybeShowInstallBarIOS() {
       if (btn) btn.textContent = '방법 보기';
     }
   }, 3500);
+}
+
+/* ───────────────── AUTH SCREEN INSTALL NUDGE ───────────────── */
+// Shows the right install guidance on the auth/landing screen, mobile-first.
+// Called once on DOMContentLoaded; also called again if beforeinstallprompt fires later.
+function initAuthInstallNudge() {
+  if (_isStandalone) return; // Already running as installed app
+  updateAuthInstallNudge();
+}
+
+function updateAuthInstallNudge() {
+  const el = document.getElementById('authInstallNudge');
+  if (!el) return;
+  if (_isStandalone) { el.style.display = 'none'; return; }
+
+  // Case 1: In-app browser (KakaoTalk, etc.) — must open in real browser first
+  if (_isInAppBrowser) {
+    const iosSteps = `
+      <div class="ain-step"><span class="ain-step-num">1</span><span>하단 또는 우측 상단의 <strong>···</strong> / <strong>⋮</strong> 버튼을 눌러요</span></div>
+      <div class="ain-step"><span class="ain-step-num">2</span><span><strong>Safari로 열기</strong> 또는 <strong>기본 브라우저로 열기</strong> 선택</span></div>
+      <div class="ain-step"><span class="ain-step-num">3</span><span>Safari에서 하단 공유 버튼 → <strong>홈 화면에 추가</strong></span></div>`;
+    const androidSteps = `
+      <div class="ain-step"><span class="ain-step-num">1</span><span>우측 상단 <strong>⋮</strong> 버튼 → <strong>다른 앱으로 열기</strong></span></div>
+      <div class="ain-step"><span class="ain-step-num">2</span><span><strong>Chrome</strong> 선택</span></div>
+      <div class="ain-step"><span class="ain-step-num">3</span><span>Chrome에서 우측 상단 <strong>⋮</strong> → <strong>홈 화면에 추가</strong></span></div>`;
+    el.innerHTML = `
+      <div class="ain-header">
+        <span class="ain-icon">📲</span>
+        <div>
+          <div class="ain-title">카카오톡에서는 설치 불가</div>
+          <div class="ain-sub">${_isIOS ? 'Safari' : 'Chrome'}에서 열어야 앱으로 저장할 수 있어요</div>
+        </div>
+      </div>
+      <div class="ain-steps">${_isIOS ? iosSteps : androidSteps}</div>`;
+    el.style.display = 'block';
+    return;
+  }
+
+  // Case 2: iOS Safari — show inline install instructions
+  if (_isIOS && _isInBrowser) {
+    el.innerHTML = `
+      <div class="ain-header">
+        <span class="ain-icon">📲</span>
+        <div>
+          <div class="ain-title">홈 화면에 앱으로 저장하기</div>
+          <div class="ain-sub">Safari에서 바로 설치할 수 있어요!</div>
+        </div>
+      </div>
+      <div class="ain-steps">
+        <div class="ain-step"><span class="ain-step-num">1</span><span>하단 중앙 공유 버튼 탭 <strong style="font-size:18px">□↑</strong></span></div>
+        <div class="ain-step"><span class="ain-step-num">2</span><span>스크롤해서 <strong>"홈 화면에 추가"</strong> 선택</span></div>
+        <div class="ain-step"><span class="ain-step-num">3</span><span>오른쪽 상단 <strong>"추가"</strong> 탭 → 완료!</span></div>
+      </div>`;
+    el.style.display = 'block';
+    return;
+  }
+
+  // Case 3: Android Chrome with install prompt ready
+  if (_pwaPrompt && _isAndroid) {
+    el.innerHTML = `
+      <div class="ain-header">
+        <span class="ain-icon">📲</span>
+        <div>
+          <div class="ain-title">홈 화면에 앱으로 저장하기</div>
+          <div class="ain-sub">한 번만 설치하면 앱처럼 바로 열려요!</div>
+        </div>
+      </div>
+      <button class="ain-install-btn" onclick="triggerInstallFromAuth()">홈 화면에 설치하기</button>`;
+    el.style.display = 'block';
+    return;
+  }
+
+  // Hide if none of the above match
+  el.style.display = 'none';
+}
+
+async function triggerInstallFromAuth() {
+  if (!_pwaPrompt) return;
+  _pwaPrompt.prompt();
+  const choice = await _pwaPrompt.userChoice;
+  if (choice.outcome === 'accepted') {
+    document.getElementById('authInstallNudge').style.display = 'none';
+    showToast('✅ 홈 화면에 추가됐어요!');
+  }
 }
 
 /* ───────────────── AUTH UI ───────────────── */
@@ -3370,7 +3496,7 @@ async function checkAndResumeDrafts() {
 
 async function processDraftToNote(draft, isManual = false) {
   try {
-    if (isManual) showProc('변환 재시도 중...', '녹음을 다시 변환하고 있어요...');
+    if (isManual) showProc('🎙️ 레시피 노트 만드는 중...', '음성을 레시피 노트로 변환하고 있어요!\n창을 닫지 마세요');
     else showDraftBanner(`녹음을 노트로 변환 중...`);
 
     const transcript = await transcribeAudio(draft.audioBlob);
@@ -3450,13 +3576,13 @@ async function onRecordingDone() {
     timestamp: Date.now(),
   });
 
-  showProc('음성 인식 중...', 'AssemblyAI로 녹음을 변환하고 있어요...\n닫아도 다음 접속 시 자동 복구됩니다 ✓');
+  showProc('🎙️ 레시피 노트 만드는 중...', '음성파일을 레시피 노트로 변환하고 있어요!\n창을 닫지 마세요 — 완료 후 자동 저장돼요');
   addProcessingGuard(); // warn user if they try to close during processing
 
   try {
     const transcript = await transcribeAudio(blob);
 
-    updateProc('노트 생성 중...', 'Claude가 수업 내용을 정리하고 있어요...\n닫아도 다음 접속 시 자동 복구됩니다 ✓');
+    updateProc('🎙️ 레시피 노트 만드는 중...', '잠깐만요, 거의 다 됐어요!\n창을 닫지 마세요 — 완료 후 자동 저장돼요');
 
     const note = await generateNote(transcript, dur, [...S.memos]);
     note.id        = Date.now().toString();
@@ -3566,7 +3692,7 @@ async function transcribeAudio(blob) {
   if (!keyRes.ok) throw new Error('API 키를 가져오지 못했습니다');
   const { key } = await keyRes.json();
 
-  updateProc('음성 업로드 중...', '파일을 AssemblyAI에 업로드하고 있어요...');
+  updateProc('🎙️ 레시피 노트 만드는 중...', '음성 파일을 분석하고 있어요...');
 
   /* 1. Upload */
   const upRes = await fetch('https://api.assemblyai.com/v2/upload', {
@@ -3613,7 +3739,7 @@ async function transcribeAudio(blob) {
     if (result.status === 'error') throw new Error('Transcription error: ' + result.error);
     if (i % 10 === 0) {
       const mins = Math.floor(i * 3 / 60);
-      updateProc('음성 인식 중...', `변환 중이에요... (${mins}분 경과)<br>긴 파일은 20~30분 걸릴 수 있어요`);
+      updateProc('🎙️ 레시피 노트 만드는 중...', `변환 중이에요... (${mins}분 경과)<br>긴 파일은 시간이 좀 걸릴 수 있어요`);
     }
   }
   throw new Error('Transcription timed out (30분 초과)');
@@ -3791,12 +3917,12 @@ async function handleAudioUpload(inp) {
   if (!checkNoteLimit()) return;
 
   const dur = 0; // unknown duration for uploaded files
-  showProc('음성 인식 중...', `"${f.name}" 파일을 분석하고 있어요...\n완료될 때까지 창을 닫지 마세요 ⚠️`);
+  showProc('🎙️ 레시피 노트 만드는 중...', '음성파일을 레시피 노트로 변환하고 있어요!\n창을 닫지 마세요 — 완료 후 자동 저장돼요');
   addProcessingGuard();
 
   try {
     const transcript = await transcribeAudio(f);
-    updateProc('노트 생성 중...', 'Claude가 내용을 정리하고 있어요...\n완료될 때까지 창을 닫지 마세요 ⚠️');
+    updateProc('🎙️ 레시피 노트 만드는 중...', '잠깐만요, 거의 다 됐어요!\n창을 닫지 마세요 — 완료 후 자동 저장돼요');
     const note = await generateNote(transcript, dur);
     note.id        = Date.now().toString();
     note.date      = new Date().toLocaleDateString('ko-KR', { year:'numeric', month:'long', day:'numeric' });
@@ -3936,7 +4062,7 @@ async function convertMemoToNote() {
   document.getElementById('memoTxt').value = '';
   closeMemoModal();
 
-  showProc('노트 생성 중...', 'Claude가 메모를 정리하고 있어요...\n완료될 때까지 창을 닫지 마세요 ⚠️');
+  showProc('✏️ 메모로 노트 만드는 중...', '잠깐만요, 곧 완성돼요!\n창을 닫지 마세요');
   addProcessingGuard();
   try {
     const note = await generateNote(t, 0);
