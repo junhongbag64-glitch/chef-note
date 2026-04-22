@@ -205,7 +205,12 @@
     .note-card-photo-placeholder {
       width: 100%; height: 100%;
       display: flex; align-items: center; justify-content: center;
-      font-size: 44px;
+    }
+    .note-card-placeholder-letter {
+      font-family: var(--f-display);
+      font-size: 56px; font-style: italic; font-weight: 700;
+      color: rgba(255,255,255,.55);
+      line-height: 1; user-select: none;
     }
     .note-card-photo-overlay {
       position: absolute; inset: 0;
@@ -787,8 +792,7 @@
     .dt-photo-placeholder {
       width: 100%; height: 220px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 56px;
-      background: var(--nc, linear-gradient(135deg,#4E6035,#6E8A4E));
+      background: var(--nc, #4E6035);
     }
     .dt-photo-btn {
       position: absolute; bottom: 10px; right: 10px;
@@ -998,69 +1002,83 @@
     }
 
 
-    /* ═══════ NOTE CUSTOMIZER (color + icon picker) ═══════ */
-    .note-customizer-overlay {
-      position: fixed; inset: 0; z-index: 500;
-      background: rgba(0,0,0,.45);
+    /* ═══════ PWA INSTALL BANNER ═══════ */
+    .pwa-install-bar {
+      position: fixed;
+      bottom: calc(var(--tab-h) + var(--safe-b) + 8px);
+      left: 50%; transform: translateX(-50%);
+      width: calc(100% - 32px); max-width: 398px;
+      background: var(--text-1); color: #fff;
+      border-radius: 14px; padding: 12px 16px;
+      display: flex; align-items: center; gap: 10px;
+      z-index: 148;
+      box-shadow: 0 6px 24px rgba(0,0,0,.25);
+      animation: slideUpBar .35s cubic-bezier(.22,.68,0,1.2) forwards;
+    }
+    @keyframes slideUpBar {
+      from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+      to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+    .pwa-install-bar.hidden { display: none; }
+    .pwa-install-bar-ico { font-size: 22px; flex-shrink: 0; }
+    .pwa-install-bar-text { flex: 1; }
+    .pwa-install-bar-title { font-size: 13px; font-weight: 700; margin-bottom: 1px; }
+    .pwa-install-bar-sub { font-size: 11px; color: rgba(255,255,255,.65); }
+    .pwa-install-btn {
+      background: #fff; color: var(--text-1);
+      border: none; border-radius: 20px;
+      padding: 7px 14px; font-size: 12px; font-weight: 700;
+      cursor: pointer; white-space: nowrap; flex-shrink: 0;
+      font-family: var(--f-sans);
+    }
+    .pwa-install-dismiss {
+      background: none; border: none; color: rgba(255,255,255,.5);
+      font-size: 18px; cursor: pointer; padding: 0; flex-shrink: 0; line-height: 1;
+    }
+    /* iOS install instruction sheet */
+    .ios-install-overlay {
+      position: fixed; inset: 0; z-index: 600;
+      background: rgba(0,0,0,.5);
       display: flex; align-items: flex-end;
       opacity: 0; pointer-events: none;
       transition: opacity .25s;
     }
-    .note-customizer-overlay.open { opacity: 1; pointer-events: auto; }
-    .note-customizer-sheet {
+    .ios-install-overlay.open { opacity: 1; pointer-events: auto; }
+    .ios-install-sheet {
       background: var(--bg-card);
       border-radius: 24px 24px 0 0;
-      padding: 0 0 40px;
-      width: 100%; max-height: 70vh; overflow-y: auto;
+      padding: 24px 24px calc(32px + var(--safe-b));
+      width: 100%;
     }
-    .note-customizer-handle {
+    .ios-install-handle {
       width: 36px; height: 4px; background: var(--border-2);
-      border-radius: 2px; margin: 14px auto 20px;
+      border-radius: 2px; margin: -10px auto 18px;
     }
-    .note-customizer-title {
-      font-family: var(--f-serif); font-size: 18px; font-weight: 700;
-      color: var(--text-1); padding: 0 20px 16px;
-      border-bottom: 1px solid var(--border-1);
+    .ios-install-title {
+      font-family: var(--f-serif); font-size: 19px; font-weight: 700;
+      color: var(--text-1); margin-bottom: 6px;
     }
-    .nc-section { padding: 16px 20px 0; }
-    .nc-section-label {
-      font-size: 10.5px; font-weight: 700;
-      color: var(--text-3); letter-spacing: 1.2px;
-      text-transform: uppercase; margin-bottom: 12px;
+    .ios-install-sub {
+      font-size: 13.5px; color: var(--text-2); line-height: 1.6; margin-bottom: 20px;
     }
-    .nc-color-grid {
-      display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 8px;
+    .ios-install-steps { display: flex; flex-direction: column; gap: 14px; }
+    .ios-install-step {
+      display: flex; align-items: flex-start; gap: 12px;
     }
-    .nc-color-swatch {
-      width: 36px; height: 36px; border-radius: 50%;
-      cursor: pointer; border: 2.5px solid transparent;
-      transition: transform .15s, border-color .15s;
-      flex-shrink: 0;
-    }
-    .nc-color-swatch:active { transform: scale(.88); }
-    .nc-color-swatch.selected { border-color: var(--text-1); transform: scale(1.1); }
-    .nc-icon-grid {
-      display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px;
-    }
-    .nc-icon-btn {
-      width: 44px; height: 44px; border-radius: 12px;
-      background: var(--bg); border: 1.5px solid var(--border-1);
-      font-size: 22px; cursor: pointer;
+    .ios-install-step-num {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--accent); color: #fff;
+      font-size: 13px; font-weight: 700;
       display: flex; align-items: center; justify-content: center;
-      transition: all .15s;
+      flex-shrink: 0; margin-top: 1px;
     }
-    .nc-icon-btn:active { background: var(--border-1); }
-    .nc-icon-btn.selected { border-color: var(--accent); background: var(--accent-lt); }
-    /* Detail header customize button */
-    .dt-customize-btn {
-      display: flex; align-items: center; gap: 5px;
-      background: none; border: 1px solid var(--border-1);
-      border-radius: var(--r-full); color: var(--text-3);
-      font-size: 11.5px; font-family: var(--f-sans);
-      padding: 4px 12px; cursor: pointer;
-      transition: all .15s; margin-top: 10px;
+    .ios-install-step-text { font-size: 14px; color: var(--text-1); line-height: 1.55; }
+    .ios-install-step-text strong { font-weight: 700; }
+    .ios-install-arrow {
+      margin-top: 22px; text-align: center;
+      font-size: 28px; animation: bounce .8s ease-in-out infinite alternate;
     }
-    .dt-customize-btn:active { background: var(--border-1); }
+    @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(6px); } }
 
     /* ═══════ CATEGORY CARDS ═══════ */
     .cat-grid {
@@ -1821,13 +1839,14 @@
       </div>
 
       <!-- Headline -->
-      <div class="auth-hero-tag">요리학도를 위한 AI 노트</div>
+      <div class="auth-hero-tag">🎙️ 녹음 → AI → 완성 레시피</div>
       <h1 class="auth-headline">
-        녹음 한 번,<br>
-        <em>완성된 레시피</em>
+        수업 중 녹음만,<br>
+        <em>레시피 노트</em>는<br>
+        AI가 써줘요
       </h1>
       <p class="auth-tagline">
-        수업 중 녹음만 하면 AI가 재료·조리법·팁을<br>자동 정리해 아름다운 노트로 만들어줘요.
+        버튼 하나로 녹음 → AI가 재료, 조리법, 팁을<br>자동으로 분리해 깔끔한 노트로 정리해줘요.
       </p>
 
       <!-- Mockup preview card -->
@@ -2294,10 +2313,6 @@
             <button class="cat-chip" id="dtCatChip" onclick="changeCategoryPrompt()">
               <span id="dtCatLabel">카테고리 없음</span>
             </button>
-            <button class="dt-customize-btn" id="dtCustomizeBtn" onclick="openNoteCustomizer()">
-              <span id="dtNoteIcon" style="font-size:13px">🍳</span>
-              꾸미기
-            </button>
           </div>
           <div class="detail-type-lbl" id="dtTypeLbl" style="margin-top:8px">레시피</div>
           <div class="detail-title" id="dtTitle">노트 제목</div>
@@ -2526,22 +2541,16 @@ const BANK_ACCOUNT = '1002-3660-6756'; // 계좌번호
 const OWNER_EMAILS = new Set(['junhongbag64@gmail.com']); // 항상 Pro
 const FREE_NOTE_LIMIT = 5;
 
-/* ───────────────── NOTE CUSTOMIZATION PALETTE ───────────────── */
+/* ───────────────── NOTE ACCENT PALETTE (deterministic, not user-facing) ───────────────── */
+// Subtle accent colors assigned automatically based on note id — no user picker
 const NOTE_COLORS = [
-  '#5C7A3E', // sage green (default)
-  '#E05A3A', // tomato
-  '#F07748', // pumpkin
-  '#E8A920', // golden
-  '#3A8A7E', // teal
-  '#4A76B5', // cornflower
-  '#5B5FA0', // periwinkle
-  '#8B5CA0', // amethyst
-  '#D85A7A', // rose
-  '#A03860', // wine
-  '#8B5E3C', // cognac
+  '#4E6035', // sage
   '#5A6E7A', // slate
+  '#8B5E3C', // cognac
+  '#3A6E5C', // teal
+  '#5B5080', // plum
+  '#6E5030', // warm brown
 ];
-const NOTE_ICONS = ['🍳','🥘','🍜','🥗','🍰','🥩','🍣','🍕','🫕','🥟','🍱','🫙','🧆','🥐','🧁','🫒'];
 
 /* ───────────────── STATE ───────────────── */
 const S = {
@@ -2575,6 +2584,92 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js')
     .then(() => console.log('[SW] registered'))
     .catch(e => console.warn('[SW] failed:', e));
+}
+
+/* ═══════════════════════════════════════════
+   PWA INSTALL PROMPT
+   - Android: uses native beforeinstallprompt
+   - iOS Safari: shows step-by-step sheet
+═══════════════════════════════════════════ */
+let _pwaPrompt = null;
+
+// Detect environment
+const _isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+const _isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+                      window.navigator.standalone === true;
+const _isInBrowser = !_isStandalone;
+
+// Capture the Android install prompt
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  _pwaPrompt = e;
+  maybeShowInstallBar();
+});
+
+// After Android install
+window.addEventListener('appinstalled', () => {
+  dismissInstallBar(true);
+  showToast('✅ 홈 화면에 추가됐어요!');
+});
+
+function maybeShowInstallBar() {
+  if (_isStandalone) return;                               // Already installed
+  if (localStorage.getItem('pwa_dismissed_at')) {
+    const t = parseInt(localStorage.getItem('pwa_dismissed_at'));
+    if (Date.now() - t < 7 * 24 * 3600 * 1000) return;   // Dismissed < 7 days ago
+  }
+  // Delay a bit so it doesn't fight the UI loading
+  setTimeout(() => {
+    document.getElementById('pwaInstallBar')?.classList.remove('hidden');
+  }, 3500);
+}
+
+async function triggerInstall() {
+  if (_isIOS) {
+    // Show iOS instruction sheet
+    document.getElementById('iosInstallOverlay')?.classList.add('open');
+    return;
+  }
+  if (!_pwaPrompt) return;
+  _pwaPrompt.prompt();
+  await _pwaPrompt.userChoice;
+  _pwaPrompt = null;
+  dismissInstallBar(true);
+}
+
+function dismissInstallBar(silent) {
+  document.getElementById('pwaInstallBar')?.classList.add('hidden');
+  if (!silent) localStorage.setItem('pwa_dismissed_at', Date.now().toString());
+}
+
+function closeIOSSheet(e) {
+  if (e.target === document.getElementById('iosInstallOverlay'))
+    document.getElementById('iosInstallOverlay')?.classList.remove('open');
+}
+
+// Check for iOS: show banner even without beforeinstallprompt
+window.addEventListener('DOMContentLoaded', () => {
+  if (_isIOS && _isInBrowser) {
+    // iOS Safari: only show if not already added to home screen
+    maybeShowInstallBarIOS();
+  }
+});
+
+function maybeShowInstallBarIOS() {
+  if (_isStandalone) return;
+  if (localStorage.getItem('pwa_dismissed_at')) {
+    const t = parseInt(localStorage.getItem('pwa_dismissed_at'));
+    if (Date.now() - t < 7 * 24 * 3600 * 1000) return;
+  }
+  setTimeout(() => {
+    const bar = document.getElementById('pwaInstallBar');
+    if (bar) {
+      bar.classList.remove('hidden');
+      // iOS: update button text
+      const btn = document.getElementById('pwaInstallBtn');
+      if (btn) btn.textContent = '방법 보기';
+    }
+  }, 3500);
 }
 
 /* ───────────────── AUTH UI ───────────────── */
@@ -2689,6 +2784,9 @@ document.addEventListener('DOMContentLoaded', () => {
       loading.classList.add('hidden');
       // Check for any unfinished recordings saved before page close
       checkAndResumeDrafts(); // fire-and-forget
+      // Show PWA install bar if not already installed
+      if (_isIOS && _isInBrowser) maybeShowInstallBarIOS();
+      else if (_pwaPrompt) maybeShowInstallBar();
     } else {
       S.currentUser = null;
       S.notes = [];
@@ -3817,15 +3915,17 @@ function noteCardHTML(n) {
   const badgeTxt = rCount > 1 ? `${rCount}가지 요리` : (hasRecipe ? '레시피' : '이론');
   const badgeCls = hasRecipe ? 'badge-recipe' : 'badge-theory';
 
-  // Deterministic accent color and icon (based on note id) — overridden by user-set values
+  // Deterministic accent color (subtle, no user picker)
   const idNum = n.id ? Math.abs(n.id.slice(-4).split('').reduce((a,c) => a + c.charCodeAt(0), 0)) : 0;
   const accentColor = n.noteColor || NOTE_COLORS[idNum % NOTE_COLORS.length];
-  const noteIcon    = n.noteIcon  || NOTE_ICONS[idNum % NOTE_ICONS.length];
 
-  // No-photo placeholder: colored bg + large emoji icon
+  // No-photo placeholder: warm gradient + large italic serif initial
+  const initial = (n.title || '?').replace(/\s/g, '').charAt(0).toUpperCase();
   const photoEl = coverSrc
     ? `<img src="${coverSrc}" alt="" loading="lazy">`
-    : `<div class="note-card-photo-placeholder" style="background:${accentColor}">${noteIcon}</div>`;
+    : `<div class="note-card-photo-placeholder" style="background:${accentColor}">
+         <span class="note-card-placeholder-letter">${initial}</span>
+       </div>`;
 
   const fav = n.favorite ? '<span class="note-card-fav">♥</span>' : '';
   return `<div class="note-card" style="--nc:${accentColor}" onclick="openNote('${n.id}')">
@@ -3983,21 +4083,11 @@ function openNote(id) {
   lbl.textContent = recipes.length > 1 ? `${recipes.length}가지 요리` : (hasRecipe ? '레시피' : '이론');
   lbl.className   = `detail-type-lbl ${hasRecipe ? 'recipe' : 'theory'}`;
 
-  /* Note color & icon customization */
+  /* Deterministic accent color for this note */
   const idNum = n.id ? Math.abs(n.id.slice(-4).split('').reduce((a,c) => a + c.charCodeAt(0), 0)) : 0;
   const noteColor = n.noteColor || NOTE_COLORS[idNum % NOTE_COLORS.length];
-  const noteIcon  = n.noteIcon  || NOTE_ICONS[idNum % NOTE_ICONS.length];
-  // Color the detail nav strip
-  const detailEl = document.getElementById('screen-detail');
-  detailEl.style.setProperty('--nc', noteColor);
-  // Show icon in customize button
-  const iconEl = document.getElementById('dtNoteIcon');
-  if (iconEl) iconEl.textContent = noteIcon;
-  // Color the photo placeholder with note color (will be overridden below if needed)
-  const heroPH2 = document.getElementById('noteHeroPlaceholder');
-  if (heroPH2) {
-    heroPH2.style.background = noteColor;
-  }
+  // Apply to detail nav colored top border
+  document.getElementById('screen-detail').style.setProperty('--nc', noteColor);
 
   document.getElementById('dtTitle').textContent = n.title;
   document.getElementById('dtDate').textContent  = n.date;
@@ -4019,7 +4109,8 @@ function openNote(id) {
     heroEl.insertBefore(img, heroEl.firstChild);
   } else {
     heroPH.style.display = '';
-    heroPH.textContent = noteIcon;
+    const initial2 = (n.title || '?').replace(/\s/g, '').charAt(0).toUpperCase();
+    heroPH.innerHTML = `<span class="note-card-placeholder-letter" style="font-size:72px;color:rgba(255,255,255,.45)">${initial2}</span>`;
     heroPH.style.background = noteColor;
   }
 
@@ -4462,74 +4553,6 @@ function splitRecipeToNote(noteId, recipeIdx) {
   showToast(`✅ "${recipe.title}" 별도 노트로 저장됐어요`);
 }
 
-/* ═══════════════════════════════════════════
-   NOTE CUSTOMIZER — color + icon picker
-═══════════════════════════════════════════ */
-function openNoteCustomizer() {
-  const n = S.notes.find(x => x.id === S.activeNote);
-  if (!n) return;
-
-  // Build color grid
-  const cGrid = document.getElementById('ncColorGrid');
-  cGrid.innerHTML = NOTE_COLORS.map(c =>
-    `<div class="nc-color-swatch ${n.noteColor === c ? 'selected' : ''}"
-       style="background:${c}"
-       onclick="setNoteColor('${c}')"></div>`
-  ).join('');
-
-  // Build icon grid
-  const iGrid = document.getElementById('ncIconGrid');
-  iGrid.innerHTML = NOTE_ICONS.map(ic =>
-    `<button class="nc-icon-btn ${n.noteIcon === ic ? 'selected' : ''}"
-       onclick="setNoteIcon('${ic}')">${ic}</button>`
-  ).join('');
-
-  document.getElementById('noteCustomizerOverlay').classList.add('open');
-}
-
-function closeNoteCustomizerOnBg(e) {
-  if (e.target === document.getElementById('noteCustomizerOverlay'))
-    document.getElementById('noteCustomizerOverlay').classList.remove('open');
-}
-
-function setNoteColor(color) {
-  const n = S.notes.find(x => x.id === S.activeNote);
-  if (!n) return;
-  n.noteColor = color;
-  saveNoteToFirestore(n);
-  // Update swatch selection
-  document.querySelectorAll('.nc-color-swatch').forEach(s => {
-    s.classList.toggle('selected', s.style.background === color || s.style.backgroundColor === color);
-  });
-  // Update detail view
-  document.getElementById('screen-detail').style.setProperty('--nc', color);
-  const heroPH = document.getElementById('noteHeroPlaceholder');
-  if (heroPH?.style.display !== 'none') {
-    heroPH.style.background = color;
-  }
-  renderNotes(); // Update cards
-  showToast('🎨 색상이 변경됐어요');
-}
-
-function setNoteIcon(icon) {
-  const n = S.notes.find(x => x.id === S.activeNote);
-  if (!n) return;
-  n.noteIcon = icon;
-  saveNoteToFirestore(n);
-  // Update icon button selection
-  document.querySelectorAll('.nc-icon-btn').forEach(b => {
-    b.classList.toggle('selected', b.textContent === icon);
-  });
-  // Update detail view icon display
-  const iconEl = document.getElementById('dtNoteIcon');
-  if (iconEl) iconEl.textContent = icon;
-  const heroPH = document.getElementById('noteHeroPlaceholder');
-  if (heroPH?.style.display !== 'none') {
-    heroPH.textContent = icon;
-  }
-  renderNotes(); // Update cards
-  showToast(`${icon} 아이콘이 변경됐어요`);
-}
 
 async function deleteCurrentNote() {
   if (!confirm('이 노트를 삭제할까요?')) return;
@@ -5219,23 +5242,40 @@ function delParaAttach(noteId, recipeIdx, paraIdx, attachIdx) {
 <input type="file" id="coverPhotoInput" accept="image/*" style="display:none" onchange="onCoverPhotoSelected(event)">
 <input type="file" id="paraPhotoInput" accept="image/*" style="display:none" onchange="onParaPhotoSelected(event)">
 
-<!-- ═══════════════════ NOTE CUSTOMIZER MODAL ═══════════════════ -->
-<div class="note-customizer-overlay" id="noteCustomizerOverlay" onclick="closeNoteCustomizerOnBg(event)">
-  <div class="note-customizer-sheet">
-    <div class="note-customizer-handle"></div>
-    <div class="note-customizer-title">노트 꾸미기</div>
+<!-- ═══════════════════ PWA INSTALL BANNER ═══════════════════ -->
+<div class="pwa-install-bar hidden" id="pwaInstallBar">
+  <div class="pwa-install-bar-ico">📲</div>
+  <div class="pwa-install-bar-text">
+    <div class="pwa-install-bar-title">홈 화면에 추가하기</div>
+    <div class="pwa-install-bar-sub">앱처럼 바로 열 수 있어요</div>
+  </div>
+  <button class="pwa-install-btn" id="pwaInstallBtn" onclick="triggerInstall()">추가</button>
+  <button class="pwa-install-dismiss" onclick="dismissInstallBar()" aria-label="닫기">×</button>
+</div>
 
-    <!-- Color picker -->
-    <div class="nc-section">
-      <div class="nc-section-label">색상</div>
-      <div class="nc-color-grid" id="ncColorGrid"></div>
+<!-- iOS install instruction sheet -->
+<div class="ios-install-overlay" id="iosInstallOverlay" onclick="closeIOSSheet(event)">
+  <div class="ios-install-sheet">
+    <div class="ios-install-handle"></div>
+    <div class="ios-install-title">홈 화면에 ChefNote 추가</div>
+    <div class="ios-install-sub">Safari에서 홈 화면에 추가하면<br>앱처럼 바로 열 수 있어요.</div>
+    <div class="ios-install-steps">
+      <div class="ios-install-step">
+        <div class="ios-install-step-num">1</div>
+        <div class="ios-install-step-text">하단 중앙의 <strong>공유 버튼</strong> 탭
+          <div style="font-size:22px;margin-top:4px">□↑</div>
+        </div>
+      </div>
+      <div class="ios-install-step">
+        <div class="ios-install-step-num">2</div>
+        <div class="ios-install-step-text">스크롤해서 <strong>"홈 화면에 추가"</strong> 선택</div>
+      </div>
+      <div class="ios-install-step">
+        <div class="ios-install-step-num">3</div>
+        <div class="ios-install-step-text">오른쪽 상단 <strong>"추가"</strong> 탭 → 완료!</div>
+      </div>
     </div>
-
-    <!-- Icon picker -->
-    <div class="nc-section" style="margin-top:16px">
-      <div class="nc-section-label">아이콘</div>
-      <div class="nc-icon-grid" id="ncIconGrid"></div>
-    </div>
+    <div class="ios-install-arrow">↓</div>
   </div>
 </div>
 </body>
