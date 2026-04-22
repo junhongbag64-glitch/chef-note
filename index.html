@@ -262,6 +262,46 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
+    /* ─── Pending drafts section (home screen) ─── */
+    .pending-drafts-section { padding: 0 16px 4px; }
+    .pending-draft-card {
+      background: #1A1814; color: #fff;
+      border-radius: 14px; padding: 14px 16px;
+      margin-bottom: 10px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .pending-draft-icon {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: rgba(255,255,255,.1);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; font-size: 18px;
+    }
+    .pending-draft-info { flex: 1; min-width: 0; }
+    .pending-draft-title {
+      font-size: 13px; font-weight: 600; color: #fff;
+      margin-bottom: 3px;
+    }
+    .pending-draft-sub {
+      font-size: 11.5px; color: rgba(255,255,255,.55);
+    }
+    .pending-draft-err {
+      font-size: 11px; color: #F4A26A; margin-top: 2px;
+    }
+    .pending-draft-actions { display: flex; gap: 8px; flex-shrink: 0; }
+    .pending-draft-retry {
+      background: #4E6035; color: #fff;
+      border: none; border-radius: 20px;
+      padding: 7px 14px; font-size: 12px; font-weight: 600;
+      cursor: pointer; font-family: var(--f-sans);
+      white-space: nowrap;
+    }
+    .pending-draft-delete {
+      background: rgba(255,255,255,.1); color: rgba(255,255,255,.6);
+      border: none; border-radius: 20px;
+      padding: 7px 10px; font-size: 12px;
+      cursor: pointer; font-family: var(--f-sans);
+    }
+
     /* ─── Recipe tabs (inside note detail) ─── */
     .recipe-tabs {
       display: flex; gap: 0;
@@ -2018,6 +2058,9 @@
       <div class="home-greeting-sub" id="homeGreetingSub">오늘 수업도 기록해보세요</div>
     </div>
 
+    <!-- Pending draft recordings -->
+    <div id="pendingDraftsSection" class="pending-drafts-section" style="display:none"></div>
+
     <!-- Categories -->
     <div class="sec-header" style="padding-top:8px">
       <span class="sec-title">카테고리</span>
@@ -2784,6 +2827,7 @@ document.addEventListener('DOMContentLoaded', () => {
       loading.classList.add('hidden');
       // Check for any unfinished recordings saved before page close
       checkAndResumeDrafts(); // fire-and-forget
+      renderPendingDrafts();  // 실패한 기존 drafts도 즉시 표시
       // Show PWA install bar if not already installed
       if (_isIOS && _isInBrowser) maybeShowInstallBarIOS();
       else if (_pwaPrompt) maybeShowInstallBar();
@@ -3157,7 +3201,16 @@ async function startRecording() {
     showToast('🎙️ 녹음 시작됨 (백그라운드 유지)');
   } catch(err) {
     console.error('[REC]', err);
-    showToast('마이크 권한이 필요합니다');
+    const n = err.name || '';
+    if (n === 'NotAllowedError' || n === 'PermissionDeniedError') {
+      showToast('마이크 권한이 없어요 — 설정 > 앱 > 브라우저에서 허용해주세요');
+    } else if (n === 'NotFoundError') {
+      showToast('마이크를 찾을 수 없어요 — 이어폰 연결을 확인해주세요');
+    } else if (n === 'NotSupportedError' || n === 'TypeError') {
+      showToast('이 브라우저에서는 녹음이 지원되지 않아요 — 크롬/사파리를 사용해주세요');
+    } else {
+      showToast(`녹음 시작 실패: ${err.message || err.name || '알 수 없는 오류'}`);
+    }
   }
 }
 
@@ -3303,16 +3356,23 @@ function showDraftBanner(text) {
 async function checkAndResumeDrafts() {
   const drafts = await getAllDrafts();
   if (!drafts.length) return;
-  showDraftBanner(`이전 녹음 ${drafts.length}개를 처리하는 중...`);
-  for (const draft of drafts) {
+  // 대기 중인 녹음 먼저 화면에 표시
+  renderPendingDrafts();
+  // 한 번도 시도 안 한 것만 자동 처리 (retryCount === 0 또는 undefined)
+  const fresh = drafts.filter(d => !d.retryCount);
+  if (!fresh.length) return; // 이미 실패한 것들은 자동 재시도 안 함 (수동으로만)
+  showDraftBanner(`이전 녹음 ${fresh.length}개를 처리하는 중...`);
+  for (const draft of fresh) {
     await processDraftToNote(draft);
   }
   showDraftBanner(null);
 }
 
-async function processDraftToNote(draft) {
+async function processDraftToNote(draft, isManual = false) {
   try {
-    showDraftBanner(`녹음을 노트로 변환 중...`);
+    if (isManual) showProc('변환 재시도 중...', '녹음을 다시 변환하고 있어요...');
+    else showDraftBanner(`녹음을 노트로 변환 중...`);
+
     const transcript = await transcribeAudio(draft.audioBlob);
     const note = await generateNote(transcript, draft.duration || 0, draft.memos || []);
     note.id        = Date.now().toString();
@@ -3321,7 +3381,7 @@ async function processDraftToNote(draft) {
     note.duration  = draft.duration || 0;
     note.favorite  = false;
     note.media     = draft.media || [];
-    note.audioBlob = null; // Skip audio storage for recovered drafts (keep it small)
+    note.audioBlob = null;
     note.memos     = draft.memos || [];
     S.notes.unshift(note);
     await saveNoteToFirestore(note);
@@ -3329,11 +3389,22 @@ async function processDraftToNote(draft) {
     await deleteDraftFromDB(draft.id);
     renderNotes();
     updateStats();
+    if (isManual) { hideProc(); setTimeout(() => openNote(note.id), 400); }
     showToast('✅ 이전 녹음을 노트로 저장했어요!');
+    renderPendingDrafts();
   } catch(e) {
     console.error('[Draft] process failed:', e);
-    await deleteDraftFromDB(draft.id); // Remove failed draft to prevent infinite retry
-    showToast('❌ 이전 녹음 처리 실패 — 건너뜁니다');
+    // ⚠️ 실패해도 삭제 안 함 — retryCount만 증가. 녹음 보존!
+    const retryCount = (draft.retryCount || 0) + 1;
+    const errMsg = e.message || '알 수 없는 오류';
+    await saveDraftToDB({ ...draft, retryCount, lastError: errMsg, lastAttempt: Date.now() });
+    if (isManual) {
+      hideProc();
+      showToast(`❌ 변환 실패: ${errMsg}`);
+    } else {
+      showDraftBanner(null);
+    }
+    renderPendingDrafts();
   }
 }
 
@@ -3412,9 +3483,19 @@ async function onRecordingDone() {
   } catch(err) {
     console.error('[NOTE]', err);
     removeProcessingGuard();
-    // Draft stays in IndexedDB — will be recovered on next session
+    // 드래프트 IndexedDB에 보존됨 — 홈화면에 재시도 버튼 표시
     hideProc();
-    showToast('❌ 노트 생성 실패 — 다음 접속 시 자동 복구 시도합니다');
+    const msg = err.message || '';
+    let reason = '서버 연결 오류';
+    if (msg.includes('ASM_UPLOAD')) reason = '음성 업로드 실패 (네트워크 확인)';
+    else if (msg.includes('ASM_TRANSCRIPT')) reason = `음성 인식 실패 (${msg.split(':')[1]?.trim() || ''})`;
+    else if (msg.includes('API 키')) reason = 'API 키 오류';
+    else if (msg.includes('JSON') || msg.includes('Claude')) reason = 'AI 노트 생성 실패';
+    // 드래프트에 에러 정보 저장
+    const existingDraft = (await getAllDrafts()).find(d => d.id === draftId);
+    if (existingDraft) await saveDraftToDB({ ...existingDraft, lastError: reason, retryCount: 0 });
+    renderPendingDrafts();
+    showToast(`❌ ${reason} — 홈화면에서 재시도 가능해요`);
   }
 }
 
@@ -3498,20 +3579,21 @@ async function transcribeAudio(blob) {
   });
   if (!upRes.ok) {
     const e = await upRes.json().catch(() => ({}));
-    throw new Error(`Upload failed: ${upRes.status} - ${e.error || ''}`);
+    throw new Error(`ASM_UPLOAD_${upRes.status}: ${e.error || '오디오 업로드 실패'}`);
   }
   const { upload_url } = await upRes.json();
-  if (!upload_url) throw new Error('Upload URL을 받지 못했습니다');
+  if (!upload_url) throw new Error('ASM_UPLOAD_NOURL: Upload URL 없음');
 
-  /* 2. Transcript — format_text 제거 (한국어 미지원 → 400 원인) */
+  /* 2. Transcript — language_code만 사용 (speech_model 파라미터 제거 → 400 방지) */
   const trRes = await fetch('https://api.assemblyai.com/v2/transcript', {
     method: 'POST',
     headers: { 'authorization': key, 'content-type': 'application/json' },
-    body: JSON.stringify({ audio_url: upload_url, language_code: 'ko', speech_models: ['universal-2'] }),
+    body: JSON.stringify({ audio_url: upload_url, language_code: 'ko' }),
   });
   if (!trRes.ok) {
-    const e = await trRes.json().catch(() => ({}));
-    throw new Error(`Transcript request failed: ${trRes.status} - ${e.error || JSON.stringify(e)}`);
+    const errBody = await trRes.json().catch(() => ({}));
+    const detail = errBody.error || errBody.message || trRes.status;
+    throw new Error(`ASM_TRANSCRIPT_${trRes.status}: ${detail}`);
   }
   const { id } = await trRes.json();
 
@@ -3884,6 +3966,53 @@ async function convertMemoToNote() {
 }
 
 /* ═══════════════════════════════════════════
+   PENDING DRAFTS UI
+═══════════════════════════════════════════ */
+async function renderPendingDrafts() {
+  const sec = document.getElementById('pendingDraftsSection');
+  if (!sec) return;
+  const drafts = await getAllDrafts();
+  if (!drafts.length) { sec.style.display = 'none'; return; }
+
+  sec.style.display = 'block';
+  sec.innerHTML = `
+    <div style="padding:14px 0 6px;display:flex;align-items:center;justify-content:space-between">
+      <span style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text-3)">처리 대기 중인 녹음</span>
+    </div>
+    ${drafts.map(d => {
+      const dur = d.duration ? `${Math.floor(d.duration/60)}분 ${d.duration%60}초` : '길이 알 수 없음';
+      const dt  = d.timestamp ? new Date(d.timestamp).toLocaleString('ko-KR', {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
+      const err = d.lastError ? `<div class="pending-draft-err">⚠️ ${d.lastError}</div>` : '';
+      return `<div class="pending-draft-card">
+        <div class="pending-draft-icon">🎙️</div>
+        <div class="pending-draft-info">
+          <div class="pending-draft-title">미완성 녹음 · ${dur}</div>
+          <div class="pending-draft-sub">${dt}${d.retryCount ? ` · 시도 ${d.retryCount}회` : ''}</div>
+          ${err}
+        </div>
+        <div class="pending-draft-actions">
+          <button class="pending-draft-retry" onclick="retryDraft('${d.id}')">다시 변환</button>
+          <button class="pending-draft-delete" onclick="discardDraft('${d.id}')">✕</button>
+        </div>
+      </div>`;
+    }).join('')}`;
+}
+
+async function retryDraft(draftId) {
+  const drafts = await getAllDrafts();
+  const draft = drafts.find(d => d.id === draftId);
+  if (!draft) { showToast('녹음 파일을 찾을 수 없어요'); return; }
+  await processDraftToNote(draft, true);
+}
+
+async function discardDraft(draftId) {
+  if (!confirm('이 녹음을 삭제할까요? 복구할 수 없어요.')) return;
+  await deleteDraftFromDB(draftId);
+  renderPendingDrafts();
+  showToast('녹음이 삭제됐어요');
+}
+
+/* ═══════════════════════════════════════════
    NOTE RENDERING
 ═══════════════════════════════════════════ */
 function renderNotes() {
@@ -3891,6 +4020,7 @@ function renderNotes() {
   renderList('homeList', S.notes.slice(0, 5));
   const filt = getFiltered();
   renderList('archiveList', filt);
+  renderPendingDrafts(); // 대기 중인 녹음 카드 업데이트
 }
 
 function renderList(id, notes) {
