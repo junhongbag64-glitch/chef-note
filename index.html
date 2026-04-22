@@ -2683,6 +2683,20 @@ const _isInBrowser = !_isStandalone;
 const _isInAppBrowser = /KAKAOTALK|NAVER|Line\/|Instagram|FBAN|FB_IAB|Twitter|Snapchat|Weibo|MicroMessenger/i.test(_ua)
   || (/wv\)/.test(_ua) && _isAndroid); // Android WebView flag
 
+// Android 인앱 브라우저(카카오톡 등) → Chrome으로 자동 리다이렉트
+// intent:// 스킴: Chrome 없으면 S.browser_fallback_url로 폴백
+if (_isInAppBrowser && _isAndroid && !_isStandalone) {
+  try {
+    const intentUrl = 'intent://' + location.host + location.pathname + location.search
+      + '#Intent'
+      + ';scheme=' + (location.protocol === 'https:' ? 'https' : 'http')
+      + ';package=com.android.chrome'
+      + ';S.browser_fallback_url=' + encodeURIComponent(location.href)
+      + ';end';
+    location.replace(intentUrl);
+  } catch(e) { /* Chrome 없음 — 아래 수동 안내 카드가 표시됨 */ }
+}
+
 // Capture the Android install prompt
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
@@ -2770,26 +2784,42 @@ function updateAuthInstallNudge() {
   if (!el) return;
   if (_isStandalone) { el.style.display = 'none'; return; }
 
-  // Case 1: In-app browser (KakaoTalk, etc.) — must open in real browser first
+  // Case 1: In-app browser (KakaoTalk, etc.)
+  // Android: intent:// redirect already attempted above — this card is shown only if that failed
+  // iOS: can't auto-redirect, show manual steps
   if (_isInAppBrowser) {
-    const iosSteps = `
-      <div class="ain-step"><span class="ain-step-num">1</span><span>하단 또는 우측 상단의 <strong>···</strong> / <strong>⋮</strong> 버튼을 눌러요</span></div>
-      <div class="ain-step"><span class="ain-step-num">2</span><span><strong>Safari로 열기</strong> 또는 <strong>기본 브라우저로 열기</strong> 선택</span></div>
-      <div class="ain-step"><span class="ain-step-num">3</span><span>Safari에서 하단 공유 버튼 → <strong>홈 화면에 추가</strong></span></div>`;
-    const androidSteps = `
-      <div class="ain-step"><span class="ain-step-num">1</span><span>우측 상단 <strong>⋮</strong> 버튼 → <strong>다른 앱으로 열기</strong></span></div>
-      <div class="ain-step"><span class="ain-step-num">2</span><span><strong>Chrome</strong> 선택</span></div>
-      <div class="ain-step"><span class="ain-step-num">3</span><span>Chrome에서 우측 상단 <strong>⋮</strong> → <strong>홈 화면에 추가</strong></span></div>`;
-    el.innerHTML = `
-      <div class="ain-header">
-        <span class="ain-icon">📲</span>
-        <div>
-          <div class="ain-title">카카오톡에서는 설치 불가</div>
-          <div class="ain-sub">${_isIOS ? 'Safari' : 'Chrome'}에서 열어야 앱으로 저장할 수 있어요</div>
+    if (_isIOS) {
+      el.innerHTML = `
+        <div class="ain-header">
+          <span class="ain-icon">📲</span>
+          <div>
+            <div class="ain-title">앱으로 저장하려면 Safari에서 열어요</div>
+            <div class="ain-sub">카카오톡에서는 홈 화면 설치가 안 돼요</div>
+          </div>
         </div>
-      </div>
-      <div class="ain-steps">${_isIOS ? iosSteps : androidSteps}</div>`;
-    el.style.display = 'block';
+        <div class="ain-steps">
+          <div class="ain-step"><span class="ain-step-num">1</span><span>하단 오른쪽 <strong>···</strong> 버튼 탭</span></div>
+          <div class="ain-step"><span class="ain-step-num">2</span><span><strong>Safari로 열기</strong> 선택</span></div>
+          <div class="ain-step"><span class="ain-step-num">3</span><span>Safari 하단 공유 버튼 → <strong>홈 화면에 추가</strong></span></div>
+        </div>`;
+      el.style.display = 'block';
+    } else {
+      // Android: Chrome이 없거나 intent redirect 실패한 경우 수동 안내
+      el.innerHTML = `
+        <div class="ain-header">
+          <span class="ain-icon">📲</span>
+          <div>
+            <div class="ain-title">앱으로 저장하려면 Chrome에서 열어요</div>
+            <div class="ain-sub">카카오톡에서는 홈 화면 설치가 안 돼요</div>
+          </div>
+        </div>
+        <div class="ain-steps">
+          <div class="ain-step"><span class="ain-step-num">1</span><span>우측 상단 <strong>⋮</strong> → <strong>다른 앱으로 열기</strong></span></div>
+          <div class="ain-step"><span class="ain-step-num">2</span><span><strong>Chrome</strong> 선택</span></div>
+          <div class="ain-step"><span class="ain-step-num">3</span><span>Chrome 우측 상단 <strong>⋮</strong> → <strong>홈 화면에 추가</strong></span></div>
+        </div>`;
+      el.style.display = 'block';
+    }
     return;
   }
 
