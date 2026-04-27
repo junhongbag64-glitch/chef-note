@@ -1,0 +1,22 @@
+# ChefNote Cloudflare Worker — wrangler.toml
+#
+# SETUP (one-time):
+#   1. npm install -g wrangler
+#   2. wrangler login
+#   3. wrangler kv:namespace create JOBS
+#      → 출력된 id를 아래 kv_namespaces.id에 붙여넣기
+#   4. wrangler secret put ASM_KEY        (AssemblyAI API 키)
+#   5. wrangler secret put ANTHROPIC_KEY  (Anthropic API 키)
+#   6. wrangler deploy
+#
+# 배포 후 worker URL이 새로 생기면 index.html의 PROXY 상수를 업데이트할 것.
+# 기존 Worker를 교체하려면 name을 기존 Worker 이름으로 변경.
+
+name = "chefnote-worker"
+main = "worker.js"
+compatibility_date = "2024-11-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[kv_namespaces]]
+binding = "JOBS"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"   # wrangler kv:namespace create JOBS 출력값

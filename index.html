@@ -3512,13 +3512,19 @@ function showDraftBanner(text) {
 async function checkAndResumeDrafts() {
   const drafts = await getAllDrafts();
   if (!drafts.length) return;
-  // 대기 중인 녹음 먼저 화면에 표시
   renderPendingDrafts();
-  // 한 번도 시도 안 한 것만 자동 처리 (retryCount === 0 또는 undefined)
-  const fresh = drafts.filter(d => !d.retryCount);
-  if (!fresh.length) return; // 이미 실패한 것들은 자동 재시도 안 함 (수동으로만)
-  showDraftBanner(`이전 녹음 ${fresh.length}개를 처리하는 중...`);
-  for (const draft of fresh) {
+
+  // 1. 서버 잡 상태 갱신 (백그라운드 완료 여부 확인)
+  const serverDrafts = drafts.filter(d => d.mode === 'server');
+  if (serverDrafts.length) {
+    await checkServerJobs();
+  }
+
+  // 2. 클라이언트 모드 fresh 드래프트만 자동 처리
+  const clientFresh = drafts.filter(d => !d.mode && !d.retryCount);
+  if (!clientFresh.length) return;
+  showDraftBanner(`이전 녹음 ${clientFresh.length}개를 처리하는 중...`);
+  for (const draft of clientFresh) {
     await processDraftToNote(draft);
   }
   showDraftBanner(null);
@@ -3591,56 +3597,61 @@ async function onRecordingDone() {
   if (!S.chunks.length) { showToast('녹음 데이터가 없습니다'); return; }
   if (!checkNoteLimit()) return;
 
-  const dur    = Math.floor((Date.now() - S.recStart) / 1000);
-  const mtype  = S.chunks[0]?.type || 'audio/webm';
-  const blob   = new Blob(S.chunks, { type: mtype });
+  const dur   = Math.floor((Date.now() - S.recStart) / 1000);
+  const blob  = new Blob(S.chunks, { type: S.chunks[0]?.type || 'audio/webm' });
+  const media = [...S.media];
+  const memos = [...S.memos];
 
-  // Save raw audio draft to IndexedDB BEFORE processing
-  // This allows recovery if the page closes during AI processing
+  // IndexedDB에 오디오 보존 (앱 종료 대비)
   const draftId = 'draft_' + Date.now();
-  await saveDraftToDB({
-    id: draftId,
-    audioBlob: blob,
-    media: [...S.media],
-    memos: [...S.memos],
-    duration: dur,
-    timestamp: Date.now(),
-  });
+  await saveDraftToDB({ id: draftId, audioBlob: blob, media, memos, duration: dur, timestamp: Date.now() });
 
+  showProc('🎙️ 서버에 접수 중...', '업로드 완료 후 앱을 닫아도 노트가 만들어져요!');
+  addProcessingGuard();
+
+  // ── 서버 처리 경로 ──
+  try {
+    const jobId = await submitJobToServer(blob, draftId, { duration: dur, memos, media });
+    S.memos = []; S.media = [];
+    removeProcessingGuard();
+    hideProc();
+    showToast('✅ 서버에 접수됐어요. 앱을 닫아도 노트가 만들어져요!');
+    renderPendingDrafts();
+    return;
+  } catch (serverErr) {
+    console.warn('[Server path failed, falling back to client]', serverErr.message);
+  }
+
+  // ── 클라이언트 처리 폴백 ──
   showProc('🎙️ 레시피 노트 만드는 중...', '음성파일을 레시피 노트로 변환하고 있어요!\n창을 닫지 마세요 — 완료 후 자동 저장돼요');
-  addProcessingGuard(); // warn user if they try to close during processing
-
   try {
     const transcript = await transcribeAudio(blob);
-
     updateProc('🎙️ 레시피 노트 만드는 중...', '잠깐만요, 거의 다 됐어요!\n창을 닫지 마세요 — 완료 후 자동 저장돼요');
 
-    const note = await generateNote(transcript, dur, [...S.memos]);
+    const note = await generateNote(transcript, dur, memos);
     note.id        = Date.now().toString();
     note.date      = new Date().toLocaleDateString('ko-KR', { year:'numeric', month:'long', day:'numeric' });
     note.timestamp = Date.now();
     note.duration  = dur;
     note.favorite  = false;
-    note.media     = [...S.media];
+    note.media     = media;
     note.audioBlob = blob.size < 10 * 1024 * 1024 ? await blobToDataUrl(blob) : null;
-    note.memos     = [...S.memos];
+    note.memos     = memos;
 
     S.notes.unshift(note);
-    S.memos = [];
+    S.memos = []; S.media = [];
     await saveNoteToFirestore(note);
     await incrementNotesCreated();
-    await deleteDraftFromDB(draftId); // ✅ Successfully saved — remove draft
+    await deleteDraftFromDB(draftId);
     renderNotes();
     updateStats();
-
     removeProcessingGuard();
     hideProc();
     showToast('✅ 노트가 생성되었습니다!');
     setTimeout(() => openNote(note.id), 600);
-  } catch(err) {
+  } catch (err) {
     console.error('[NOTE]', err);
     removeProcessingGuard();
-    // 드래프트 IndexedDB에 보존됨 — 홈화면에 재시도 버튼 표시
     hideProc();
     const msg = err.message || '';
     let reason = '서버 연결 오류';
@@ -3648,9 +3659,8 @@ async function onRecordingDone() {
     else if (msg.includes('ASM_TRANSCRIPT')) reason = `음성 인식 실패 (${msg.split(':')[1]?.trim() || ''})`;
     else if (msg.includes('API 키')) reason = 'API 키 오류';
     else if (msg.includes('JSON') || msg.includes('Claude')) reason = 'AI 노트 생성 실패';
-    // 드래프트에 에러 정보 저장
-    const existingDraft = (await getAllDrafts()).find(d => d.id === draftId);
-    if (existingDraft) await saveDraftToDB({ ...existingDraft, lastError: reason, retryCount: 0 });
+    const existing = (await getAllDrafts()).find(d => d.id === draftId);
+    if (existing) await saveDraftToDB({ ...existing, lastError: reason, retryCount: 0 });
     renderPendingDrafts();
     showToast(`❌ ${reason} — 홈화면에서 재시도 가능해요`);
   }
@@ -3718,45 +3728,51 @@ function encodeWAV(samples, sampleRate) {
   return buf;
 }
 
-async function transcribeAudio(blob) {
-  const keyRes = await fetch(`${PROXY}/get-asm-key`);
-  if (!keyRes.ok) throw new Error('API 키를 가져오지 못했습니다');
-  const { key } = await keyRes.json();
+/* ═══════════════════════════════════════════
+   ASSEMBLYAI — split helpers
+═══════════════════════════════════════════ */
+async function asmGetKey() {
+  const r = await fetch(`${PROXY}/get-asm-key`);
+  if (!r.ok) throw new Error('API 키를 가져오지 못했습니다');
+  const { key } = await r.json();
+  return key;
+}
 
+async function asmUploadBlob(blob, key) {
   updateProc('🎙️ 레시피 노트 만드는 중...', '음성 파일을 분석하고 있어요...');
-
-  /* 1. Upload */
-  const upRes = await fetch('https://api.assemblyai.com/v2/upload', {
+  const r = await fetch('https://api.assemblyai.com/v2/upload', {
     method: 'POST',
-    headers: {
-      'authorization': key,
-      'content-type': 'application/octet-stream',
-    },
+    headers: { 'authorization': key, 'content-type': 'application/octet-stream' },
     body: blob,
   });
-  if (!upRes.ok) {
-    const e = await upRes.json().catch(() => ({}));
-    throw new Error(`ASM_UPLOAD_${upRes.status}: ${e.error || '오디오 업로드 실패'}`);
+  if (!r.ok) {
+    const e = await r.json().catch(() => ({}));
+    throw new Error(`ASM_UPLOAD_${r.status}: ${e.error || '오디오 업로드 실패'}`);
   }
-  const { upload_url } = await upRes.json();
+  const { upload_url } = await r.json();
   if (!upload_url) throw new Error('ASM_UPLOAD_NOURL: Upload URL 없음');
+  return upload_url;
+}
 
-  /* 2. Transcript — speech_models 필수 (2026-04 API 변경), 한국어는 universal-2만 지원 */
-  const trRes = await fetch('https://api.assemblyai.com/v2/transcript', {
+async function asmCreateTranscript(upload_url, key, webhookUrl = null) {
+  const body = { audio_url: upload_url, language_code: 'ko', speech_models: ['universal-2'] };
+  if (webhookUrl) body.webhook_url = webhookUrl;
+
+  const r = await fetch('https://api.assemblyai.com/v2/transcript', {
     method: 'POST',
     headers: { 'authorization': key, 'content-type': 'application/json' },
-    body: JSON.stringify({ audio_url: upload_url, language_code: 'ko', speech_models: ['universal-2'] }),
+    body: JSON.stringify(body),
   });
-  if (!trRes.ok) {
-    const errBody = await trRes.json().catch(() => ({}));
-    const detail = errBody.error || errBody.message || trRes.status;
-    throw new Error(`ASM_TRANSCRIPT_${trRes.status}: ${detail}`);
+  if (!r.ok) {
+    const e = await r.json().catch(() => ({}));
+    throw new Error(`ASM_TRANSCRIPT_${r.status}: ${e.error || e.message || r.status}`);
   }
-  const trBody = await trRes.json();
-  const id = trBody.id;
-  if (!id) throw new Error(`ASM_TRANSCRIPT_NOID: transcript ID 없음 (응답: ${JSON.stringify(trBody).slice(0, 120)})`);
+  const data = await r.json();
+  if (!data.id) throw new Error(`ASM_TRANSCRIPT_NOID: ID 없음 (응답: ${JSON.stringify(data).slice(0, 120)})`);
+  return data.id;
+}
 
-  /* 3. Poll — 최대 30분 (1시간 20분 파일 대응) */
+async function asmPollTranscript(id, key) {
   for (let i = 0; i < 600; i++) {
     await sleep(3000);
     const poll = await fetch(`https://api.assemblyai.com/v2/transcript/${id}`, {
@@ -3769,8 +3785,8 @@ async function transcribeAudio(blob) {
     const result = await poll.json();
     if (result.status === 'completed') {
       const txt = result.text || '';
-      console.log('[ASM] 변환완료 글자수:', txt.length, '미리보기:', txt.slice(0, 80));
       if (!txt) throw new Error('음성 인식 결과가 비어있습니다. 파일에 음성이 없거나 지원 안 되는 형식입니다.');
+      console.log('[ASM] 완료 글자수:', txt.length);
       return txt;
     }
     if (result.status === 'error') throw new Error('Transcription error: ' + result.error);
@@ -3780,6 +3796,112 @@ async function transcribeAudio(blob) {
     }
   }
   throw new Error('Transcription timed out (30분 초과)');
+}
+
+// Client-side full pipeline (fallback when server path fails)
+async function transcribeAudio(blob) {
+  const key = await asmGetKey();
+  const upload_url = await asmUploadBlob(blob, key);
+  const id = await asmCreateTranscript(upload_url, key);
+  return asmPollTranscript(id, key);
+}
+
+/* ═══════════════════════════════════════════
+   SERVER-SIDE JOB SUBMISSION
+═══════════════════════════════════════════ */
+async function submitJobToServer(blob, draftId, metadata) {
+  const key = await asmGetKey();
+
+  updateProc('🎙️ 서버에 접수 중...', '업로드 후 앱을 닫아도 노트가 만들어져요!');
+  const upload_url = await asmUploadBlob(blob, key);
+
+  const jobId = 'job_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+  const webhookUrl = `${PROXY}/asm-webhook/${jobId}`;
+  const asmId = await asmCreateTranscript(upload_url, key, webhookUrl);
+
+  // Register job with Worker (fire-and-forget metadata)
+  const idToken = await auth.currentUser?.getIdToken().catch(() => null);
+  const regRes = await fetch(`${PROXY}/register-job`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ jobId, asmId, uid: S.currentUser.uid, idToken, metadata }),
+  });
+  if (!regRes.ok) throw new Error('서버 접수 실패');
+
+  // Update draft to server mode (keep audioBlob for fallback recovery)
+  await saveDraftToDB({
+    id: draftId,
+    mode: 'server',
+    jobId,
+    asmId,
+    status: 'transcribing',
+    audioBlob: blob,             // kept for 7-day fallback
+    media: metadata.media || [],
+    memos: metadata.memos || [],
+    duration: metadata.duration || 0,
+    timestamp: Date.now(),
+  });
+
+  return jobId;
+}
+
+/* ═══════════════════════════════════════════
+   SERVER JOB STATUS CHECKS (called on app open)
+═══════════════════════════════════════════ */
+async function checkServerJobs() {
+  const drafts = await getAllDrafts();
+  const serverDrafts = drafts.filter(d => d.mode === 'server');
+  if (!serverDrafts.length) return;
+
+  for (const draft of serverDrafts) {
+    await checkAndFinalizeServerJob(draft);
+  }
+}
+
+async function checkAndFinalizeServerJob(draft) {
+  if (!draft.jobId) return;
+  try {
+    const res = await fetch(`${PROXY}/job-status/${draft.jobId}`);
+    const job = await res.json();
+
+    if (job.status === 'done' && job.note) {
+      await finalizeServerNote(draft, job.note);
+    } else if (job.status === 'error') {
+      await saveDraftToDB({ ...draft, lastError: job.error || '서버 처리 실패', status: 'error' });
+      renderPendingDrafts();
+    } else if (job.status === 'not_found') {
+      // KV expired (>7 days) — revert to client mode if blob still present
+      if (draft.audioBlob) {
+        await saveDraftToDB({ ...draft, mode: undefined, jobId: undefined, retryCount: 0, lastError: '서버 데이터 만료 — 재변환 필요' });
+      } else {
+        await deleteDraftFromDB(draft.id);
+      }
+      renderPendingDrafts();
+    } else {
+      // still transcribing / generating — update local status mirror
+      if (job.status && job.status !== draft.status) {
+        await saveDraftToDB({ ...draft, status: job.status });
+        renderPendingDrafts();
+      }
+    }
+  } catch (e) {
+    console.warn('[checkServerJob]', e.message);
+  }
+}
+
+async function finalizeServerNote(draft, note) {
+  note.media = draft.media || [];
+  if (draft.audioBlob && draft.audioBlob.size < 10 * 1024 * 1024) {
+    note.audioBlob = await blobToDataUrl(draft.audioBlob).catch(() => null);
+  }
+  S.notes.unshift(note);
+  await saveNoteToFirestore(note);
+  await incrementNotesCreated();
+  await deleteDraftFromDB(draft.id);
+  renderNotes();
+  updateStats();
+  renderPendingDrafts();
+  showToast('✅ 노트가 생성되었습니다!');
 }
 
 /* ═══════════════════════════════════════════
@@ -4147,19 +4269,41 @@ async function renderPendingDrafts() {
 
   sec.style.display = 'block';
   sec.innerHTML = `
-    <div style="padding:14px 0 6px;display:flex;align-items:center;justify-content:space-between">
+    <div style="padding:14px 0 6px">
       <span style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text-3)">처리 대기 중인 녹음</span>
     </div>
     ${drafts.map(d => {
       const dur = d.duration ? `${Math.floor(d.duration/60)}분 ${d.duration%60}초` : '길이 알 수 없음';
       const dt  = d.timestamp ? new Date(d.timestamp).toLocaleString('ko-KR', {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
-      const err = d.lastError ? `<div class="pending-draft-err">⚠️ ${d.lastError}</div>` : '';
+
+      if (d.mode === 'server') {
+        const statusMap = { transcribing: '🔄 음성 인식 중...', generating: '✨ 노트 생성 중...', done: '✅ 완료 — 탭해서 저장', error: '❌ 오류 발생' };
+        const statusText = statusMap[d.status] || '🔄 서버에서 처리 중...';
+        const isError = d.status === 'error';
+        const isDone  = d.status === 'done';
+        const errLine = isError && d.lastError ? `<div class="pending-draft-err">⚠️ ${d.lastError}</div>` : '';
+        return `<div class="pending-draft-card" ${isDone ? `onclick="retryDraft('${d.id}')" style="cursor:pointer"` : ''}>
+          <div class="pending-draft-icon">☁️</div>
+          <div class="pending-draft-info">
+            <div class="pending-draft-title">서버 처리 중 · ${dur}</div>
+            <div class="pending-draft-sub">${dt} · ${statusText}</div>
+            ${errLine}
+          </div>
+          <div class="pending-draft-actions">
+            ${isDone  ? `<button class="pending-draft-retry" onclick="retryDraft('${d.id}')">저장하기</button>` : ''}
+            ${isError ? `<button class="pending-draft-retry" onclick="retryDraft('${d.id}')">재시도</button>` : ''}
+            <button class="pending-draft-delete" onclick="discardDraft('${d.id}')">✕</button>
+          </div>
+        </div>`;
+      }
+
+      const errLine = d.lastError ? `<div class="pending-draft-err">⚠️ ${d.lastError}</div>` : '';
       return `<div class="pending-draft-card">
         <div class="pending-draft-icon">🎙️</div>
         <div class="pending-draft-info">
           <div class="pending-draft-title">미완성 녹음 · ${dur}</div>
           <div class="pending-draft-sub">${dt}${d.retryCount ? ` · 시도 ${d.retryCount}회` : ''}</div>
-          ${err}
+          ${errLine}
         </div>
         <div class="pending-draft-actions">
           <button class="pending-draft-retry" onclick="retryDraft('${d.id}')">다시 변환</button>
@@ -4173,6 +4317,39 @@ async function retryDraft(draftId) {
   const drafts = await getAllDrafts();
   const draft = drafts.find(d => d.id === draftId);
   if (!draft) { showToast('녹음 파일을 찾을 수 없어요'); return; }
+
+  if (draft.mode === 'server') {
+    if (draft.status === 'done') {
+      // Worker가 완료 — 서버에서 노트 받아서 저장
+      try {
+        const res = await fetch(`${PROXY}/job-status/${draft.jobId}`);
+        const job = await res.json();
+        if (job.status === 'done' && job.note) {
+          await finalizeServerNote(draft, job.note);
+          return;
+        }
+      } catch { /* fall through */ }
+      showToast('노트 데이터를 가져오지 못했어요. 잠시 후 다시 시도해주세요');
+      return;
+    }
+    if (draft.status === 'error') {
+      // 에러 시 클라이언트 처리 폴백
+      if (draft.audioBlob) {
+        await saveDraftToDB({ ...draft, mode: undefined, jobId: undefined, retryCount: 0, lastError: null });
+        const updated = { ...draft, mode: undefined };
+        await processDraftToNote(updated, true);
+      } else {
+        showToast('오디오 데이터가 없어 재시도할 수 없어요');
+      }
+      return;
+    }
+    // 아직 처리 중 — 상태 새로고침
+    await checkAndFinalizeServerJob(draft);
+    renderPendingDrafts();
+    showToast('서버에서 처리 중이에요. 완료되면 홈화면에 표시돼요');
+    return;
+  }
+
   await processDraftToNote(draft, true);
 }
 
