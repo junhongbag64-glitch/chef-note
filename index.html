@@ -3530,6 +3530,7 @@ async function processDraftToNote(draft, isManual = false) {
     else showDraftBanner(`녹음을 노트로 변환 중...`);
 
     const transcript = await transcribeAudio(draft.audioBlob);
+    if (isManual) updateProc('🎙️ 레시피 노트 만드는 중...', '잠깐만요, 거의 다 됐어요!\n창을 닫지 마세요');
     const note = await generateNote(transcript, draft.duration || 0, draft.memos || []);
     note.id        = Date.now().toString();
     note.date      = new Date().toLocaleDateString('ko-KR', { year:'numeric', month:'long', day:'numeric' });
@@ -3751,7 +3752,9 @@ async function transcribeAudio(blob) {
     const detail = errBody.error || errBody.message || trRes.status;
     throw new Error(`ASM_TRANSCRIPT_${trRes.status}: ${detail}`);
   }
-  const { id } = await trRes.json();
+  const trBody = await trRes.json();
+  const id = trBody.id;
+  if (!id) throw new Error(`ASM_TRANSCRIPT_NOID: transcript ID 없음 (응답: ${JSON.stringify(trBody).slice(0, 120)})`);
 
   /* 3. Poll — 최대 30분 (1시간 20분 파일 대응) */
   for (let i = 0; i < 600; i++) {
@@ -3759,6 +3762,10 @@ async function transcribeAudio(blob) {
     const poll = await fetch(`https://api.assemblyai.com/v2/transcript/${id}`, {
       headers: { 'authorization': key },
     });
+    if (!poll.ok) {
+      const e = await poll.json().catch(() => ({}));
+      throw new Error(`ASM_POLL_${poll.status}: ${e.error || '상태 확인 실패'}`);
+    }
     const result = await poll.json();
     if (result.status === 'completed') {
       const txt = result.text || '';
@@ -3818,18 +3825,26 @@ ${transcript}
   /* Claude API — Worker 프록시 경유 (AI Gateway 사용) */
   let raw = '';
   try {
-    const res = await fetch(`${PROXY}/anthropic/v1/messages`, {
-      method: 'POST',
-      headers: {
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 4096,
-        messages: [{ role: 'user', content: prompt }],
-      }),
-    });
+    const ctrl = new AbortController();
+    const claudeTimer = setTimeout(() => ctrl.abort(), 120000); // 2분 타임아웃
+    let res;
+    try {
+      res = await fetch(`${PROXY}/anthropic/v1/messages`, {
+        method: 'POST',
+        signal: ctrl.signal,
+        headers: {
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 4096,
+          messages: [{ role: 'user', content: prompt }],
+        }),
+      });
+    } finally {
+      clearTimeout(claudeTimer);
+    }
     if (res.ok) {
       const data = await res.json();
       raw = data.content?.[0]?.text || '';
