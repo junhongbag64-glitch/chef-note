@@ -427,6 +427,28 @@
     .rec-tool-btn:active { background: rgba(255,255,255,.15); }
     .rec-tool-btn svg { width: 22px; height: 22px; }
     .rec-tool-btn span { font-size: 10px; color: rgba(255,255,255,.8); }
+    /* Pause button — distinct yellow accent, green when paused */
+    .rec-pause-btn {
+      background: rgba(255,193,7,.18);
+      border: 1px solid rgba(255,193,7,.35);
+    }
+    .rec-pause-btn:active { background: rgba(255,193,7,.3); }
+    .rec-pause-btn.paused {
+      background: rgba(76,175,80,.22);
+      border-color: rgba(76,175,80,.5);
+    }
+    .rec-pause-btn.paused span { color: #B7E0B4; }
+    /* Recording zone visuals when paused */
+    .rec-zone.paused .wave-b { animation-play-state: paused !important; opacity: .35; }
+    .rec-zone.paused .rec-pill-dot { animation: none; opacity: .4; }
+    .rec-zone.paused .rec-timer { color: rgba(255,255,255,.55); }
+    .rec-zone.paused .rec-timer::after {
+      content: ' (일시정지)';
+      font-size: 11px;
+      color: rgba(255,193,7,.85);
+      margin-left: 4px;
+      font-weight: 500;
+    }
     .rec-tool-counts {
       font-size: 11px; color: rgba(255,255,255,.6);
       padding-left: 4px; border-left: 1px solid rgba(255,255,255,.2);
@@ -2149,21 +2171,31 @@
 
     <!-- Recording toolbar — appears above FAB when recording -->
     <div class="rec-toolbar" id="recToolbar">
-      <button class="rec-tool-btn" onclick="document.getElementById('photoIn').click()" title="사진">
+      <button class="rec-tool-btn rec-pause-btn" id="recPauseBtn" onclick="event.stopPropagation();togglePause()" title="일시정지/재개">
+        <svg id="recPauseIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <rect x="6" y="4" width="4" height="16"/>
+          <rect x="14" y="4" width="4" height="16"/>
+        </svg>
+        <svg id="recPlayIcon" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="display:none">
+          <polygon points="6 4 20 12 6 20 6 4"/>
+        </svg>
+        <span id="recPauseLabel">일시정지</span>
+      </button>
+      <button class="rec-tool-btn" onclick="event.stopPropagation();document.getElementById('photoIn').click()" title="사진">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
           <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
           <circle cx="12" cy="13" r="4"/>
         </svg>
         <span>사진</span>
       </button>
-      <button class="rec-tool-btn" onclick="document.getElementById('videoIn').click()" title="동영상">
+      <button class="rec-tool-btn" onclick="event.stopPropagation();document.getElementById('videoIn').click()" title="동영상">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
           <polygon points="23 7 16 12 23 17 23 7"/>
           <rect x="1" y="5" width="15" height="14" rx="2"/>
         </svg>
         <span>동영상</span>
       </button>
-      <button class="rec-tool-btn" onclick="openMemoModal()" title="메모">
+      <button class="rec-tool-btn" onclick="event.stopPropagation();openMemoModal()" title="메모">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
           <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
@@ -3297,6 +3329,63 @@ async function toggleRecording() {
   else await startRecording();
 }
 
+/* Pause / Resume — MediaRecorder native pause()/resume() */
+function togglePause() {
+  if (!S.recording || !S.recorder) return;
+  if (S.paused) resumeRecording();
+  else pauseRecording();
+}
+
+function pauseRecording() {
+  if (!S.recorder || S.recorder.state !== 'recording') return;
+  try {
+    S.recorder.pause();
+    S.paused = true;
+    S.recPausedAt = Date.now();
+    clearInterval(S.recTimer); // freeze timer
+    setPauseUI(true);
+    showToast('⏸ 일시정지됨');
+  } catch(e) { console.warn('[REC] pause failed:', e); }
+}
+
+function resumeRecording() {
+  if (!S.recorder || S.recorder.state !== 'paused') return;
+  try {
+    // recStart 보정 — 일시정지된 만큼 timer 늦추기
+    if (S.recPausedAt) {
+      S.recStart += (Date.now() - S.recPausedAt);
+      S.recPausedAt = 0;
+    }
+    S.recorder.resume();
+    S.paused = false;
+    setPauseUI(false);
+    startTimer();
+    showToast('▶ 녹음 재개');
+  } catch(e) { console.warn('[REC] resume failed:', e); }
+}
+
+function setPauseUI(paused) {
+  const pauseIco = document.getElementById('recPauseIcon');
+  const playIco = document.getElementById('recPlayIcon');
+  const label = document.getElementById('recPauseLabel');
+  const btn = document.getElementById('recPauseBtn');
+  const recZone = document.getElementById('recZone');
+  if (!btn) return;
+  if (paused) {
+    pauseIco.style.display = 'none';
+    playIco.style.display = 'block';
+    label.textContent = '재개';
+    btn.classList.add('paused');
+    recZone?.classList.add('paused');
+  } else {
+    pauseIco.style.display = 'block';
+    playIco.style.display = 'none';
+    label.textContent = '일시정지';
+    btn.classList.remove('paused');
+    recZone?.classList.remove('paused');
+  }
+}
+
 async function startRecording() {
   try {
     /* iOS: AudioContext must be created inside user gesture */
@@ -3348,8 +3437,11 @@ async function startRecording() {
 
     /* UI */
     S.recording = true;
+    S.paused    = false;
+    S.recPausedAt = 0;
     S.recStart  = Date.now();
     S.media     = [];
+    setPauseUI(false);
     document.getElementById('mediaScroll').innerHTML = '';
     document.getElementById('mediaStrip').classList.remove('on');
     setRecUI(true);
@@ -3372,9 +3464,16 @@ async function startRecording() {
 
 async function stopRecording() {
   S.recording = false;
+  S.paused    = false;
+  S.recPausedAt = 0;
   clearInterval(S.recTimer);
   document.removeEventListener('visibilitychange', onVisChange);
+  setPauseUI(false);
 
+  // paused 상태에서도 stop이 잘 호출되도록 — resume 후 stop
+  if (S.recorder && S.recorder.state === 'paused') {
+    try { S.recorder.resume(); } catch {}
+  }
   if (S.recorder && S.recorder.state !== 'inactive') S.recorder.stop();
   if (S.stream) { S.stream.getTracks().forEach(t => t.stop()); S.stream = null; }
   clearInterval(S.audioKeepAlive); S.audioKeepAlive = null;
@@ -3606,17 +3705,58 @@ async function onRecordingDone() {
   const draftId = 'draft_' + Date.now();
   await saveDraftToDB({ id: draftId, audioBlob: blob, media, memos, duration: dur, timestamp: Date.now() });
 
-  showProc('🎙️ 서버에 접수 중...', '업로드 완료 후 앱을 닫아도 노트가 만들어져요!');
+  showProc('🎙️ 서버에 접수 중...', '업로드 후 앱을 닫아도 노트가 만들어져요!');
   addProcessingGuard();
 
-  // ── 서버 처리 경로 ──
+  // ── 서버 처리 경로 — 접수 후 적극적으로 폴링하여 빨리 노트 표시 ──
   try {
     const jobId = await submitJobToServer(blob, draftId, { duration: dur, memos, media });
     S.memos = []; S.media = [];
+    renderPendingDrafts();
+
+    // 서버 잡 적극 폴링 — 1초 간격, 최대 5분
+    const pollStart = Date.now();
+    let lastUiUpdate = 0;
+    while (Date.now() - pollStart < 5 * 60 * 1000) {
+      // 어댑티브: 0~30초 1초, 30초~2분 2초, 이후 3초
+      const elapsedSec = (Date.now() - pollStart) / 1000;
+      const wait = elapsedSec < 30 ? 1000 : elapsedSec < 120 ? 2000 : 3000;
+      await sleep(wait);
+
+      let job;
+      try {
+        const r = await fetch(`${PROXY}/job-status/${jobId}`);
+        job = await r.json();
+      } catch { continue; }
+
+      if (job.status === 'done' && job.note) {
+        // ✅ 완료 → 노트 즉시 표시
+        const draft = (await getAllDrafts()).find(d => d.jobId === jobId);
+        if (draft) await finalizeServerNote(draft, job.note);
+        removeProcessingGuard();
+        hideProc();
+        setTimeout(() => openNote(job.note.id), 400);
+        return;
+      }
+      if (job.status === 'error') {
+        throw new Error(job.error || '서버 처리 실패');
+      }
+
+      // UI 갱신 — 3초마다
+      if (Date.now() - lastUiUpdate >= 3000) {
+        lastUiUpdate = Date.now();
+        const sec = Math.round((Date.now() - pollStart) / 1000);
+        const stage = job.status === 'generating' ? '레시피 정리 중...'
+                    : job.status === 'transcribing' ? '음성 인식 중...'
+                    : '처리 중...';
+        const timeMsg = sec < 60 ? `${sec}초` : `${Math.floor(sec/60)}분 ${sec%60}초`;
+        updateProc('🎙️ 레시피 노트 만드는 중...', `${stage} (${timeMsg})\n앱을 닫아도 노트는 자동 저장돼요`);
+      }
+    }
+    // 5분 넘으면 UI는 닫지만 서버는 계속 처리 (다음 접속 시 자동 finalize)
     removeProcessingGuard();
     hideProc();
-    showToast('✅ 서버에 접수됐어요. 앱을 닫아도 노트가 만들어져요!');
-    renderPendingDrafts();
+    showToast('⏳ 변환이 길어지고 있어요. 앱을 닫아도 노트는 자동 저장돼요');
     return;
   } catch (serverErr) {
     console.warn('[Server path failed, falling back to client]', serverErr.message);
@@ -3773,8 +3913,15 @@ async function asmCreateTranscript(upload_url, key, webhookUrl = null) {
 }
 
 async function asmPollTranscript(id, key) {
-  for (let i = 0; i < 600; i++) {
-    await sleep(3000);
+  // 어댑티브 인터벌 — 짧은 녹음 즉시 감지, 긴 녹음 부하 줄임
+  let elapsed = 0;
+  const MAX = 30 * 60 * 1000; // 30분
+  let lastProgressMs = 0;
+  while (elapsed < MAX) {
+    // 0~30초: 1초 / 30초~2분: 2초 / 그 이후: 3초
+    const interval = elapsed < 30000 ? 1000 : elapsed < 120000 ? 2000 : 3000;
+    await sleep(interval);
+    elapsed += interval;
     const poll = await fetch(`https://api.assemblyai.com/v2/transcript/${id}`, {
       headers: { 'authorization': key },
     });
@@ -3786,13 +3933,18 @@ async function asmPollTranscript(id, key) {
     if (result.status === 'completed') {
       const txt = result.text || '';
       if (!txt) throw new Error('음성 인식 결과가 비어있습니다. 파일에 음성이 없거나 지원 안 되는 형식입니다.');
-      console.log('[ASM] 완료 글자수:', txt.length);
+      console.log('[ASM] 완료 글자수:', txt.length, '소요:', Math.round(elapsed/1000) + '초');
       return txt;
     }
     if (result.status === 'error') throw new Error('Transcription error: ' + result.error);
-    if (i % 10 === 0) {
-      const mins = Math.floor(i * 3 / 60);
-      updateProc('🎙️ 레시피 노트 만드는 중...', `변환 중이에요... (${mins}분 경과)<br>긴 파일은 시간이 좀 걸릴 수 있어요`);
+    // 진행 상태 — 4초마다 갱신
+    if (elapsed - lastProgressMs >= 4000) {
+      lastProgressMs = elapsed;
+      const sec = Math.round(elapsed / 1000);
+      const msg = sec < 60
+        ? `잠시만요... (${sec}초)`
+        : `변환 중이에요... (${Math.floor(sec/60)}분 ${sec%60}초)`;
+      updateProc('🎙️ 레시피 노트 만드는 중...', msg);
     }
   }
   throw new Error('Transcription timed out (30분 초과)');
@@ -3960,7 +4112,8 @@ ${transcript}
         },
         body: JSON.stringify({
           model: 'claude-sonnet-4-6',
-          max_tokens: 4096,
+          max_tokens: 3000,        // 4096 → 3000: 충분 + 응답 속도 ↑
+          temperature: 0.2,        // 일관된 JSON + 빠른 생성
           messages: [{ role: 'user', content: prompt }],
         }),
       });
