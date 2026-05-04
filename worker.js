@@ -13,13 +13,14 @@
  *   6. Client opens app → GET /job-status/:jobId → gets note → saves to Firestore
  *
  * Environment bindings (set in Cloudflare dashboard or wrangler.toml):
- *   JOBS           — KV namespace for job state
- *   ASM_KEY        — AssemblyAI API key  (secret)
- *   ANTHROPIC_KEY  — Anthropic API key   (secret)
+ *   JOBS              — KV namespace for job state
+ *   ASSEMBLYAI_KEY    — AssemblyAI API key  (secret)
+ *   CLAUDE_KEY        — Anthropic API key   (secret)
  */
 
 const ASM_API = 'https://api.assemblyai.com';
-const ANTHROPIC_API = 'https://api.anthropic.com';
+// Cloudflare AI Gateway — direct Anthropic 호출이 edge WAF에 차단되므로 Gateway 경유
+const ANTHROPIC_API = 'https://gateway.ai.cloudflare.com/v1/d872f29764b5c5b238824decd2dc6d91/chefnote/anthropic';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -52,7 +53,7 @@ export default {
 
     // ── Existing endpoints (backward compat) ──
     if (url.pathname === '/get-asm-key' && request.method === 'GET') {
-      return ok({ key: env.ASM_KEY });
+      return ok({ key: env.ASSEMBLYAI_KEY });
     }
 
     // ── New: job lifecycle ──
@@ -68,7 +69,7 @@ export default {
 
     if (url.pathname.startsWith('/job-status/') && request.method === 'GET') {
       const jobId = url.pathname.slice('/job-status/'.length);
-      return handleJobStatus(jobId, env);
+      return handleJobStatus(jobId, env, ctx);
     }
 
     // ── Anthropic proxy (existing) ──
@@ -126,7 +127,7 @@ async function handleAsmWebhook(jobId, request, env) {
     const asmId = body.transcript_id || body.id;
     try {
       const r = await fetch(`${ASM_API}/v2/transcript/${asmId}`, {
-        headers: { authorization: env.ASM_KEY },
+        headers: { authorization: env.ASSEMBLYAI_KEY },
       });
       const d = await r.json();
       text = d.text || '';
@@ -156,12 +157,47 @@ async function handleAsmWebhook(jobId, request, env) {
 }
 
 /* ═══════════════════════════════════════════
-   JOB STATUS ENDPOINT
+   JOB STATUS ENDPOINT — with webhook-failure fallback
+   If job is stuck in 'transcribing', poll AssemblyAI directly + start Claude in background.
+   Always responds quickly; heavy work happens in ctx.waitUntil.
 ═══════════════════════════════════════════ */
-async function handleJobStatus(jobId, env) {
+async function handleJobStatus(jobId, env, ctx) {
   if (!jobId) return err('jobId required', 400);
-  const job = await getJob(env, jobId);
+  let job = await getJob(env, jobId);
   if (!job) return ok({ status: 'not_found' }, 404);
+
+  // ── Webhook fallback: 'transcribing' 상태가 5초 이상 지속되면 AssemblyAI 직접 체크 ──
+  if (job.status === 'transcribing' && job.asmId) {
+    const ageSec = (Date.now() - (job.createdAt || 0)) / 1000;
+    if (ageSec > 5) {
+      try {
+        const r = await fetch(`${ASM_API}/v2/transcript/${job.asmId}`, {
+          headers: { authorization: env.ASSEMBLYAI_KEY },
+        });
+        const asmData = await r.json();
+        if (asmData.status === 'completed' && asmData.text) {
+          // ASM 완료 → 'generating'으로 표시하고 Claude를 백그라운드로
+          job.status = 'generating';
+          await putJob(env, jobId, job);
+          if (ctx && ctx.waitUntil) {
+            ctx.waitUntil((async () => {
+              const fresh = await getJob(env, jobId);
+              if (!fresh || fresh.status === 'done') return; // already done
+              try {
+                const note = await generateNote(asmData.text, fresh.metadata || {}, env);
+                await putJob(env, jobId, { ...fresh, status: 'done', note, completedAt: Date.now() });
+              } catch (e) {
+                await putJob(env, jobId, { ...fresh, status: 'error', error: `노트 생성 실패: ${e.message}` });
+              }
+            })());
+          }
+        } else if (asmData.status === 'error') {
+          job = { ...job, status: 'error', error: asmData.error || '음성 인식 실패' };
+          await putJob(env, jobId, job);
+        }
+      } catch (e) { /* swallow — keep status as is */ }
+    }
+  }
 
   // Strip sensitive data before returning
   const { idToken: _tok, transcript: _tr, ...safe } = job;
@@ -211,13 +247,14 @@ ${transcript}
   const res = await fetch(`${ANTHROPIC_API}/v1/messages`, {
     method: 'POST',
     headers: {
-      'x-api-key': env.ANTHROPIC_KEY,
+      'x-api-key': env.CLAUDE_KEY,
       'anthropic-version': '2023-06-01',
       'content-type': 'application/json',
     },
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
-      max_tokens: 4096,
+      max_tokens: 3000,
+      temperature: 0.2,
       messages: [{ role: 'user', content: prompt }],
     }),
   });
@@ -271,28 +308,37 @@ ${transcript}
 }
 
 /* ═══════════════════════════════════════════
-   ANTHROPIC PROXY (existing endpoint)
+   ANTHROPIC PROXY — pass only minimal headers (avoid 403 from edge WAF)
 ═══════════════════════════════════════════ */
 async function handleAnthropicProxy(request, env, url) {
   const targetPath = url.pathname.replace('/anthropic', '');
   const targetUrl = `${ANTHROPIC_API}${targetPath}${url.search}`;
 
-  const headers = new Headers(request.headers);
-  headers.set('x-api-key', env.ANTHROPIC_KEY);
-  headers.delete('host');
+  // 클라이언트 헤더 전부를 forward하면 Anthropic edge WAF가 차단함.
+  // 정확히 필요한 헤더만 새로 만들어서 보내기.
+  const cleanHeaders = {
+    'x-api-key': env.CLAUDE_KEY,
+    'anthropic-version': request.headers.get('anthropic-version') || '2023-06-01',
+    'content-type': 'application/json',
+  };
+  const beta = request.headers.get('anthropic-beta');
+  if (beta) cleanHeaders['anthropic-beta'] = beta;
+
+  let body = null;
+  if (request.method !== 'GET' && request.method !== 'HEAD') {
+    body = await request.text();
+  }
 
   const response = await fetch(targetUrl, {
     method: request.method,
-    headers,
-    body: request.body,
+    headers: cleanHeaders,
+    body,
   });
 
-  const respHeaders = new Headers(response.headers);
-  Object.entries(CORS).forEach(([k, v]) => respHeaders.set(k, v));
-
-  return new Response(response.body, {
+  const respText = await response.text();
+  return new Response(respText, {
     status: response.status,
-    headers: respHeaders,
+    headers: { ...CORS, 'Content-Type': 'application/json' },
   });
 }
 
