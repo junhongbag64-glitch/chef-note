@@ -1595,94 +1595,125 @@
 
     /* ─── Hero text ─── */
     .auth-hero-tag {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 6px 12px;
-      background: rgba(255,255,255,.12);
-      border: 1px solid rgba(255,255,255,.18);
-      border-radius: 99px;
-      font-size: 12px; font-weight: 600; color: rgba(255,255,255,.9);
-      margin-top: 36px; margin-bottom: 20px;
+      display: inline-flex; align-items: center; gap: 7px;
+      font-size: 11px; font-weight: 600;
+      color: rgba(168,207,110,.95);
+      letter-spacing: .3px;
+      margin-top: 40px; margin-bottom: 18px;
       width: fit-content;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
     }
     .auth-hero-tag::before {
       content: '';
       width: 6px; height: 6px; border-radius: 50%;
       background: #A8CF6E; flex-shrink: 0;
+      box-shadow: 0 0 10px rgba(168,207,110,.6);
     }
     .auth-headline {
       font-family: var(--f-display);
-      font-size: 44px; font-weight: 700;
-      line-height: 1.08; letter-spacing: -1.2px;
+      font-size: 48px; font-weight: 700;
+      line-height: 1.05; letter-spacing: -1.5px;
       color: #fff;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
     }
     .auth-headline em {
       font-style: italic; color: #A8CF6E;
       font-weight: 500;
     }
     .auth-tagline {
-      font-size: 15px; line-height: 1.65;
-      color: rgba(255,255,255,.72);
-      margin-bottom: 32px;
+      font-size: 14.5px; line-height: 1.5;
+      color: rgba(255,255,255,.62);
+      margin-bottom: 30px;
+      max-width: 320px;
     }
 
-    /* ─── Mockup preview card (inside hero) ─── */
+    /* ─── Mockup preview card (REAL recipe note) ─── */
     .auth-mockup-wrap {
       position: relative;
-      margin: 0 0 0;
+      margin: 0;
     }
     .auth-mockup-card {
       background: #FEFCF7;
       border-radius: 14px;
       overflow: hidden;
-      box-shadow: 0 12px 40px rgba(0,0,0,.28), 0 4px 12px rgba(0,0,0,.18);
-      transform: perspective(600px) rotateX(3deg);
+      box-shadow: 0 24px 60px rgba(0,0,0,.4), 0 8px 20px rgba(0,0,0,.25);
+      transform: perspective(900px) rotateX(2deg);
       transform-origin: bottom center;
     }
-    .auth-mockup-photo {
-      height: 90px;
-      background: linear-gradient(135deg, #4E6035, #6E8A4E);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 36px;
+    .auth-mockup-topbar {
+      height: 5px;
+      background: linear-gradient(90deg, #4E6035 0%, #7EAA50 100%);
     }
-    .auth-mockup-body { padding: 12px 14px 14px; }
+    .auth-mockup-header {
+      padding: 13px 16px 11px;
+      border-bottom: 1px solid #EDE9E1;
+      display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 10px;
+    }
     .auth-mockup-eyebrow {
-      font-size: 8px; font-weight: 800;
-      letter-spacing: 2px; text-transform: uppercase;
-      color: #4E6035; margin-bottom: 4px;
+      font-size: 8.5px; font-weight: 800;
+      letter-spacing: 1.6px; text-transform: uppercase;
+      color: #4E6035; margin-bottom: 3px;
     }
     .auth-mockup-title {
       font-family: var(--f-display);
-      font-size: 15px; font-weight: 700; color: #1A1814;
-      margin-bottom: 8px;
+      font-size: 17px; font-weight: 700; color: #1A1814;
+      letter-spacing: -.3px;
     }
-    .auth-mockup-line {
-      height: 8px; background: #EDE9E1; border-radius: 4px;
+    .auth-mockup-date-chip {
+      font-size: 9.5px; color: #6B6860;
+      background: #F2EDE3;
+      padding: 3px 8px; border-radius: 99px;
+      white-space: nowrap; flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .auth-mockup-body { padding: 11px 16px 14px; }
+    .auth-mockup-section-label {
+      font-size: 8.5px; font-weight: 800; letter-spacing: 1.4px;
+      text-transform: uppercase; color: #4E6035;
+      margin: 9px 0 5px;
+    }
+    .auth-mockup-section-label:first-child { margin-top: 0; }
+    .auth-mockup-ingr {
+      display: flex; flex-wrap: wrap; gap: 4px 11px;
+      font-size: 11.5px; color: #2A2722;
+      line-height: 1.55;
+    }
+    .auth-mockup-ingr b { font-weight: 700; color: #1A1814; }
+    .auth-mockup-step-row {
+      display: flex; gap: 8px; align-items: flex-start;
       margin-bottom: 5px;
     }
-    .auth-mockup-line.short { width: 60%; }
-    .auth-mockup-line.medium { width: 80%; }
-    .auth-mockup-step {
-      display: flex; align-items: center; gap: 6px; margin-top: 8px;
-    }
+    .auth-mockup-step-row:last-child { margin-bottom: 0; }
     .auth-mockup-step-num {
-      width: 18px; height: 18px; border-radius: 50%;
-      background: #4E6035; color: #fff;
-      font-size: 9px; font-weight: 700;
+      width: 17px; height: 17px; min-width: 17px;
+      background: #4E6035; color: #fff; border-radius: 50%;
+      font-size: 9.5px; font-weight: 700;
       display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
+      margin-top: 1px;
     }
     .auth-mockup-step-text {
-      height: 8px; flex: 1; background: #EDE9E1; border-radius: 4px;
+      font-size: 11.5px; color: #2A2722; line-height: 1.5;
+      flex: 1;
     }
+    .auth-mockup-tip {
+      background: #F5F2EB;
+      border-left: 2.5px solid #A8CF6E;
+      padding: 7px 10px;
+      margin-top: 10px;
+      border-radius: 0 7px 7px 0;
+      font-size: 11px; color: #4A453E; line-height: 1.5;
+    }
+    .auth-mockup-tip b { color: #4E6035; font-weight: 700; }
     /* AI badge floating over mockup */
     .auth-mockup-badge {
-      position: absolute; bottom: -12px; right: 12px;
+      position: absolute; bottom: -11px; right: 14px;
       background: #1A1814; color: #fff;
       font-size: 11px; font-weight: 600;
-      padding: 6px 12px; border-radius: 20px;
-      display: flex; align-items: center; gap: 6px;
-      box-shadow: 0 4px 12px rgba(0,0,0,.3);
+      padding: 7px 13px; border-radius: 20px;
+      display: flex; align-items: center; gap: 5px;
+      box-shadow: 0 6px 16px rgba(0,0,0,.4);
       white-space: nowrap;
     }
     .auth-mockup-badge::before { content: '✨'; font-size: 12px; }
@@ -1725,7 +1756,64 @@
       margin-top: 4px;
     }
 
-    /* ─── Features ─── */
+    /* ─── How it works (3-step flow) ─── */
+    .auth-howto {
+      margin: 26px 0 22px;
+      padding: 22px 20px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-1);
+      border-radius: 18px;
+    }
+    .auth-howto-title {
+      font-size: 11px; font-weight: 700;
+      letter-spacing: 1.2px; text-transform: uppercase;
+      color: var(--text-3);
+      margin-bottom: 16px;
+    }
+    .auth-howto-step {
+      display: flex; align-items: flex-start; gap: 14px;
+    }
+    .auth-howto-num {
+      width: 28px; height: 28px;
+      background: var(--accent); color: #fff;
+      border-radius: 50%;
+      font-family: var(--f-display);
+      font-size: 14px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .auth-howto-txt { flex: 1; padding-top: 2px; }
+    .auth-howto-txt b {
+      display: block;
+      font-size: 14.5px; font-weight: 700;
+      color: var(--text-1);
+      margin-bottom: 2px;
+    }
+    .auth-howto-txt span {
+      font-size: 12.5px; color: var(--text-2);
+      line-height: 1.5;
+    }
+    .auth-howto-line {
+      width: 1.5px; height: 18px;
+      background: var(--border-1);
+      margin: 4px 0 4px 13px;
+    }
+
+    /* ─── Compact trust line ─── */
+    .auth-trust-compact {
+      display: flex; align-items: center; justify-content: center; gap: 7px;
+      font-size: 11.5px; color: var(--text-3);
+      padding: 0 10px;
+      margin-bottom: 20px;
+      text-align: center;
+      line-height: 1.4;
+    }
+    .auth-trust-compact svg {
+      flex-shrink: 0;
+      color: var(--text-3);
+    }
+
+    /* ─── Features (legacy, kept for reference) ─── */
     .auth-features {
       display: flex; flex-direction: column; gap: 10px;
       margin-bottom: 32px;
@@ -1930,37 +2018,48 @@
           </div>
           <div class="auth-brand-name">Chef<em>Note</em></div>
         </div>
-        <div style="font-size:11px;color:rgba(255,255,255,.5);background:rgba(255,255,255,.1);padding:5px 10px;border-radius:20px;border:1px solid rgba(255,255,255,.15)">무료 오픈 베타</div>
+        <div style="font-size:10.5px;color:rgba(255,255,255,.55);letter-spacing:.5px;font-weight:500">v1.0 · BETA</div>
       </div>
 
       <!-- Headline -->
-      <div class="auth-hero-tag">🎙️ 녹음 → AI → 완성 레시피</div>
+      <div class="auth-hero-tag">조리과 학생 전용 · 오픈 베타</div>
       <h1 class="auth-headline">
-        수업 중 녹음만,<br>
-        <em>레시피 노트</em>는<br>
-        AI가 써줘요
+        녹음 하나로<br>
+        <em>레시피 노트</em> 완성
       </h1>
       <p class="auth-tagline">
-        버튼 하나로 녹음 → AI가 재료, 조리법, 팁을<br>자동으로 분리해 깔끔한 노트로 정리해줘요.
+        수업에서 녹음만 해두면, 재료·조리법·팁이 깔끔하게 정리돼요.
       </p>
 
-      <!-- Mockup preview card -->
+      <!-- Mockup preview card — actual recipe note content -->
       <div class="auth-mockup-wrap">
         <div class="auth-mockup-card">
-          <div class="auth-mockup-photo">🍳</div>
+          <div class="auth-mockup-topbar"></div>
+          <div class="auth-mockup-header">
+            <div>
+              <div class="auth-mockup-eyebrow">RECIPE · 오늘 실습</div>
+              <div class="auth-mockup-title">베샤멜 소스</div>
+            </div>
+            <div class="auth-mockup-date-chip">5월 5일</div>
+          </div>
           <div class="auth-mockup-body">
-            <div class="auth-mockup-eyebrow">RECIPE · 실습</div>
-            <div class="auth-mockup-title">브라운 소스</div>
-            <div class="auth-mockup-line medium"></div>
-            <div class="auth-mockup-line short"></div>
-            <div class="auth-mockup-step">
+            <div class="auth-mockup-section-label">재료</div>
+            <div class="auth-mockup-ingr">
+              <span><b>버터</b> 30g</span>
+              <span><b>밀가루</b> 30g</span>
+              <span><b>우유</b> 500ml</span>
+              <span><b>소금</b> 약간</span>
+            </div>
+            <div class="auth-mockup-section-label">조리법</div>
+            <div class="auth-mockup-step-row">
               <div class="auth-mockup-step-num">1</div>
-              <div class="auth-mockup-step-text"></div>
+              <div class="auth-mockup-step-text">버터를 약불에 녹여 밀가루로 화이트 루를 만든다</div>
             </div>
-            <div class="auth-mockup-step">
+            <div class="auth-mockup-step-row">
               <div class="auth-mockup-step-num">2</div>
-              <div class="auth-mockup-step-text" style="width:70%"></div>
+              <div class="auth-mockup-step-text">따뜻한 우유를 천천히 부어가며 거품기로 풀어준다</div>
             </div>
+            <div class="auth-mockup-tip"><b>💡 포인트</b> 우유는 반드시 따뜻하게 — 차가우면 덩어리짐</div>
           </div>
         </div>
         <div class="auth-mockup-badge">AI가 자동 생성</div>
@@ -2011,60 +2110,40 @@
       <!-- Mobile PWA install nudge (KakaoTalk / iOS / Android Chrome) -->
       <div class="auth-install-nudge" id="authInstallNudge" style="display:none"></div>
 
-      <!-- Section divider -->
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;margin-top:24px">
-        <div style="flex:1;height:1px;background:var(--border-1)"></div>
-        <span style="font-size:11px;color:var(--text-3);font-weight:600;letter-spacing:.5px">ChefNote가 하는 일</span>
-        <div style="flex:1;height:1px;background:var(--border-1)"></div>
-      </div>
-
-      <!-- Features -->
-      <div class="auth-features">
-        <div class="auth-feat">
-          <div class="auth-feat-ico">🎙️</div>
-          <div class="auth-feat-text">
-            <div class="auth-feat-title">음성 → 레시피 자동 변환</div>
-            <div class="auth-feat-sub">수업 녹음이 재료·조리법·팁이 분리된 노트로 변환돼요</div>
+      <!-- How it works — 3-step visual flow -->
+      <div class="auth-howto">
+        <div class="auth-howto-title">이렇게 동작해요</div>
+        <div class="auth-howto-step">
+          <div class="auth-howto-num">1</div>
+          <div class="auth-howto-txt">
+            <b>수업 시간에 녹음</b>
+            <span>버튼 한 번이면 백그라운드에서 알아서 녹음돼요</span>
           </div>
         </div>
-        <div class="auth-feat">
-          <div class="auth-feat-ico">📸</div>
-          <div class="auth-feat-text">
-            <div class="auth-feat-title">사진·메모 함께 저장</div>
-            <div class="auth-feat-sub">완성 요리 사진과 메모를 노트에 바로 추가할 수 있어요</div>
+        <div class="auth-howto-line"></div>
+        <div class="auth-howto-step">
+          <div class="auth-howto-num">2</div>
+          <div class="auth-howto-txt">
+            <b>녹음 끝나면 끝</b>
+            <span>업로드 후 앱 닫아도 돼요. 변환은 서버에서 진행</span>
           </div>
         </div>
-        <div class="auth-feat">
-          <div class="auth-feat-ico">☁️</div>
-          <div class="auth-feat-text">
-            <div class="auth-feat-title">모든 기기 동기화</div>
-            <div class="auth-feat-sub">폰, 태블릿, PC 어디서든 내 레시피에 접근</div>
+        <div class="auth-howto-line"></div>
+        <div class="auth-howto-step">
+          <div class="auth-howto-num">3</div>
+          <div class="auth-howto-txt">
+            <b>노트가 알아서 완성</b>
+            <span>재료·조리법·팁이 깔끔하게 정리된 레시피 노트로</span>
           </div>
         </div>
       </div>
 
-      <!-- Trust Signals -->
-      <div class="auth-trust">
-        <div class="auth-trust-title">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-          </svg>
-          보안 &amp; 프라이버시
-        </div>
-        <div class="auth-trust-item">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="11" width="18" height="11" rx="2"/>
-            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-          </svg>
-          <span>Google Firebase 엔터프라이즈 인프라에서 암호화 저장</span>
-        </div>
-        <div class="auth-trust-item">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M9 12l2 2 4-4"/>
-            <circle cx="12" cy="12" r="10"/>
-          </svg>
-          <span>데이터는 본인만 접근 가능 · 언제든 삭제 요청 가능</span>
-        </div>
+      <!-- Single-line trust signal -->
+      <div class="auth-trust-compact">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+        Google 엔터프라이즈 인프라에서 암호화 · 본인만 접근 가능
       </div>
 
       <div class="auth-footer">
