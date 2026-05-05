@@ -1551,24 +1551,19 @@
       margin-bottom: 0;
     }
 
-    /* ─── Hero section (full-bleed, warm gradient) ─── */
+    /* ─── Hero section — clean dark with subtle gradient ─── */
     .auth-hero-section {
-      background: linear-gradient(160deg, #2D3B1E 0%, #3E5426 60%, #5E7A3A 100%);
-      padding: 48px 28px 52px;
+      background:
+        radial-gradient(ellipse 120% 80% at 50% 0%, rgba(124, 156, 84, 0.18) 0%, transparent 60%),
+        linear-gradient(180deg, #1E2814 0%, #1A2310 100%);
+      padding: 32px 24px 80px;
       position: relative; overflow: hidden;
     }
     .auth-hero-section::before {
       content: '';
-      position: absolute; top: -60px; right: -80px;
-      width: 300px; height: 300px; border-radius: 50%;
-      background: radial-gradient(circle, rgba(255,255,255,.06) 0%, transparent 70%);
-      pointer-events: none;
-    }
-    .auth-hero-section::after {
-      content: '';
-      position: absolute; bottom: -40px; left: -60px;
-      width: 200px; height: 200px; border-radius: 50%;
-      background: radial-gradient(circle, rgba(180,220,100,.08) 0%, transparent 70%);
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(168,207,110,.3), transparent);
       pointer-events: none;
     }
 
@@ -1593,39 +1588,204 @@
       font-style: italic; color: #A8CF6E; font-weight: 500;
     }
 
-    /* ─── Hero text ─── */
+    /* ─── Hero text — centered, modern SaaS style ─── */
+    .auth-hero-content {
+      text-align: center;
+      max-width: 420px;
+      margin: 0 auto;
+      position: relative; z-index: 2;
+    }
     .auth-hero-tag {
       display: inline-flex; align-items: center; gap: 7px;
       font-size: 11px; font-weight: 600;
-      color: rgba(168,207,110,.95);
-      letter-spacing: .3px;
-      margin-top: 40px; margin-bottom: 18px;
-      width: fit-content;
+      color: rgba(168,207,110,.9);
+      margin: 32px 0 24px;
       text-transform: uppercase;
-      letter-spacing: 1.2px;
+      letter-spacing: 1.4px;
+      padding: 6px 12px;
+      background: rgba(168,207,110,.08);
+      border: 1px solid rgba(168,207,110,.18);
+      border-radius: 99px;
     }
     .auth-hero-tag::before {
       content: '';
       width: 6px; height: 6px; border-radius: 50%;
       background: #A8CF6E; flex-shrink: 0;
-      box-shadow: 0 0 10px rgba(168,207,110,.6);
+      box-shadow: 0 0 8px rgba(168,207,110,.7);
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%,100% { opacity: 1; transform: scale(1); }
+      50% { opacity: .5; transform: scale(.8); }
     }
     .auth-headline {
       font-family: var(--f-display);
-      font-size: 48px; font-weight: 700;
-      line-height: 1.05; letter-spacing: -1.5px;
+      font-size: 44px; font-weight: 700;
+      line-height: 1.08; letter-spacing: -1.6px;
       color: #fff;
-      margin-bottom: 14px;
+      margin-bottom: 16px;
     }
     .auth-headline em {
-      font-style: italic; color: #A8CF6E;
-      font-weight: 500;
+      font-style: normal;
+      background: linear-gradient(135deg, #A8CF6E 0%, #C4E388 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      font-weight: 700;
     }
     .auth-tagline {
-      font-size: 14.5px; line-height: 1.5;
-      color: rgba(255,255,255,.62);
-      margin-bottom: 30px;
-      max-width: 320px;
+      font-size: 15px; line-height: 1.55;
+      color: rgba(255,255,255,.7);
+      margin: 0 auto 36px;
+      max-width: 340px;
+    }
+
+    /* ─── iPhone-frame mockup — shows real ChefNote app ─── */
+    .auth-phone-wrap {
+      position: relative;
+      margin: 0 auto;
+      max-width: 280px;
+      padding-top: 8px;
+    }
+    .auth-phone-frame {
+      position: relative;
+      background: #0E0E0C;
+      border-radius: 38px;
+      padding: 7px;
+      box-shadow:
+        0 0 0 1.5px rgba(255,255,255,.07),
+        0 30px 80px rgba(0,0,0,.5),
+        0 12px 30px rgba(0,0,0,.4);
+    }
+    .auth-phone-screen {
+      background: #FAF6EF;
+      border-radius: 32px;
+      overflow: hidden;
+      aspect-ratio: 9 / 18;
+      position: relative;
+    }
+    .auth-phone-notch {
+      position: absolute; top: 8px; left: 50%;
+      transform: translateX(-50%);
+      width: 80px; height: 22px;
+      background: #0E0E0C;
+      border-radius: 12px;
+      z-index: 5;
+    }
+    /* Mini app UI inside phone */
+    .mini-app {
+      padding: 38px 14px 14px;
+      height: 100%;
+      display: flex; flex-direction: column;
+      gap: 10px;
+    }
+    .mini-app-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 2px;
+    }
+    .mini-app-logo {
+      font-family: var(--f-display);
+      font-size: 14px; font-weight: 700;
+      color: #1A1814;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .mini-app-logo::before {
+      content: '🍳'; font-size: 14px;
+    }
+    .mini-app-logo em {
+      font-style: italic; color: #4E6035; font-weight: 500;
+    }
+    .mini-app-avatar {
+      width: 18px; height: 18px; border-radius: 50%;
+      background: linear-gradient(135deg, #A8CF6E, #4E6035);
+    }
+    .mini-app-greeting {
+      font-size: 9px; color: #6B6860;
+      padding: 0 2px; line-height: 1.3;
+    }
+    .mini-app-greeting b { color: #1A1814; font-weight: 600; }
+    .mini-section-title {
+      font-size: 8.5px; font-weight: 700;
+      color: #1A1814;
+      padding: 4px 2px 2px;
+      letter-spacing: -.1px;
+    }
+    .mini-cat-row {
+      display: flex; gap: 6px;
+    }
+    .mini-cat {
+      flex: 1;
+      background: linear-gradient(135deg, #4E6035, #6E8A4E);
+      border-radius: 8px;
+      padding: 8px 6px;
+      color: #fff;
+      font-size: 8px; font-weight: 600;
+      min-height: 44px;
+      display: flex; flex-direction: column; justify-content: flex-end;
+    }
+    .mini-cat:nth-child(2) {
+      background: linear-gradient(135deg, #B8763A, #D4884A);
+    }
+    .mini-cat-meta {
+      font-size: 7px; color: rgba(255,255,255,.7);
+      font-weight: 400;
+      margin-top: 2px;
+    }
+    .mini-note-card {
+      background: #fff;
+      border: 1px solid #EDE9E1;
+      border-radius: 10px;
+      padding: 8px 9px;
+      display: flex; gap: 8px; align-items: center;
+    }
+    .mini-note-img {
+      width: 32px; height: 32px;
+      border-radius: 7px;
+      background: linear-gradient(135deg, #E5C9A1, #C4A77D);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    .mini-note-info { flex: 1; min-width: 0; }
+    .mini-note-title {
+      font-size: 9px; font-weight: 700; color: #1A1814;
+      margin-bottom: 1px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .mini-note-meta {
+      font-size: 7px; color: #ABA89F;
+    }
+    .mini-rec-fab {
+      position: absolute; bottom: 18px; left: 50%;
+      transform: translateX(-50%);
+      width: 36px; height: 36px;
+      background: #1A1814;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,.3);
+      color: #fff; font-size: 14px;
+    }
+    /* Floating callout badge */
+    .auth-phone-badge {
+      position: absolute;
+      background: #fff;
+      color: #1A1814;
+      font-size: 11px; font-weight: 700;
+      padding: 8px 13px;
+      border-radius: 99px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.4), 0 2px 8px rgba(0,0,0,.3);
+      display: flex; align-items: center; gap: 6px;
+      z-index: 10;
+    }
+    .auth-phone-badge.top-right {
+      top: 12%; right: -18px;
+    }
+    .auth-phone-badge.bottom-left {
+      bottom: 18%; left: -22px;
+    }
+    .auth-phone-badge::before {
+      content: ''; width: 7px; height: 7px;
+      border-radius: 50%; background: #4E6035;
     }
 
     /* ─── Mockup preview card (REAL recipe note) ─── */
@@ -1818,6 +1978,107 @@
       display: flex; flex-direction: column; gap: 10px;
       margin-bottom: 32px;
     }
+
+    /* ─── Persona section ─── */
+    .auth-persona-section {
+      margin: 32px 0 8px;
+    }
+    .auth-section-title {
+      font-family: var(--f-display);
+      font-size: 22px; font-weight: 700;
+      color: var(--text-1);
+      letter-spacing: -.5px;
+      margin-bottom: 6px;
+      line-height: 1.25;
+    }
+    .auth-section-sub {
+      font-size: 13px;
+      color: var(--text-2);
+      margin-bottom: 18px;
+      line-height: 1.5;
+    }
+    .auth-persona-grid {
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .auth-persona-card {
+      padding: 16px 18px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-1);
+      border-radius: 14px;
+      display: flex; gap: 13px; align-items: flex-start;
+    }
+    .auth-persona-emoji {
+      font-size: 26px;
+      line-height: 1;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .auth-persona-text { flex: 1; }
+    .auth-persona-quote {
+      font-size: 13.5px;
+      color: var(--text-1);
+      font-weight: 600;
+      line-height: 1.45;
+      margin-bottom: 4px;
+    }
+    .auth-persona-detail {
+      font-size: 12px;
+      color: var(--text-2);
+      line-height: 1.5;
+    }
+
+    /* ─── Comparison table ─── */
+    .auth-compare-section {
+      margin: 32px 0 8px;
+    }
+    .auth-compare-table {
+      background: var(--bg-card);
+      border: 1px solid var(--border-1);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .auth-compare-row {
+      display: grid;
+      grid-template-columns: 1.3fr 1fr 1fr;
+      border-bottom: 1px solid var(--border-1);
+    }
+    .auth-compare-row:last-child { border-bottom: none; }
+    .auth-compare-cell {
+      padding: 12px 8px;
+      font-size: 11.5px;
+      color: var(--text-2);
+      line-height: 1.4;
+      text-align: center;
+      border-right: 1px solid var(--border-1);
+    }
+    .auth-compare-cell:last-child { border-right: none; }
+    .auth-compare-cell.label {
+      text-align: left;
+      font-weight: 600;
+      color: var(--text-1);
+      padding-left: 14px;
+      font-size: 12px;
+    }
+    .auth-compare-row.header .auth-compare-cell {
+      font-weight: 700;
+      color: var(--text-2);
+      font-size: 11px;
+      padding: 11px 6px;
+      letter-spacing: -.1px;
+      background: #F5F0E5;
+    }
+    .auth-compare-row.header .auth-compare-cell.us {
+      background: var(--accent);
+      color: #fff;
+    }
+    .auth-compare-cell.us {
+      background: rgba(168,207,110,.08);
+      color: var(--text-1);
+      font-weight: 600;
+    }
+    .auth-compare-mark { font-size: 16px; line-height: 1; }
+    .auth-compare-mark.yes { color: #4E6035; }
+    .auth-compare-mark.no { color: #C9A1A1; }
     .auth-feat {
       display: flex; align-items: center; gap: 14px;
       padding: 14px 16px;
@@ -2008,7 +2269,7 @@
     <div class="auth-hero-section">
 
       <!-- Top nav -->
-      <div class="auth-topbar" style="padding:0 0 0">
+      <div class="auth-topbar" style="padding:0 0 0;position:relative;z-index:2">
         <div class="auth-brand">
           <div class="auth-brand-icon">
             <svg width="20" height="20" viewBox="0 0 30 30" fill="none">
@@ -2021,48 +2282,66 @@
         <div style="font-size:10.5px;color:rgba(255,255,255,.55);letter-spacing:.5px;font-weight:500">v1.0 · BETA</div>
       </div>
 
-      <!-- Headline -->
-      <div class="auth-hero-tag">조리과 학생 전용 · 오픈 베타</div>
-      <h1 class="auth-headline">
-        녹음 하나로<br>
-        <em>레시피 노트</em> 완성
-      </h1>
-      <p class="auth-tagline">
-        수업에서 녹음만 해두면, 재료·조리법·팁이 깔끔하게 정리돼요.
-      </p>
+      <!-- Centered hero text -->
+      <div class="auth-hero-content">
+        <div class="auth-hero-tag">조리과 학생 전용</div>
+        <h1 class="auth-headline">
+          수업 녹음하면<br>
+          <em>레시피 노트</em>가<br>
+          알아서 완성돼요
+        </h1>
+        <p class="auth-tagline">
+          AI가 재료·조리법·팁을 깔끔하게 정리해줘요.<br>
+          수업 시간엔 그냥 듣기만 하세요.
+        </p>
+      </div>
 
-      <!-- Mockup preview card — actual recipe note content -->
-      <div class="auth-mockup-wrap">
-        <div class="auth-mockup-card">
-          <div class="auth-mockup-topbar"></div>
-          <div class="auth-mockup-header">
-            <div>
-              <div class="auth-mockup-eyebrow">RECIPE · 오늘 실습</div>
-              <div class="auth-mockup-title">베샤멜 소스</div>
+      <!-- iPhone mockup with real ChefNote UI -->
+      <div class="auth-phone-wrap">
+        <div class="auth-phone-badge top-right">AI 자동 정리</div>
+        <div class="auth-phone-badge bottom-left">수업별 분류</div>
+        <div class="auth-phone-frame">
+          <div class="auth-phone-screen">
+            <div class="auth-phone-notch"></div>
+            <div class="mini-app">
+              <div class="mini-app-header">
+                <div class="mini-app-logo">Chef<em>Note</em></div>
+                <div class="mini-app-avatar"></div>
+              </div>
+              <div class="mini-app-greeting">
+                좋은 아침이에요, <b>박준홍</b> 👋<br>
+                <span style="color:#ABA89F;font-size:8px">레시피 15개 보관 중 · 오늘도 맛있는 수업을</span>
+              </div>
+              <div class="mini-section-title">카테고리</div>
+              <div class="mini-cat-row">
+                <div class="mini-cat">
+                  한식조리
+                  <div class="mini-cat-meta">10개 노트</div>
+                </div>
+                <div class="mini-cat">
+                  양식조리
+                  <div class="mini-cat-meta">5개 노트</div>
+                </div>
+              </div>
+              <div class="mini-section-title">최근 레시피</div>
+              <div class="mini-note-card">
+                <div class="mini-note-img">🥩</div>
+                <div class="mini-note-info">
+                  <div class="mini-note-title">브라운 소스 4종</div>
+                  <div class="mini-note-meta">5월 5일 · 실습</div>
+                </div>
+              </div>
+              <div class="mini-note-card">
+                <div class="mini-note-img" style="background:linear-gradient(135deg,#FBE3A4,#E8C672)">🍝</div>
+                <div class="mini-note-info">
+                  <div class="mini-note-title">베샤멜 소스</div>
+                  <div class="mini-note-meta">5월 4일 · 실습</div>
+                </div>
+              </div>
+              <div class="mini-rec-fab">🎙️</div>
             </div>
-            <div class="auth-mockup-date-chip">5월 5일</div>
-          </div>
-          <div class="auth-mockup-body">
-            <div class="auth-mockup-section-label">재료</div>
-            <div class="auth-mockup-ingr">
-              <span><b>버터</b> 30g</span>
-              <span><b>밀가루</b> 30g</span>
-              <span><b>우유</b> 500ml</span>
-              <span><b>소금</b> 약간</span>
-            </div>
-            <div class="auth-mockup-section-label">조리법</div>
-            <div class="auth-mockup-step-row">
-              <div class="auth-mockup-step-num">1</div>
-              <div class="auth-mockup-step-text">버터를 약불에 녹여 밀가루로 화이트 루를 만든다</div>
-            </div>
-            <div class="auth-mockup-step-row">
-              <div class="auth-mockup-step-num">2</div>
-              <div class="auth-mockup-step-text">따뜻한 우유를 천천히 부어가며 거품기로 풀어준다</div>
-            </div>
-            <div class="auth-mockup-tip"><b>💡 포인트</b> 우유는 반드시 따뜻하게 — 차가우면 덩어리짐</div>
           </div>
         </div>
-        <div class="auth-mockup-badge">AI가 자동 생성</div>
       </div>
     </div><!-- /auth-hero-section -->
 
@@ -2109,6 +2388,73 @@
 
       <!-- Mobile PWA install nudge (KakaoTalk / iOS / Android Chrome) -->
       <div class="auth-install-nudge" id="authInstallNudge" style="display:none"></div>
+
+      <!-- Persona section -->
+      <div class="auth-persona-section">
+        <div class="auth-section-title">이런 분들이<br>쓰고 있어요</div>
+        <div class="auth-section-sub">손으로 받아적기 힘든 조리 실습, AI가 대신 정리해드려요</div>
+        <div class="auth-persona-grid">
+          <div class="auth-persona-card">
+            <div class="auth-persona-emoji">👨‍🍳</div>
+            <div class="auth-persona-text">
+              <div class="auth-persona-quote">"실습 중엔 손이 바빠서 못 적어요"</div>
+              <div class="auth-persona-detail">조리과 1·2학년 — 양손 더러워서 노트 못 쓰는데 교수님 설명은 빠르게 지나가요</div>
+            </div>
+          </div>
+          <div class="auth-persona-card">
+            <div class="auth-persona-emoji">📚</div>
+            <div class="auth-persona-text">
+              <div class="auth-persona-quote">"수업마다 레시피가 쌓여서 정리가 안 돼요"</div>
+              <div class="auth-persona-detail">졸업반 — 한식·양식·제과 레시피가 폰 메모장에 흩어져 있어 시험 직전에 다 못 찾아요</div>
+            </div>
+          </div>
+          <div class="auth-persona-card">
+            <div class="auth-persona-emoji">🎓</div>
+            <div class="auth-persona-text">
+              <div class="auth-persona-quote">"교수님 팁까지 빠짐없이 기록하고 싶어요"</div>
+              <div class="auth-persona-detail">자격증 준비 — 책에는 없는 "이때 불 줄여라" 같은 실무 팁이 가장 중요해요</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Comparison table -->
+      <div class="auth-compare-section">
+        <div class="auth-section-title">왜 ChefNote인가요?</div>
+        <div class="auth-section-sub">일반 음성 메모 앱과 결정적으로 달라요</div>
+        <div class="auth-compare-table">
+          <div class="auth-compare-row header">
+            <div class="auth-compare-cell label">기능</div>
+            <div class="auth-compare-cell">일반 녹음 앱</div>
+            <div class="auth-compare-cell us">ChefNote</div>
+          </div>
+          <div class="auth-compare-row">
+            <div class="auth-compare-cell label">음성 → 텍스트</div>
+            <div class="auth-compare-cell"><span class="auth-compare-mark yes">○</span></div>
+            <div class="auth-compare-cell us"><span class="auth-compare-mark yes">●</span></div>
+          </div>
+          <div class="auth-compare-row">
+            <div class="auth-compare-cell label">재료·조리법 자동 분리</div>
+            <div class="auth-compare-cell"><span class="auth-compare-mark no">×</span></div>
+            <div class="auth-compare-cell us"><span class="auth-compare-mark yes">●</span></div>
+          </div>
+          <div class="auth-compare-row">
+            <div class="auth-compare-cell label">수업별 자동 분류</div>
+            <div class="auth-compare-cell"><span class="auth-compare-mark no">×</span></div>
+            <div class="auth-compare-cell us"><span class="auth-compare-mark yes">●</span></div>
+          </div>
+          <div class="auth-compare-row">
+            <div class="auth-compare-cell label">사진·메모 함께</div>
+            <div class="auth-compare-cell"><span class="auth-compare-mark no">×</span></div>
+            <div class="auth-compare-cell us"><span class="auth-compare-mark yes">●</span></div>
+          </div>
+          <div class="auth-compare-row">
+            <div class="auth-compare-cell label">앱 닫아도 처리 진행</div>
+            <div class="auth-compare-cell"><span class="auth-compare-mark no">×</span></div>
+            <div class="auth-compare-cell us"><span class="auth-compare-mark yes">●</span></div>
+          </div>
+        </div>
+      </div>
 
       <!-- How it works — 3-step visual flow -->
       <div class="auth-howto">

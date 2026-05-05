@@ -1,4 +1,4 @@
-const CACHE_NAME = 'chefnote-v20';
+const CACHE_NAME = 'chefnote-v21';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
