@@ -3613,10 +3613,15 @@ async function checkAndResumeDrafts() {
   if (!drafts.length) return;
   renderPendingDrafts();
 
-  // 1. 서버 잡 상태 갱신 (백그라운드 완료 여부 확인)
-  const serverDrafts = drafts.filter(d => d.mode === 'server');
+  // 1. 서버 잡 상태 즉시 갱신 + 미완료 잡들 백그라운드 폴러 시작
+  const serverDrafts = drafts.filter(d => d.mode === 'server' && d.jobId);
   if (serverDrafts.length) {
-    await checkServerJobs();
+    await checkServerJobs(); // 한 번 즉시 체크 (이미 done인 것 finalize)
+    // 아직 안 끝난 것들은 백그라운드 폴러 등록 → 사용자가 앱 쓰는 동안 자동 완성
+    const stillPending = (await getAllDrafts()).filter(d => d.mode === 'server' && d.jobId && d.status !== 'done' && d.status !== 'error');
+    for (const d of stillPending) {
+      startBgJobPoll(d.jobId, d.id);
+    }
   }
 
   // 2. 클라이언트 모드 fresh 드래프트만 자동 처리
@@ -3705,58 +3710,20 @@ async function onRecordingDone() {
   const draftId = 'draft_' + Date.now();
   await saveDraftToDB({ id: draftId, audioBlob: blob, media, memos, duration: dur, timestamp: Date.now() });
 
-  showProc('🎙️ 서버에 접수 중...', '업로드 후 앱을 닫아도 노트가 만들어져요!');
+  showProc('🎙️ 업로드 중...', '잠시만요... 업로드가 끝나면 앱 자유롭게 쓸 수 있어요');
   addProcessingGuard();
 
-  // ── 서버 처리 경로 — 접수 후 적극적으로 폴링하여 빨리 노트 표시 ──
+  // ── 서버 처리 경로 — 업로드 완료 즉시 모달 닫고 백그라운드 폴링 ──
   try {
     const jobId = await submitJobToServer(blob, draftId, { duration: dur, memos, media });
     S.memos = []; S.media = [];
-    renderPendingDrafts();
 
-    // 서버 잡 적극 폴링 — 1초 간격, 최대 5분
-    const pollStart = Date.now();
-    let lastUiUpdate = 0;
-    while (Date.now() - pollStart < 5 * 60 * 1000) {
-      // 어댑티브: 0~30초 1초, 30초~2분 2초, 이후 3초
-      const elapsedSec = (Date.now() - pollStart) / 1000;
-      const wait = elapsedSec < 30 ? 1000 : elapsedSec < 120 ? 2000 : 3000;
-      await sleep(wait);
-
-      let job;
-      try {
-        const r = await fetch(`${PROXY}/job-status/${jobId}`);
-        job = await r.json();
-      } catch { continue; }
-
-      if (job.status === 'done' && job.note) {
-        // ✅ 완료 → 노트 즉시 표시
-        const draft = (await getAllDrafts()).find(d => d.jobId === jobId);
-        if (draft) await finalizeServerNote(draft, job.note);
-        removeProcessingGuard();
-        hideProc();
-        setTimeout(() => openNote(job.note.id), 400);
-        return;
-      }
-      if (job.status === 'error') {
-        throw new Error(job.error || '서버 처리 실패');
-      }
-
-      // UI 갱신 — 3초마다
-      if (Date.now() - lastUiUpdate >= 3000) {
-        lastUiUpdate = Date.now();
-        const sec = Math.round((Date.now() - pollStart) / 1000);
-        const stage = job.status === 'generating' ? '레시피 정리 중...'
-                    : job.status === 'transcribing' ? '음성 인식 중...'
-                    : '처리 중...';
-        const timeMsg = sec < 60 ? `${sec}초` : `${Math.floor(sec/60)}분 ${sec%60}초`;
-        updateProc('🎙️ 레시피 노트 만드는 중...', `${stage} (${timeMsg})\n앱을 닫아도 노트는 자동 저장돼요`);
-      }
-    }
-    // 5분 넘으면 UI는 닫지만 서버는 계속 처리 (다음 접속 시 자동 finalize)
+    // ✅ 업로드 완료 → UI 해방. 변환은 백그라운드에서.
     removeProcessingGuard();
     hideProc();
-    showToast('⏳ 변환이 길어지고 있어요. 앱을 닫아도 노트는 자동 저장돼요');
+    showToast('✅ 업로드 완료! 노트는 곧 자동으로 만들어져요 — 앱 자유롭게 사용하세요');
+    renderPendingDrafts();
+    startBgJobPoll(jobId, draftId);
     return;
   } catch (serverErr) {
     console.warn('[Server path failed, falling back to client]', serverErr.message);
@@ -3879,7 +3846,7 @@ async function asmGetKey() {
 }
 
 async function asmUploadBlob(blob, key) {
-  updateProc('🎙️ 레시피 노트 만드는 중...', '음성 파일을 분석하고 있어요...');
+  updateProc('🎙️ 업로드 중...', '음성 파일을 서버로 보내고 있어요...');
   const r = await fetch('https://api.assemblyai.com/v2/upload', {
     method: 'POST',
     headers: { 'authorization': key, 'content-type': 'application/octet-stream' },
@@ -3964,8 +3931,9 @@ async function transcribeAudio(blob) {
 async function submitJobToServer(blob, draftId, metadata) {
   const key = await asmGetKey();
 
-  updateProc('🎙️ 서버에 접수 중...', '업로드 후 앱을 닫아도 노트가 만들어져요!');
+  updateProc('🎙️ 업로드 중...', '잠시만요... 업로드가 끝나면 앱 자유롭게 쓸 수 있어요');
   const upload_url = await asmUploadBlob(blob, key);
+  updateProc('🎙️ 거의 다 됐어요...', '서버에 등록 중...');
 
   const jobId = 'job_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
   const webhookUrl = `${PROXY}/asm-webhook/${jobId}`;
@@ -4038,6 +4006,75 @@ async function checkAndFinalizeServerJob(draft) {
     }
   } catch (e) {
     console.warn('[checkServerJob]', e.message);
+  }
+}
+
+/* ═══════════════════════════════════════════
+   BACKGROUND JOB POLLER — 모달 없이 자동으로 노트 완성 + 토스트 알림
+   업로드 완료 후 사용자는 앱 자유롭게 사용. 노트 준비되면 자동 저장 + 알림.
+═══════════════════════════════════════════ */
+const _bgPollers = {}; // jobId → intervalId
+
+function startBgJobPoll(jobId, draftId) {
+  if (_bgPollers[jobId]) return; // already polling
+
+  const startedAt = Date.now();
+  let interval = 2000;
+  const tick = async () => {
+    const elapsedSec = (Date.now() - startedAt) / 1000;
+    // 어댑티브: 0~30초 2초 / 30초~2분 3초 / 그 이후 5초
+    const newInterval = elapsedSec < 30 ? 2000 : elapsedSec < 120 ? 3000 : 5000;
+    if (newInterval !== interval) {
+      interval = newInterval;
+      clearInterval(_bgPollers[jobId]);
+      _bgPollers[jobId] = setInterval(tick, interval);
+    }
+
+    let job;
+    try {
+      const r = await fetch(`${PROXY}/job-status/${jobId}`);
+      job = await r.json();
+    } catch (e) { return; } // network error — try again next tick
+
+    if (job.status === 'done' && job.note) {
+      stopBgJobPoll(jobId);
+      const draft = (await getAllDrafts()).find(d => d.jobId === jobId || d.id === draftId);
+      if (draft) await finalizeServerNote(draft, job.note);
+      // 사용자 알림: home 화면이면 토스트만, 아니어도 토스트는 동일
+      showToast('✅ 노트가 완성됐어요! 홈에서 확인하세요');
+      // 진동 알림 (모바일)
+      if (navigator.vibrate) try { navigator.vibrate([100, 50, 100]); } catch {}
+      renderPendingDrafts();
+      return;
+    }
+    if (job.status === 'error') {
+      stopBgJobPoll(jobId);
+      const draft = (await getAllDrafts()).find(d => d.jobId === jobId || d.id === draftId);
+      if (draft) await saveDraftToDB({ ...draft, status: 'error', lastError: job.error || '서버 처리 실패' });
+      showToast(`❌ ${job.error || '노트 생성 실패'} — 홈에서 재시도 가능`);
+      if (navigator.vibrate) try { navigator.vibrate(300); } catch {}
+      renderPendingDrafts();
+      return;
+    }
+    // 진행 중 — 카드 상태 업데이트
+    const draft = (await getAllDrafts()).find(d => d.jobId === jobId || d.id === draftId);
+    if (draft && job.status && draft.status !== job.status) {
+      await saveDraftToDB({ ...draft, status: job.status });
+      renderPendingDrafts();
+    }
+
+    // 10분 초과 시 폴링 중단 (다음 앱 시작 시 다시 체크됨)
+    if (elapsedSec > 600) stopBgJobPoll(jobId);
+  };
+
+  _bgPollers[jobId] = setInterval(tick, interval);
+  tick(); // first tick immediately
+}
+
+function stopBgJobPoll(jobId) {
+  if (_bgPollers[jobId]) {
+    clearInterval(_bgPollers[jobId]);
+    delete _bgPollers[jobId];
   }
 }
 
