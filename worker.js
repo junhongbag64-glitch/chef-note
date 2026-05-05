@@ -252,8 +252,9 @@ ${transcript}
       'content-type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 3000,
+      // Haiku 4.5 — Sonnet 대비 3배 저렴, 구조화된 JSON 출력에 충분한 품질
+      model: 'claude-haiku-4-5',
+      max_tokens: 2500,
       temperature: 0.2,
       messages: [{ role: 'user', content: prompt }],
     }),

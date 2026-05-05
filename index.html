@@ -4227,9 +4227,10 @@ ${transcript}
           'content-type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
-          max_tokens: 3000,        // 4096 → 3000: 충분 + 응답 속도 ↑
-          temperature: 0.2,        // 일관된 JSON + 빠른 생성
+          // Haiku 4.5 — Sonnet 대비 3배 저렴 + 빠른 응답
+          model: 'claude-haiku-4-5',
+          max_tokens: 2500,
+          temperature: 0.2,
           messages: [{ role: 'user', content: prompt }],
         }),
       });
