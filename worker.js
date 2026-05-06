@@ -77,6 +77,11 @@ export default {
       return handleAnthropicProxy(request, env, url);
     }
 
+    // ── Gemini proxy (free tier primary) ──
+    if (url.pathname === '/gemini/generate' && request.method === 'POST') {
+      return handleGeminiProxy(request, env);
+    }
+
     return new Response('Not found', { status: 404, headers: CORS });
   },
 };
@@ -244,30 +249,69 @@ ${transcript}
 - 이론·역사·영양학·위생·서비스 등이면 "theory"
 - 여러 요리가 명확히 구분된다면 반드시 여러 recipes로 분리할 것`;
 
-  const res = await fetch(`${ANTHROPIC_API}/v1/messages`, {
-    method: 'POST',
-    headers: {
-      'x-api-key': env.CLAUDE_KEY,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      // Haiku 4.5 — Sonnet 대비 3배 저렴, 구조화된 JSON 출력에 충분한 품질
-      model: 'claude-haiku-4-5',
-      max_tokens: 2500,
-      temperature: 0.2,
-      messages: [{ role: 'user', content: prompt }],
-    }),
-  });
-
-  if (!res.ok) {
-    const e = await res.text().catch(() => '');
-    throw new Error(`Claude ${res.status}: ${e.slice(0, 200)}`);
+  // 1차: Gemini 2.5 Flash (무료 250 req/day, 한국어 우수)
+  // 실패 시 → 2차: Claude Haiku 4.5 (유료 백업)
+  let raw = '';
+  let usedModel = '';
+  if (env.GEMINI_KEY) {
+    try {
+      const gres = await fetch(
+        `https://gateway.ai.cloudflare.com/v1/d872f29764b5c5b238824decd2dc6d91/chefnote/google-ai-studio/v1beta/models/gemini-2.5-flash:generateContent`,
+        {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            'x-goog-api-key': env.GEMINI_KEY,
+          },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              responseMimeType: 'application/json',
+              temperature: 0.2,
+              maxOutputTokens: 2500,
+            },
+          }),
+        }
+      );
+      if (gres.ok) {
+        const gdata = await gres.json();
+        raw = gdata.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        if (raw) usedModel = 'gemini-2.5-flash';
+      } else {
+        console.warn('[Gemini]', gres.status, (await gres.text()).slice(0, 200));
+      }
+    } catch (e) {
+      console.warn('[Gemini] error:', e.message);
+    }
   }
 
-  const data = await res.json();
-  const raw = data.content?.[0]?.text || '';
-  if (!raw) throw new Error('Claude 응답이 비어있습니다');
+  // Gemini 실패 → Claude Haiku 백업
+  if (!raw) {
+    const res = await fetch(`${ANTHROPIC_API}/v1/messages`, {
+      method: 'POST',
+      headers: {
+        'x-api-key': env.CLAUDE_KEY,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5',
+        max_tokens: 2500,
+        temperature: 0.2,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+    if (!res.ok) {
+      const e = await res.text().catch(() => '');
+      throw new Error(`Claude ${res.status}: ${e.slice(0, 200)}`);
+    }
+    const data = await res.json();
+    raw = data.content?.[0]?.text || '';
+    usedModel = 'claude-haiku-4-5';
+  }
+
+  if (!raw) throw new Error('LLM 응답이 비어있습니다');
+  console.log('[NoteGen] used model:', usedModel);
 
   // Parse JSON from response
   const m = raw.match(/\{[\s\S]*\}/);
@@ -341,6 +385,51 @@ async function handleAnthropicProxy(request, env, url) {
     status: response.status,
     headers: { ...CORS, 'Content-Type': 'application/json' },
   });
+}
+
+/* ═══════════════════════════════════════════
+   GEMINI PROXY — Google Generative Language API
+   무료 티어: gemini-2.5-flash 250 req/day, 한국어 우수, 구조화 JSON 안정
+═══════════════════════════════════════════ */
+async function handleGeminiProxy(request, env) {
+  if (!env.GEMINI_KEY) {
+    return err('GEMINI_KEY not configured', 500);
+  }
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return err('Invalid JSON body', 400);
+  }
+  // body: { prompt: string, model?: string, temperature?: number, maxOutputTokens?: number }
+  const model = body.model || 'gemini-2.5-flash';
+  // CF AI Gateway 경유 — Worker 리전이 Gemini 미지원 지역일 때 우회
+  const targetUrl = `https://gateway.ai.cloudflare.com/v1/d872f29764b5c5b238824decd2dc6d91/chefnote/google-ai-studio/v1beta/models/${model}:generateContent`;
+  const payload = {
+    contents: [{ parts: [{ text: body.prompt }] }],
+    generationConfig: {
+      responseMimeType: 'application/json',
+      temperature: typeof body.temperature === 'number' ? body.temperature : 0.2,
+      maxOutputTokens: body.maxOutputTokens || 2500,
+    },
+  };
+  try {
+    const response = await fetch(targetUrl, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-goog-api-key': env.GEMINI_KEY,
+      },
+      body: JSON.stringify(payload),
+    });
+    const respText = await response.text();
+    return new Response(respText, {
+      status: response.status,
+      headers: { ...CORS, 'Content-Type': 'application/json' },
+    });
+  } catch (e) {
+    return err('Gemini proxy error: ' + e.message, 502);
+  }
 }
 
 /* ═══════════════════════════════════════════

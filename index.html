@@ -4558,44 +4558,74 @@ ${transcript}
 - 이론·역사·영양학·위생·서비스 등이면 "theory"
 - 여러 요리가 명확히 구분된다면 반드시 여러 recipes로 분리할 것`;
 
-  /* Claude API — Worker 프록시 경유 (AI Gateway 사용) */
+  /* 1차 Gemini (무료) → 2차 Claude Haiku (백업) → 3차 smart extract */
+  updateProc('🎙️ 레시피 노트 만드는 중...', '잠깐만요, 거의 다 됐어요!\n레시피 정리 중...');
   let raw = '';
+  let usedModel = '';
+
+  // 1) Gemini 2.5 Flash 시도
   try {
-    const ctrl = new AbortController();
-    const claudeTimer = setTimeout(() => ctrl.abort(), 120000); // 2분 타임아웃
-    let res;
+    const gctrl = new AbortController();
+    const gtimer = setTimeout(() => gctrl.abort(), 60000);
+    let gres;
     try {
-      res = await fetch(`${PROXY}/anthropic/v1/messages`, {
+      gres = await fetch(`${PROXY}/gemini/generate`, {
         method: 'POST',
-        signal: ctrl.signal,
-        headers: {
-          'anthropic-version': '2023-06-01',
-          'content-type': 'application/json',
-        },
+        signal: gctrl.signal,
+        headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          // Haiku 4.5 — Sonnet 대비 3배 저렴 + 빠른 응답
-          model: 'claude-haiku-4-5',
-          max_tokens: 2500,
+          model: 'gemini-2.5-flash',
           temperature: 0.2,
-          messages: [{ role: 'user', content: prompt }],
+          maxOutputTokens: 2500,
+          prompt,
         }),
       });
-    } finally {
-      clearTimeout(claudeTimer);
-    }
-    if (res.ok) {
-      const data = await res.json();
-      raw = data.content?.[0]?.text || '';
-      console.log('[Claude] 응답 글자수:', raw.length, '미리보기:', raw.slice(0, 80));
-    } else {
-      const errBody = await res.text().catch(() => '');
-      console.warn('[Claude] API 오류', res.status, errBody);
-      return smartExtract(transcript, dur);
+    } finally { clearTimeout(gtimer); }
+    if (gres && gres.ok) {
+      const gdata = await gres.json();
+      raw = gdata.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      if (raw) usedModel = 'gemini-2.5-flash';
+    } else if (gres) {
+      console.warn('[Gemini]', gres.status, (await gres.text().catch(() => '')).slice(0, 200));
     }
   } catch (e) {
-    console.warn('[Claude] 연결 실패:', e.message);
-    return smartExtract(transcript, dur);
+    console.warn('[Gemini] error:', e.message);
   }
+
+  // 2) Claude Haiku 백업
+  if (!raw) {
+    try {
+      const ctrl = new AbortController();
+      const claudeTimer = setTimeout(() => ctrl.abort(), 120000);
+      let res;
+      try {
+        res = await fetch(`${PROXY}/anthropic/v1/messages`, {
+          method: 'POST',
+          signal: ctrl.signal,
+          headers: { 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+          body: JSON.stringify({
+            model: 'claude-haiku-4-5',
+            max_tokens: 2500,
+            temperature: 0.2,
+            messages: [{ role: 'user', content: prompt }],
+          }),
+        });
+      } finally { clearTimeout(claudeTimer); }
+      if (res.ok) {
+        const data = await res.json();
+        raw = data.content?.[0]?.text || '';
+        if (raw) usedModel = 'claude-haiku-4-5';
+      } else {
+        console.warn('[Claude] API 오류', res.status, (await res.text().catch(() => '')).slice(0, 200));
+      }
+    } catch (e) {
+      console.warn('[Claude] 연결 실패:', e.message);
+    }
+  }
+
+  // 3) 둘 다 실패 → smart extract 폴백
+  if (!raw) return smartExtract(transcript, dur);
+  console.log('[NoteGen] 사용 모델:', usedModel, '응답 길이:', raw.length);
 
   try {
     const m = raw.match(/\{[\s\S]*\}/);
