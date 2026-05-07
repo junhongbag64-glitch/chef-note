@@ -210,13 +210,72 @@ async function handleJobStatus(jobId, env, ctx) {
 }
 
 /* ═══════════════════════════════════════════
-   NOTE GENERATION (Claude)
+   NOTE GENERATION (Gemini 1차 + Claude Haiku 백업)
+
+   두 모델 모두 schema 강제 사용으로 깨진 JSON 자체가 발생할 수 없게 함.
+   - Gemini : responseSchema (OpenAPI 3.0)
+   - Claude : tool_use + tool_choice
+   파싱 실패 시 트랜스크립트 기반 smartExtract 로 폴백 — 빈 노트 절대 안 만듦.
 ═══════════════════════════════════════════ */
+
+// Gemini 용 OpenAPI 3.0 schema (responseSchema)
+const NOTE_SCHEMA_GEMINI = {
+  type: 'object',
+  properties: {
+    title: { type: 'string', description: '수업 제목' },
+    recipes: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          title: { type: 'string' },
+          type: { type: 'string', enum: ['recipe', 'theory'] },
+          classType: { type: 'string', enum: ['실습', '이론'] },
+          content: { type: 'string' },
+          ingredients: { type: 'array', items: { type: 'string' } },
+          tips: { type: 'array', items: { type: 'string' } },
+        },
+        required: ['title', 'type', 'classType', 'content', 'ingredients', 'tips'],
+      },
+    },
+  },
+  required: ['title', 'recipes'],
+};
+
+// Claude tool_use 스키마
+const NOTE_TOOL = {
+  name: 'save_class_note',
+  description: '조리학과 수업 녹음에서 추출한 노트를 저장한다. 한 수업에 여러 요리가 있으면 recipes 에 분리.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      title: { type: 'string' },
+      recipes: {
+        type: 'array',
+        minItems: 1,
+        items: {
+          type: 'object',
+          properties: {
+            title: { type: 'string' },
+            type: { type: 'string', enum: ['recipe', 'theory'] },
+            classType: { type: 'string', enum: ['실습', '이론'] },
+            content: { type: 'string' },
+            ingredients: { type: 'array', items: { type: 'string' } },
+            tips: { type: 'array', items: { type: 'string' } },
+          },
+          required: ['title', 'type', 'classType', 'content', 'ingredients', 'tips'],
+        },
+      },
+    },
+    required: ['title', 'recipes'],
+  },
+};
+
 async function generateNote(transcript, metadata, env) {
   const { duration = 0, memos = [] } = metadata;
 
   const memoSection = memos.length
-    ? `\n수업 중 추가 메모 (중요 참고사항):\n${memos.map((m, i) => `${i + 1}. ${m}`).join('\n')}\n`
+    ? `\n수업 중 추가 메모 (반드시 반영):\n${memos.map((m, i) => `${i + 1}. ${m}`).join('\n')}\n`
     : '';
 
   const prompt = `다음은 조리학과 수업 녹음을 텍스트로 변환한 내용입니다.
@@ -226,33 +285,19 @@ ${memoSection}
 ${transcript}
 """
 
-이 수업 내용을 분석해 아래 JSON 형식 **만** 반환하세요. 다른 텍스트나 마크다운 코드 블록 없이 순수 JSON만 반환하세요.${memos.length ? ' 메모에 언급된 내용을 반드시 반영하세요.' : ''}
-
-한 수업에서 여러 요리/레시피를 다루는 경우, recipes 배열에 각각 분리해서 넣어주세요. (예: 토마토 소스와 알르망제 소스를 함께 배웠다면 recipes에 2개)
-
-{
-  "title": "수업 제목 (날짜나 전체 수업명, 간결하게)",
-  "recipes": [
-    {
-      "title": "요리/레시피명 (없으면 수업 제목과 동일하게)",
-      "type": "recipe" 또는 "theory",
-      "classType": "실습" 또는 "이론",
-      "content": "핵심 내용/조리 순서 (단계별, 줄바꿈 \\n 사용, 각 줄이 한 단계)",
-      "ingredients": ["재료명 (용량/수량)"],
-      "tips": ["교수님이 강조한 팁이나 주의사항"]
-    }
-  ]
-}
+이 수업 내용을 분석해 노트를 만들어주세요.
 
 판단 기준:
-- 실제 조리/요리/실습 관련이면 "recipe"
-- 이론·역사·영양학·위생·서비스 등이면 "theory"
-- 여러 요리가 명확히 구분된다면 반드시 여러 recipes로 분리할 것`;
+- 실제 조리/요리/실습이면 type="recipe", classType="실습"
+- 이론·역사·영양학·위생·서비스이면 type="theory", classType="이론"
+- 한 수업에 여러 요리가 명확히 구분되면 recipes 에 각각 분리 (예: 토마토 소스 + 알르망드 소스 → recipes 2개)
+- content 는 단계별로 \\n 으로 줄바꿈
+- ingredients 는 "재료명 + 용량" 형식 (예: "당근 50g"). 이론 수업이면 빈 배열`;
 
-  // 1차: Gemini 2.5 Flash (무료 250 req/day, 한국어 우수)
-  // 실패 시 → 2차: Claude Haiku 4.5 (유료 백업)
-  let raw = '';
+  let parsed = null;
   let usedModel = '';
+
+  // 1) Gemini 2.5 Flash (responseSchema 강제) — 무료, 한국어 우수
   if (env.GEMINI_KEY) {
     try {
       const gres = await fetch(
@@ -267,6 +312,7 @@ ${transcript}
             contents: [{ parts: [{ text: prompt }] }],
             generationConfig: {
               responseMimeType: 'application/json',
+              responseSchema: NOTE_SCHEMA_GEMINI,
               temperature: 0.2,
               maxOutputTokens: 2500,
             },
@@ -275,8 +321,12 @@ ${transcript}
       );
       if (gres.ok) {
         const gdata = await gres.json();
-        raw = gdata.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        if (raw) usedModel = 'gemini-2.5-flash';
+        const raw = gdata.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        if (raw) {
+          parsed = parseClaudeJSON(raw);
+          if (parsed) usedModel = 'gemini-2.5-flash';
+          else console.warn('[Gemini] responseSchema 했는데도 파싱 실패:', raw.slice(0, 200));
+        }
       } else {
         console.warn('[Gemini]', gres.status, (await gres.text()).slice(0, 200));
       }
@@ -285,41 +335,55 @@ ${transcript}
     }
   }
 
-  // Gemini 실패 → Claude Haiku 백업
-  if (!raw) {
-    const res = await fetch(`${ANTHROPIC_API}/v1/messages`, {
-      method: 'POST',
-      headers: {
-        'x-api-key': env.CLAUDE_KEY,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5',
-        max_tokens: 2500,
-        temperature: 0.2,
-        messages: [{ role: 'user', content: prompt }],
-      }),
-    });
-    if (!res.ok) {
-      const e = await res.text().catch(() => '');
-      throw new Error(`Claude ${res.status}: ${e.slice(0, 200)}`);
+  // 2) Claude Haiku (tool_use 강제) — 백업
+  if (!parsed && env.CLAUDE_KEY) {
+    try {
+      const res = await fetch(`${ANTHROPIC_API}/v1/messages`, {
+        method: 'POST',
+        headers: {
+          'x-api-key': env.CLAUDE_KEY,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5',
+          max_tokens: 2500,
+          temperature: 0.2,
+          tools: [NOTE_TOOL],
+          tool_choice: { type: 'tool', name: NOTE_TOOL.name },
+          messages: [{ role: 'user', content: prompt }],
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const toolUse = (data.content || []).find(b => b.type === 'tool_use');
+        if (toolUse?.input) {
+          parsed = toolUse.input;
+          usedModel = 'claude-haiku-4-5';
+        } else {
+          // 모델이 도구 미사용 시 텍스트 폴백
+          const raw = data.content?.find(b => b.type === 'text')?.text || '';
+          parsed = parseClaudeJSON(raw);
+          if (parsed) usedModel = 'claude-haiku-4-5(text)';
+        }
+      } else {
+        console.warn('[Claude]', res.status, (await res.text()).slice(0, 200));
+      }
+    } catch (e) {
+      console.warn('[Claude] error:', e.message);
     }
-    const data = await res.json();
-    raw = data.content?.[0]?.text || '';
-    usedModel = 'claude-haiku-4-5';
   }
 
-  if (!raw) throw new Error('LLM 응답이 비어있습니다');
-  console.log('[NoteGen] used model:', usedModel);
-
-  // Parse JSON from response
-  const m = raw.match(/\{[\s\S]*\}/);
-  const clean = m ? m[0] : raw.replace(/```[\w]*\n?/g, '').trim();
-  const parsed = JSON.parse(clean);
+  // 3) 둘 다 실패 → 트랜스크립트에서 직접 추출 (빈 노트 절대 안 만듦)
+  if (!parsed) {
+    console.warn('[NoteGen] LLM 둘 다 실패 — smartExtract 사용');
+    parsed = smartExtract(transcript);
+    usedModel = 'smartExtract';
+  }
+  console.log('[NoteGen] used:', usedModel);
 
   // Normalize recipes array
-  if (!parsed.recipes || !Array.isArray(parsed.recipes)) {
+  if (!parsed.recipes || !Array.isArray(parsed.recipes) || !parsed.recipes.length) {
     parsed.recipes = [{
       id: 'r0',
       title: parsed.title || '레시피',
@@ -349,6 +413,80 @@ ${transcript}
     media: [],
     audioBlob: null,
     ...parsed,
+  };
+}
+
+/* Robust JSON extraction. Handles code fences, prose prefix, trailing commas,
+   and literal newlines/tabs/CRs inside string values. Returns parsed object or null. */
+function parseClaudeJSON(raw) {
+  if (!raw) return null;
+  const text = raw.replace(/```(?:json)?\s*/gi, '').replace(/```/g, '').trim();
+  const first = text.indexOf('{');
+  const last = text.lastIndexOf('}');
+  if (first < 0 || last <= first) return null;
+  const candidate = text.slice(first, last + 1);
+  const attempts = [
+    candidate,
+    candidate.replace(/,\s*([}\]])/g, '$1'),
+    repairJsonStringNewlines(candidate),
+    repairJsonStringNewlines(candidate.replace(/,\s*([}\]])/g, '$1')),
+  ];
+  for (const a of attempts) {
+    try { return JSON.parse(a); } catch { /* next */ }
+  }
+  return null;
+}
+
+function repairJsonStringNewlines(s) {
+  let out = '';
+  let inStr = false, esc = false;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (esc) { out += c; esc = false; continue; }
+    if (c === '\\') { out += c; esc = true; continue; }
+    if (c === '"') { inStr = !inStr; out += c; continue; }
+    if (inStr) {
+      if (c === '\n') { out += '\\n'; continue; }
+      if (c === '\r') { out += '\\r'; continue; }
+      if (c === '\t') { out += '\\t'; continue; }
+    }
+    out += c;
+  }
+  return out;
+}
+
+/* 트랜스크립트에서 직접 노트 추출 (LLM 둘 다 실패 시 최후 폴백) */
+function smartExtract(transcript) {
+  const d = new Date().toLocaleDateString('ko-KR');
+  const recipeKw = ['재료', '계량', '손질', '조리', '볶', '끓', '굽', '튀기', '레시피', '소금', '설탕', '기름', '양념', '밀가루', '달걀', '버터', '육수'];
+  const score = recipeKw.filter(k => transcript.includes(k)).length;
+  const isRecipe = score >= 2;
+
+  const sentences = transcript
+    .replace(/\s+/g, ' ')
+    .split(/(?<=[.!?。])\s+/)
+    .filter(s => s.length > 15)
+    .slice(0, 12);
+
+  const content = sentences.join('\n') || transcript.slice(0, 1200);
+  const ingMatches = transcript.match(/[\w가-힣]+\s*\d+[\w가-힣]*/g) || [];
+  const ingredients = isRecipe ? [...new Set(ingMatches)].slice(0, 8) : [];
+  const tipKw = ['중요', '반드시', '꼭', '주의', '포인트', '핵심', 'tip', '팁'];
+  const tips = sentences.filter(s => tipKw.some(k => s.includes(k))).slice(0, 4);
+  const title = sentences[0]?.slice(0, 20).trim() || `수업 노트 ${d}`;
+
+  return {
+    title,
+    recipes: [{
+      id: 'r0',
+      title,
+      type: isRecipe ? 'recipe' : 'theory',
+      classType: isRecipe ? '실습' : '이론',
+      content,
+      ingredients,
+      tips,
+      paragraphAttachments: {},
+    }],
   };
 }
 
@@ -405,13 +543,18 @@ async function handleGeminiProxy(request, env) {
   const model = body.model || 'gemini-2.5-flash';
   // CF AI Gateway 경유 — Worker 리전이 Gemini 미지원 지역일 때 우회
   const targetUrl = `https://gateway.ai.cloudflare.com/v1/d872f29764b5c5b238824decd2dc6d91/chefnote/google-ai-studio/v1beta/models/${model}:generateContent`;
+  const generationConfig = {
+    responseMimeType: 'application/json',
+    temperature: typeof body.temperature === 'number' ? body.temperature : 0.2,
+    maxOutputTokens: body.maxOutputTokens || 2500,
+  };
+  // 클라이언트가 responseSchema 를 명시한 경우 forward (Gemini 가 schema 강제하여 깨진 JSON 안 나옴)
+  if (body.responseSchema && typeof body.responseSchema === 'object') {
+    generationConfig.responseSchema = body.responseSchema;
+  }
   const payload = {
     contents: [{ parts: [{ text: body.prompt }] }],
-    generationConfig: {
-      responseMimeType: 'application/json',
-      temperature: typeof body.temperature === 'number' ? body.temperature : 0.2,
-      maxOutputTokens: body.maxOutputTokens || 2500,
-    },
+    generationConfig,
   };
   try {
     const response = await fetch(targetUrl, {

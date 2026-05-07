@@ -4519,13 +4519,65 @@ async function finalizeServerNote(draft, note) {
 }
 
 /* ═══════════════════════════════════════════
-   CLAUDE NOTE GENERATION
+   NOTE GENERATION (Gemini 1차 + Claude Haiku 백업)
+   두 모델 모두 schema 강제 (Gemini responseSchema, Claude tool_use) →
+   깨진 JSON 으로 fallbackNote 가 저장되는 일이 없어짐.
 ═══════════════════════════════════════════ */
+const NOTE_SCHEMA_GEMINI = {
+  type: 'object',
+  properties: {
+    title: { type: 'string' },
+    recipes: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          title: { type: 'string' },
+          type: { type: 'string', enum: ['recipe', 'theory'] },
+          classType: { type: 'string', enum: ['실습', '이론'] },
+          content: { type: 'string' },
+          ingredients: { type: 'array', items: { type: 'string' } },
+          tips: { type: 'array', items: { type: 'string' } },
+        },
+        required: ['title', 'type', 'classType', 'content', 'ingredients', 'tips'],
+      },
+    },
+  },
+  required: ['title', 'recipes'],
+};
+const NOTE_TOOL = {
+  name: 'save_class_note',
+  description: '조리학과 수업 녹음에서 추출한 노트를 저장한다.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      title: { type: 'string' },
+      recipes: {
+        type: 'array',
+        minItems: 1,
+        items: {
+          type: 'object',
+          properties: {
+            title: { type: 'string' },
+            type: { type: 'string', enum: ['recipe', 'theory'] },
+            classType: { type: 'string', enum: ['실습', '이론'] },
+            content: { type: 'string' },
+            ingredients: { type: 'array', items: { type: 'string' } },
+            tips: { type: 'array', items: { type: 'string' } },
+          },
+          required: ['title', 'type', 'classType', 'content', 'ingredients', 'tips'],
+        },
+      },
+    },
+    required: ['title', 'recipes'],
+  },
+};
+
 async function generateNote(transcript, dur, memos = []) {
   if (!transcript || transcript.trim().length < 5) return fallbackNote(dur);
 
   const memoSection = memos.length
-    ? `\n수업 중 추가 메모 (중요 참고사항):\n${memos.map((m,i) => `${i+1}. ${m}`).join('\n')}\n`
+    ? `\n수업 중 추가 메모 (반드시 반영):\n${memos.map((m,i) => `${i+1}. ${m}`).join('\n')}\n`
     : '';
 
   const prompt = `다음은 조리학과 수업 녹음을 텍스트로 변환한 내용입니다.
@@ -4535,35 +4587,20 @@ ${memoSection}
 ${transcript}
 """
 
-이 수업 내용을 분석해 아래 JSON 형식 **만** 반환하세요. 다른 텍스트나 마크다운 코드 블록 없이 순수 JSON만 반환하세요.${memos.length ? ' 메모에 언급된 내용을 반드시 반영하세요.' : ''}
-
-한 수업에서 여러 요리/레시피를 다루는 경우, recipes 배열에 각각 분리해서 넣어주세요. (예: 토마토 소스와 알르망제 소스를 함께 배웠다면 recipes에 2개)
-
-{
-  "title": "수업 제목 (날짜나 전체 수업명, 간결하게)",
-  "recipes": [
-    {
-      "title": "요리/레시피명 (없으면 수업 제목과 동일하게)",
-      "type": "recipe" 또는 "theory",
-      "classType": "실습" 또는 "이론",
-      "content": "핵심 내용/조리 순서 (단계별, 줄바꿈 \\n 사용, 각 줄이 한 단계)",
-      "ingredients": ["재료명 (용량/수량)"],
-      "tips": ["교수님이 강조한 팁이나 주의사항"]
-    }
-  ]
-}
+이 수업 내용을 분석해 노트를 만들어주세요.
 
 판단 기준:
-- 실제 조리/요리/실습 관련이면 "recipe"
-- 이론·역사·영양학·위생·서비스 등이면 "theory"
-- 여러 요리가 명확히 구분된다면 반드시 여러 recipes로 분리할 것`;
+- 실제 조리/요리/실습이면 type="recipe", classType="실습"
+- 이론·역사·영양학·위생·서비스이면 type="theory", classType="이론"
+- 한 수업에 여러 요리가 명확히 구분되면 recipes 에 각각 분리
+- content 는 단계별로 \\n 으로 줄바꿈
+- ingredients 는 "재료명 + 용량" 형식 (예: "당근 50g"). 이론 수업이면 빈 배열`;
 
-  /* 1차 Gemini (무료) → 2차 Claude Haiku (백업) → 3차 smart extract */
   updateProc('🎙️ 레시피 노트 만드는 중...', '잠깐만요, 거의 다 됐어요!\n레시피 정리 중...');
-  let raw = '';
+  let parsed = null;
   let usedModel = '';
 
-  // 1) Gemini 2.5 Flash 시도
+  // 1) Gemini 2.5 Flash (responseSchema 강제) — 무료, 한국어 우수
   try {
     const gctrl = new AbortController();
     const gtimer = setTimeout(() => gctrl.abort(), 60000);
@@ -4578,13 +4615,17 @@ ${transcript}
           temperature: 0.2,
           maxOutputTokens: 2500,
           prompt,
+          responseSchema: NOTE_SCHEMA_GEMINI,
         }),
       });
     } finally { clearTimeout(gtimer); }
     if (gres && gres.ok) {
       const gdata = await gres.json();
-      raw = gdata.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      if (raw) usedModel = 'gemini-2.5-flash';
+      const raw = gdata.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      if (raw) {
+        parsed = parseClaudeJSON(raw);
+        if (parsed) usedModel = 'gemini-2.5-flash';
+      }
     } else if (gres) {
       console.warn('[Gemini]', gres.status, (await gres.text().catch(() => '')).slice(0, 200));
     }
@@ -4592,8 +4633,8 @@ ${transcript}
     console.warn('[Gemini] error:', e.message);
   }
 
-  // 2) Claude Haiku 백업
-  if (!raw) {
+  // 2) Claude Haiku (tool_use 강제) — 백업
+  if (!parsed) {
     try {
       const ctrl = new AbortController();
       const claudeTimer = setTimeout(() => ctrl.abort(), 120000);
@@ -4607,14 +4648,23 @@ ${transcript}
             model: 'claude-haiku-4-5',
             max_tokens: 2500,
             temperature: 0.2,
+            tools: [NOTE_TOOL],
+            tool_choice: { type: 'tool', name: NOTE_TOOL.name },
             messages: [{ role: 'user', content: prompt }],
           }),
         });
       } finally { clearTimeout(claudeTimer); }
       if (res.ok) {
         const data = await res.json();
-        raw = data.content?.[0]?.text || '';
-        if (raw) usedModel = 'claude-haiku-4-5';
+        const toolUse = (data.content || []).find(b => b.type === 'tool_use');
+        if (toolUse?.input) {
+          parsed = toolUse.input;
+          usedModel = 'claude-haiku-4-5';
+        } else {
+          const raw = data.content?.find(b => b.type === 'text')?.text || '';
+          parsed = parseClaudeJSON(raw);
+          if (parsed) usedModel = 'claude-haiku-4-5(text)';
+        }
       } else {
         console.warn('[Claude] API 오류', res.status, (await res.text().catch(() => '')).slice(0, 200));
       }
@@ -4623,41 +4673,72 @@ ${transcript}
     }
   }
 
-  // 3) 둘 다 실패 → smart extract 폴백
-  if (!raw) return smartExtract(transcript, dur);
-  console.log('[NoteGen] 사용 모델:', usedModel, '응답 길이:', raw.length);
-
-  try {
-    const m = raw.match(/\{[\s\S]*\}/);
-    const clean = m ? m[0] : raw.replace(/```[\w]*\n?/g, '').trim();
-    const parsed = JSON.parse(clean);
-
-    // Normalize: ensure `recipes` array exists with proper structure
-    if (!parsed.recipes || !Array.isArray(parsed.recipes)) {
-      // Old format fallback: wrap single recipe fields into recipes array
-      parsed.recipes = [{
-        id: 'r0',
-        title: parsed.title || '레시피',
-        type: parsed.type || 'recipe',
-        classType: parsed.classType || '실습',
-        ingredients: parsed.ingredients || [],
-        content: parsed.content || '',
-        tips: parsed.tips || [],
-        paragraphAttachments: {},
-      }];
-    } else {
-      // Assign IDs to recipes
-      parsed.recipes = parsed.recipes.map((r, i) => ({
-        id: 'r' + i,
-        paragraphAttachments: {},
-        ...r,
-      }));
-    }
-    return parsed;
-  } catch (e) {
-    console.error('[Claude] JSON 파싱 실패:', e.message, raw.slice(0, 300));
-    return fallbackNote(dur);
+  // 3) 둘 다 실패 → smartExtract (빈 fallbackNote 안 만듦)
+  if (!parsed) {
+    console.warn('[NoteGen] LLM 둘 다 실패 — smartExtract 사용');
+    return smartExtract(transcript, dur);
   }
+  console.log('[NoteGen] 사용 모델:', usedModel);
+
+  // Normalize: ensure `recipes` array exists with proper structure
+  if (!parsed.recipes || !Array.isArray(parsed.recipes) || !parsed.recipes.length) {
+    parsed.recipes = [{
+      id: 'r0',
+      title: parsed.title || '레시피',
+      type: parsed.type || 'recipe',
+      classType: parsed.classType || '실습',
+      ingredients: parsed.ingredients || [],
+      content: parsed.content || '',
+      tips: parsed.tips || [],
+      paragraphAttachments: {},
+    }];
+  } else {
+    parsed.recipes = parsed.recipes.map((r, i) => ({
+      id: 'r' + i,
+      paragraphAttachments: {},
+      ...r,
+    }));
+  }
+  return parsed;
+}
+
+/* Robust JSON extraction. Handles code fences, prose prefix, trailing commas,
+   and literal newlines/tabs/CRs inside string values. Returns parsed object or null. */
+function parseClaudeJSON(raw) {
+  if (!raw) return null;
+  const text = raw.replace(/```(?:json)?\s*/gi, '').replace(/```/g, '').trim();
+  const first = text.indexOf('{');
+  const last = text.lastIndexOf('}');
+  if (first < 0 || last <= first) return null;
+  const candidate = text.slice(first, last + 1);
+  const attempts = [
+    candidate,
+    candidate.replace(/,\s*([}\]])/g, '$1'),
+    repairJsonStringNewlines(candidate),
+    repairJsonStringNewlines(candidate.replace(/,\s*([}\]])/g, '$1')),
+  ];
+  for (const a of attempts) {
+    try { return JSON.parse(a); } catch { /* next */ }
+  }
+  return null;
+}
+
+function repairJsonStringNewlines(s) {
+  let out = '';
+  let inStr = false, esc = false;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (esc) { out += c; esc = false; continue; }
+    if (c === '\\') { out += c; esc = true; continue; }
+    if (c === '"') { inStr = !inStr; out += c; continue; }
+    if (inStr) {
+      if (c === '\n') { out += '\\n'; continue; }
+      if (c === '\r') { out += '\\r'; continue; }
+      if (c === '\t') { out += '\\t'; continue; }
+    }
+    out += c;
+  }
+  return out;
 }
 
 function fallbackNote(dur) {
