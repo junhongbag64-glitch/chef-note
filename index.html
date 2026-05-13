@@ -221,20 +221,28 @@
     }
 
     .note-card-body {
-      padding: 12px 14px 14px;
+      padding: 13px 14px 15px;
     }
     .note-card-title {
       font-family: var(--f-serif);
-      font-size: 15px; font-weight: 700;
-      color: var(--text-1); line-height: 1.4;
-      margin-bottom: 6px;
+      font-size: 15.5px; font-weight: 700;
+      color: var(--text-1); line-height: 1.35;
+      letter-spacing: -.2px;
+      margin-bottom: 8px;
       display: -webkit-box; -webkit-line-clamp: 2;
       -webkit-box-orient: vertical; overflow: hidden;
+      min-height: 2.7em; /* 2줄 항상 확보 → 카드 키 균일 */
     }
     .note-card-meta {
       display: flex; align-items: center; gap: 8px;
+      min-height: 16px;
     }
-    .note-card-date { font-size: 11px; color: var(--text-3); }
+    .note-card-date {
+      font-size: 11px;
+      color: var(--text-3);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: .1px;
+    }
     .note-card-fav { font-size: 12px; color: var(--danger); }
 
     /* Note list container — 2-column card grid */
@@ -302,28 +310,33 @@
       cursor: pointer; font-family: var(--f-sans);
     }
 
-    /* ─── Recipe tabs (inside note detail) ─── */
+    /* ─── Recipe tabs (inside note detail) — Linear/Notion 스타일 ─── */
     .recipe-tabs {
       display: flex; gap: 0;
       padding: 0 20px 0; margin-bottom: 0;
       border-bottom: 1.5px solid var(--border-1);
       overflow-x: auto; -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
     }
+    .recipe-tabs::-webkit-scrollbar { display: none; }
     .recipe-tab {
       background: none; border: none; cursor: pointer;
-      font-family: var(--f-sans); font-size: 13px; font-weight: 500;
-      color: var(--text-3); padding: 10px 16px 9px;
-      border-bottom: 2px solid transparent;
+      font-family: var(--f-sans); font-size: 13.5px; font-weight: 500;
+      color: var(--text-3); padding: 12px 16px 11px;
+      border-bottom: 2.5px solid transparent;
       margin-bottom: -1.5px; white-space: nowrap;
-      transition: color .15s;
+      transition: color .15s, border-color .15s;
+      letter-spacing: -.1px;
     }
     .recipe-tab.active {
-      color: var(--accent); border-bottom-color: var(--accent);
-      font-weight: 600;
+      color: var(--text-1);
+      border-bottom-color: var(--accent);
+      font-weight: 700;
     }
     .recipe-tab:hover { color: var(--text-1); }
+    .recipe-tab:active { opacity: .65; }
     .recipe-tab-add {
-      color: var(--accent); font-size: 18px; padding: 8px 12px 9px;
+      color: var(--accent); font-size: 18px; padding: 10px 12px 11px;
     }
 
     /* ─── Recipe section inside detail ─── */
@@ -341,66 +354,160 @@
       padding: 2px 8px; border-radius: var(--r-full);
     }
 
-    /* ─── Home screen improvements ─── */
+    /* ─── Home greeting (editorial, Bear-style) ─── */
+    /* Single source of truth — earlier rule conflict removed.
+       편집형 인사로 큰 임팩트, 안내 부제로 톤 부드럽게. */
     .home-greeting {
       font-family: var(--f-display);
-      font-size: 22px; font-style: italic;
-      color: var(--text-1); padding: 4px 0 0;
+      font-size: 26px;
+      font-style: italic;
+      font-weight: 500;
+      letter-spacing: -.5px;
+      line-height: 1.18;
+      color: var(--text-1);
+      padding: 10px 0 0;
     }
     .home-greeting-sub {
-      font-size: 12.5px; color: var(--text-3);
-      margin-top: 2px;
+      font-size: 13px;
+      color: var(--text-2);
+      margin-top: 4px;
+      letter-spacing: -.1px;
     }
 
     /* ─── Empty state ─── */
     .empty-state {
       display: flex; flex-direction: column; align-items: center;
-      padding: 56px 32px;
-      gap: 10px; text-align: center;
+      padding: 64px 32px 48px;
+      gap: 12px; text-align: center;
     }
-    .empty-icon { font-size: 36px; opacity: .2; }
+    .empty-icon {
+      font-size: 40px;
+      opacity: .25;
+      filter: grayscale(.3);
+    }
     .empty-title {
       font-family: var(--f-serif);
-      font-size: 16px; font-weight: 600; color: var(--text-2);
+      font-size: 16.5px; font-weight: 600; color: var(--text-2);
+      letter-spacing: -.2px;
     }
-    .empty-desc { font-size: 13px; color: var(--text-3); line-height: 1.6; }
+    .empty-desc {
+      font-size: 13px; color: var(--text-3); line-height: 1.65;
+    }
 
-    /* ─── Section header ─── */
+    /* ─── Section header (Bear / Substack-inspired editorial) ─── */
     .sec-header {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 18px 20px 10px;
+      display: flex; align-items: baseline; justify-content: space-between;
+      padding: 22px 22px 12px;
     }
     .sec-title {
       font-family: var(--f-serif);
       font-size: 18px; font-weight: 700;
-      color: var(--text-1); letter-spacing: -.3px;
+      color: var(--text-1);
+      letter-spacing: -.4px;
     }
     .sec-more {
-      font-size: 12px; color: var(--accent); font-weight: 500; cursor: pointer;
+      font-size: 12.5px;
+      color: var(--accent);
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: -.1px;
     }
+    .sec-more:active { opacity: .55; }
 
     /* ═══════════════════════════════════════════
        HOME
     ═══════════════════════════════════════════ */
     #home-header {
-      padding: 16px 20px 12px;
+      padding: 18px 22px 14px;
     }
     .home-top-row {
       display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 6px;
+      margin-bottom: 8px;
     }
-    .logo { display: flex; align-items: center; gap: 7px; }
-    .logo-icon { width: 28px; height: 28px; }
+    .logo { display: flex; align-items: center; gap: 8px; }
+    .logo-icon { width: 30px; height: 30px; }
     .logo-text {
       font-family: var(--f-display);
-      font-size: 21px; font-weight: 700;
-      letter-spacing: -.4px; color: var(--text-1);
+      font-size: 22px; font-weight: 700;
+      letter-spacing: -.5px; color: var(--text-1);
     }
-    .logo-text em { font-style: normal; color: var(--accent); }
+    .logo-text em { font-style: italic; color: var(--accent); font-weight: 600; }
     .header-actions { display: flex; gap: 2px; }
-    .home-greeting {
-      font-size: 13px; color: var(--text-3);
-      padding-left: 2px; letter-spacing: -.1px;
+    /* NOTE: .home-greeting / .home-greeting-sub are defined above (editorial).
+       Earlier duplicate that flattened it has been removed intentionally. */
+    /* Today Focus → 공유 기능 프로모션 카드로 재활용.
+       어두운 배경 + sage 액센트로 FAB 와 시선 경쟁 안 함.
+       Bear / Notion / Apple Notes 의 "highlight card" 패턴 참고. */
+    .home-focus-card {
+      margin: 16px 20px 8px;
+      padding: 16px 18px;
+      background:
+        radial-gradient(circle at 100% 0%, rgba(168,207,110,.22) 0%, transparent 55%),
+        linear-gradient(135deg, #1F2818 0%, #161E10 100%);
+      border: 1px solid rgba(168,207,110,.18);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(14,18,8,.18);
+    }
+    .home-focus-card::before {
+      content: '';
+      position: absolute;
+      top: 0; right: 0;
+      width: 90px; height: 90px;
+      background: radial-gradient(circle, rgba(168,207,110,.10) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .home-focus-eyebrow {
+      font-size: 10px;
+      letter-spacing: 1.3px;
+      text-transform: uppercase;
+      font-weight: 700;
+      color: #A8CF6E;
+      margin-bottom: 5px;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .home-focus-eyebrow::before {
+      content: '';
+      width: 5px; height: 5px; border-radius: 50%;
+      background: #A8CF6E;
+      box-shadow: 0 0 6px rgba(168,207,110,.6);
+    }
+    .home-focus-title {
+      font-family: var(--f-display);
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -.3px;
+      color: #FAF6EF;
+      margin-bottom: 3px;
+      line-height: 1.25;
+    }
+    .home-focus-sub {
+      font-size: 12.5px;
+      color: rgba(250,246,239,.65);
+      line-height: 1.45;
+    }
+    .home-focus-btn {
+      border: none;
+      border-radius: 999px;
+      padding: 10px 16px;
+      background: #A8CF6E;
+      color: #1A2310;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      flex-shrink: 0;
+      letter-spacing: -.1px;
+      transition: transform .15s, background .15s;
+      position: relative; z-index: 2;
+    }
+    .home-focus-btn:active {
+      transform: scale(.96);
+      background: #B9DC82;
     }
 
     /* ─── Recording toolbar (above FAB) ─── */
@@ -476,9 +583,23 @@
     .rec-zone:active {
       transform: translateX(-50%) scale(.91);
     }
-    /* Recording state: dark red */
+    /* Recording state: dark red + pulsing glow ring */
     .rec-zone.recording-active {
       background: #B03020;
+      box-shadow:
+        0 4px 20px rgba(176,48,32,.4),
+        0 0 0 0 rgba(176,48,32,.45);
+      animation: recPulse 2.1s ease-out infinite;
+    }
+    @keyframes recPulse {
+      0%   { box-shadow: 0 4px 20px rgba(176,48,32,.4), 0 0 0 0 rgba(176,48,32,.45); }
+      70%  { box-shadow: 0 4px 20px rgba(176,48,32,.4), 0 0 0 18px rgba(176,48,32,0); }
+      100% { box-shadow: 0 4px 20px rgba(176,48,32,.4), 0 0 0 0 rgba(176,48,32,0); }
+    }
+    /* paused 상태에서는 펄스 멈춤 */
+    .rec-zone.recording-active.paused {
+      animation: none;
+      box-shadow: 0 4px 20px rgba(176,48,32,.35);
     }
 
     /* Idle state inside FAB */
@@ -863,16 +984,38 @@
       backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
     }
 
-    /* ── Ingredients ── */
+    /* ── Ingredients ── cookbook 시그니처: 이름과 용량 사이 점선 leader */
     .dt-ing { padding: 4px 20px 0; overflow-y: visible; }
     .block-title { display: none; } /* replaced by .nyt-sec */
     .ing-row {
-      display: flex; justify-content: space-between; align-items: baseline;
-      padding: 10px 0; border-bottom: 1px solid var(--border-1); gap: 8px;
+      display: flex; align-items: baseline;
+      padding: 11px 0;
+      border-bottom: 1px solid var(--border-1);
+      gap: 6px;
     }
     .ing-row:last-child { border-bottom: none; }
-    .ing-name { font-family: var(--f-serif); font-size: 15px; color: var(--text-1); font-weight: 400; }
-    .ing-amount { font-family: var(--f-serif); font-size: 14px; color: var(--text-2); white-space: nowrap; }
+    .ing-name {
+      font-family: var(--f-serif); font-size: 15px;
+      color: var(--text-1); font-weight: 400;
+      letter-spacing: -.1px;
+      display: flex; align-items: baseline;
+      flex: 1; min-width: 0; gap: 0;
+    }
+    /* 점선 leader — name 직후 자라나서 amount 까지 공간 메움 (cookbook 시그니처) */
+    .ing-name::after {
+      content: '';
+      flex: 1;
+      margin: 0 8px;
+      border-bottom: 1.5px dotted var(--border-2);
+      transform: translateY(-3px);
+    }
+    .ing-amount {
+      font-family: var(--f-serif); font-size: 14px;
+      color: var(--text-2); white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+      font-style: italic;
+      letter-spacing: -.1px;
+    }
 
     /* ── Preparation steps ── */
     .dt-recipe { padding: 0; }
@@ -883,34 +1026,63 @@
     }
     .para-block:last-child { border-bottom: none; }
     .step-label {
-      font-family: var(--f-sans); font-weight: 700; font-size: 13px;
-      color: var(--text-1); margin-bottom: 5px;
+      font-family: var(--f-display);
+      font-weight: 700; font-size: 16px;
+      color: var(--accent);
+      margin-bottom: 7px;
+      letter-spacing: -.1px;
+      font-variant-numeric: tabular-nums;
+      display: inline-flex; align-items: baseline; gap: 6px;
+    }
+    .step-label::before {
+      content: '';
+      width: 18px;
+      height: 1.5px;
+      background: var(--accent);
+      margin-right: 2px;
+      align-self: center;
     }
     .para-text {
-      font-family: var(--f-serif); font-size: 15px; line-height: 1.8;
+      font-family: var(--f-serif); font-size: 15.5px; line-height: 1.78;
       color: var(--text-1); margin: 0 !important; padding: 0 !important;
       border: none !important;
+      letter-spacing: -.05px;
     }
     .detail-content img {
       width: 100%; height: auto; max-height: 280px; object-fit: cover;
       border-radius: var(--r-md); margin: 8px 0 4px; display: block;
     }
 
-    /* ── Inline tip (extra tips distributed between steps) ── */
+    /* ── Inline tip — editorial pull-quote treatment with serif quotemark ── */
     .inline-tip {
+      position: relative;
       margin: 0 20px 0;
-      padding: 10px 14px 10px 16px;
+      padding: 12px 16px 12px 38px;
       border-left: 3px solid var(--accent);
       background: var(--accent-lt);
       border-radius: 0 var(--r-sm) var(--r-sm) 0;
       font-family: var(--f-serif); font-style: italic;
-      font-size: 14px; line-height: 1.7; color: var(--text-1);
+      font-size: 14.5px; line-height: 1.7; color: var(--text-1);
+    }
+    .inline-tip::before {
+      content: '“';
+      position: absolute;
+      left: 12px; top: 4px;
+      font-family: var(--f-display);
+      font-size: 32px; line-height: 1;
+      color: var(--accent);
+      font-style: normal;
+      opacity: .85;
     }
     .inline-tip-label {
       font-family: var(--f-sans); font-style: normal;
       font-size: 9px; font-weight: 800; letter-spacing: 2px;
       text-transform: uppercase; color: var(--accent);
       display: block; margin-bottom: 3px;
+    }
+    /* Tip-item (standalone tips section) — same pull-quote style */
+    .tip-item {
+      position: relative;
     }
 
     /* ── Tips ── */
@@ -1687,10 +1859,16 @@
       font-family: var(--f-display);
       font-size: 14px; font-weight: 700;
       color: #1A1814;
-      display: flex; align-items: center; gap: 5px;
+      display: flex; align-items: center; gap: 4px;
     }
+    /* Mini logo — manifest/header와 동일 마크 (chef hat + notebook ruling) */
     .mini-app-logo::before {
-      content: '🍳'; font-size: 14px;
+      content: '';
+      width: 16px; height: 16px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30' fill='none'%3E%3Cpath d='M15 3C11.3 3 8.2 5.6 7.5 9.2C5.8 9.7 4.5 11.3 4.5 13.2C4.5 15.4 6.3 17.2 8.5 17.2H21.5C23.7 17.2 25.5 15.4 25.5 13.2C25.5 11.3 24.2 9.7 22.5 9.2C21.8 5.6 18.7 3 15 3Z' fill='%230E0E0C'/%3E%3Cpath d='M8.5 19.5H21.5V25C21.5 25.6 21.1 26 20.5 26H9.5C8.9 26 8.5 25.6 8.5 25V19.5Z' fill='%234E6035'/%3E%3Cline x1='10.5' y1='21.5' x2='19.5' y2='21.5' stroke='rgba(255,255,255,0.42)' stroke-width='0.8' stroke-linecap='round'/%3E%3Cline x1='10.5' y1='23' x2='19.5' y2='23' stroke='rgba(255,255,255,0.42)' stroke-width='0.8' stroke-linecap='round'/%3E%3Cline x1='10.5' y1='24.5' x2='17' y2='24.5' stroke='rgba(255,255,255,0.42)' stroke-width='0.8' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-size: contain;
+      background-repeat: no-repeat;
+      flex-shrink: 0;
     }
     .mini-app-logo em {
       font-style: italic; color: #4E6035; font-weight: 500;
@@ -2230,9 +2408,124 @@
       color: var(--text-2); text-decoration: underline;
     }
 
+    /* Lean auth layout overrides */
+    .auth-container {
+      max-width: 460px;
+      padding-bottom: 54px;
+    }
+    .auth-topbar {
+      padding: 0;
+      margin-bottom: 28px;
+    }
+    .auth-hero-section {
+      background: linear-gradient(180deg, #1c2613 0%, #18210f 100%);
+      padding: 28px 24px 34px;
+    }
+    .auth-hero-content {
+      text-align: left;
+      margin: 0;
+      max-width: none;
+    }
+    .auth-hero-tag {
+      margin: 0 0 14px;
+      letter-spacing: .8px;
+      font-size: 10px;
+    }
+    .auth-headline {
+      font-size: 36px;
+      line-height: 1.12;
+      letter-spacing: -1px;
+      margin-bottom: 10px;
+    }
+    .auth-tagline {
+      font-size: 14px;
+      color: rgba(255,255,255,.8);
+      margin: 0;
+      max-width: 100%;
+      line-height: 1.5;
+    }
+    .auth-content-section {
+      padding: 22px 22px 0;
+    }
+    .auth-proof {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+    .auth-proof-item {
+      background: var(--bg-card);
+      border: 1px solid var(--border-1);
+      border-radius: 12px;
+      padding: 10px 8px;
+      text-align: center;
+      font-size: 11px;
+      color: var(--text-2);
+      line-height: 1.35;
+    }
+    .auth-proof-item b {
+      display: block;
+      color: var(--text-1);
+      font-size: 12px;
+      margin-bottom: 3px;
+    }
+    .auth-flow {
+      background: var(--bg-card);
+      border: 1px solid var(--border-1);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .auth-flow-item {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+    .auth-flow-num {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .auth-flow-txt b {
+      display: block;
+      font-size: 13.5px;
+      color: var(--text-1);
+      margin-bottom: 2px;
+    }
+    .auth-flow-txt span {
+      font-size: 12px;
+      color: var(--text-2);
+      line-height: 1.45;
+    }
+    .auth-value-list {
+      background: var(--bg-card);
+      border: 1px solid var(--border-1);
+      border-radius: 14px;
+      padding: 13px 14px;
+      margin-bottom: 18px;
+      font-size: 12px;
+      color: var(--text-2);
+      line-height: 1.55;
+    }
+    .auth-value-list b {
+      color: var(--text-1);
+    }
     @media (min-width: 480px) {
-      .auth-headline { font-size: 50px; }
-      .auth-hero-section { padding: 56px 28px 60px; }
+      .auth-headline { font-size: 42px; }
+      .auth-hero-section { padding: 34px 28px 40px; }
+      .auth-content-section { padding: 24px 28px 0; }
     }
 
     /* Loading spinner */
@@ -2264,91 +2557,43 @@
 <!-- Auth screen — Product Landing Page -->
 <div id="auth-screen" class="hidden">
   <div class="auth-container">
-
-    <!-- ── Hero Section (dark green) ── -->
     <div class="auth-hero-section">
-
-      <!-- Top nav -->
       <div class="auth-topbar" style="padding:0 0 0;position:relative;z-index:2">
         <div class="auth-brand">
           <div class="auth-brand-icon">
-            <svg width="20" height="20" viewBox="0 0 30 30" fill="none">
+            <svg width="20" height="20" viewBox="0 0 30 30" fill="none" aria-label="ChefNote">
               <path d="M15 3C11.3 3 8.2 5.6 7.5 9.2C5.8 9.7 4.5 11.3 4.5 13.2C4.5 15.4 6.3 17.2 8.5 17.2H21.5C23.7 17.2 25.5 15.4 25.5 13.2C25.5 11.3 24.2 9.7 22.5 9.2C21.8 5.6 18.7 3 15 3Z" fill="#fff"/>
               <path d="M8.5 19.5H21.5V25C21.5 25.6 21.1 26 20.5 26H9.5C8.9 26 8.5 25.6 8.5 25V19.5Z" fill="#A8CF6E"/>
+              <line x1="10.5" y1="21.5" x2="19.5" y2="21.5" stroke="rgba(255,255,255,0.55)" stroke-width="0.8" stroke-linecap="round"/>
+              <line x1="10.5" y1="23"   x2="19.5" y2="23"   stroke="rgba(255,255,255,0.55)" stroke-width="0.8" stroke-linecap="round"/>
+              <line x1="10.5" y1="24.5" x2="17"   y2="24.5" stroke="rgba(255,255,255,0.55)" stroke-width="0.8" stroke-linecap="round"/>
             </svg>
           </div>
           <div class="auth-brand-name">Chef<em>Note</em></div>
         </div>
         <div style="font-size:10.5px;color:rgba(255,255,255,.55);letter-spacing:.5px;font-weight:500">v1.0 · BETA</div>
       </div>
-
-      <!-- Centered hero text -->
       <div class="auth-hero-content">
         <div class="auth-hero-tag">조리과 학생 전용</div>
         <h1 class="auth-headline">
-          수업 녹음하면<br>
-          <em>레시피 노트</em>가<br>
-          알아서 완성돼요
+          수업 녹음이<br>
+          <em>시험용 노트</em>로<br>
+          바로 정리됩니다
         </h1>
         <p class="auth-tagline">
-          AI가 재료·조리법·팁을 깔끔하게 정리해줘요.<br>
-          수업 시간엔 그냥 듣기만 하세요.
+          메모하느라 놓치지 말고 수업에만 집중하세요.
+          변환 완료 후에는 재료, 조리 순서, 팁을 빠르게 찾을 수 있어요.
         </p>
       </div>
+    </div>
 
-      <!-- iPhone mockup with real ChefNote UI -->
-      <div class="auth-phone-wrap">
-        <div class="auth-phone-badge top-right">AI 자동 정리</div>
-        <div class="auth-phone-badge bottom-left">수업별 분류</div>
-        <div class="auth-phone-frame">
-          <div class="auth-phone-screen">
-            <div class="auth-phone-notch"></div>
-            <div class="mini-app">
-              <div class="mini-app-header">
-                <div class="mini-app-logo">Chef<em>Note</em></div>
-                <div class="mini-app-avatar"></div>
-              </div>
-              <div class="mini-app-greeting">
-                좋은 아침이에요, <b>박준홍</b> 👋<br>
-                <span style="color:#ABA89F;font-size:8px">레시피 15개 보관 중 · 오늘도 맛있는 수업을</span>
-              </div>
-              <div class="mini-section-title">카테고리</div>
-              <div class="mini-cat-row">
-                <div class="mini-cat">
-                  한식조리
-                  <div class="mini-cat-meta">10개 노트</div>
-                </div>
-                <div class="mini-cat">
-                  양식조리
-                  <div class="mini-cat-meta">5개 노트</div>
-                </div>
-              </div>
-              <div class="mini-section-title">최근 레시피</div>
-              <div class="mini-note-card">
-                <div class="mini-note-img">🥩</div>
-                <div class="mini-note-info">
-                  <div class="mini-note-title">브라운 소스 4종</div>
-                  <div class="mini-note-meta">5월 5일 · 실습</div>
-                </div>
-              </div>
-              <div class="mini-note-card">
-                <div class="mini-note-img" style="background:linear-gradient(135deg,#FBE3A4,#E8C672)">🍝</div>
-                <div class="mini-note-info">
-                  <div class="mini-note-title">베샤멜 소스</div>
-                  <div class="mini-note-meta">5월 4일 · 실습</div>
-                </div>
-              </div>
-              <div class="mini-rec-fab">🎙️</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div><!-- /auth-hero-section -->
-
-    <!-- ── Content Section ── -->
     <div class="auth-content-section">
+      <div class="auth-proof">
+        <div class="auth-proof-item"><b>한 번 녹음</b>자동 정리</div>
+        <div class="auth-proof-item"><b>수업별 저장</b>시험 전 검색</div>
+        <div class="auth-proof-item"><b>백그라운드 처리</b>앱 닫아도 진행</div>
+      </div>
 
-      <!-- CTA first — most important action -->
       <div class="auth-cta-block" style="margin-bottom:28px;margin-top:0">
         <button class="auth-google-big" onclick="googleLogin()">
           <svg viewBox="0 0 48 48">
@@ -2386,117 +2631,42 @@
         </div>
       </div>
 
-      <!-- Mobile PWA install nudge (KakaoTalk / iOS / Android Chrome) -->
       <div class="auth-install-nudge" id="authInstallNudge" style="display:none"></div>
 
-      <!-- Persona section -->
-      <div class="auth-persona-section">
-        <div class="auth-section-title">이런 분들이<br>쓰고 있어요</div>
-        <div class="auth-section-sub">손으로 받아적기 힘든 조리 실습, AI가 대신 정리해드려요</div>
-        <div class="auth-persona-grid">
-          <div class="auth-persona-card">
-            <div class="auth-persona-emoji">👨‍🍳</div>
-            <div class="auth-persona-text">
-              <div class="auth-persona-quote">"실습 중엔 손이 바빠서 못 적어요"</div>
-              <div class="auth-persona-detail">조리과 1·2학년 — 양손 더러워서 노트 못 쓰는데 교수님 설명은 빠르게 지나가요</div>
-            </div>
+      <div class="auth-flow">
+        <div class="auth-flow-item">
+          <div class="auth-flow-num">1</div>
+          <div class="auth-flow-txt">
+            <b>수업 시간에 녹음하세요</b>
+            <span>실습 중에도 한 번의 탭으로 녹음이 시작됩니다.</span>
           </div>
-          <div class="auth-persona-card">
-            <div class="auth-persona-emoji">📚</div>
-            <div class="auth-persona-text">
-              <div class="auth-persona-quote">"수업마다 레시피가 쌓여서 정리가 안 돼요"</div>
-              <div class="auth-persona-detail">졸업반 — 한식·양식·제과 레시피가 폰 메모장에 흩어져 있어 시험 직전에 다 못 찾아요</div>
-            </div>
+        </div>
+        <div class="auth-flow-item">
+          <div class="auth-flow-num">2</div>
+          <div class="auth-flow-txt">
+            <b>업로드 후 기다릴 필요 없습니다</b>
+            <span>AssemblyAI와 서버 처리로 백그라운드에서 계속 변환합니다.</span>
           </div>
-          <div class="auth-persona-card">
-            <div class="auth-persona-emoji">🎓</div>
-            <div class="auth-persona-text">
-              <div class="auth-persona-quote">"교수님 팁까지 빠짐없이 기록하고 싶어요"</div>
-              <div class="auth-persona-detail">자격증 준비 — 책에는 없는 "이때 불 줄여라" 같은 실무 팁이 가장 중요해요</div>
-            </div>
+        </div>
+        <div class="auth-flow-item">
+          <div class="auth-flow-num">3</div>
+          <div class="auth-flow-txt">
+            <b>완성된 노트를 바로 복습하세요</b>
+            <span>재료, 조리 순서, 교수님 팁까지 구조화되어 저장됩니다.</span>
           </div>
         </div>
       </div>
 
-      <!-- Comparison table -->
-      <div class="auth-compare-section">
-        <div class="auth-section-title">왜 ChefNote인가요?</div>
-        <div class="auth-section-sub">일반 음성 메모 앱과 결정적으로 달라요</div>
-        <div class="auth-compare-table">
-          <div class="auth-compare-row header">
-            <div class="auth-compare-cell label">기능</div>
-            <div class="auth-compare-cell">일반 녹음 앱</div>
-            <div class="auth-compare-cell us">ChefNote</div>
-          </div>
-          <div class="auth-compare-row">
-            <div class="auth-compare-cell label">음성 → 텍스트</div>
-            <div class="auth-compare-cell"><span class="auth-compare-mark yes">○</span></div>
-            <div class="auth-compare-cell us"><span class="auth-compare-mark yes">●</span></div>
-          </div>
-          <div class="auth-compare-row">
-            <div class="auth-compare-cell label">재료·조리법 자동 분리</div>
-            <div class="auth-compare-cell"><span class="auth-compare-mark no">×</span></div>
-            <div class="auth-compare-cell us"><span class="auth-compare-mark yes">●</span></div>
-          </div>
-          <div class="auth-compare-row">
-            <div class="auth-compare-cell label">수업별 자동 분류</div>
-            <div class="auth-compare-cell"><span class="auth-compare-mark no">×</span></div>
-            <div class="auth-compare-cell us"><span class="auth-compare-mark yes">●</span></div>
-          </div>
-          <div class="auth-compare-row">
-            <div class="auth-compare-cell label">사진·메모 함께</div>
-            <div class="auth-compare-cell"><span class="auth-compare-mark no">×</span></div>
-            <div class="auth-compare-cell us"><span class="auth-compare-mark yes">●</span></div>
-          </div>
-          <div class="auth-compare-row">
-            <div class="auth-compare-cell label">앱 닫아도 처리 진행</div>
-            <div class="auth-compare-cell"><span class="auth-compare-mark no">×</span></div>
-            <div class="auth-compare-cell us"><span class="auth-compare-mark yes">●</span></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- How it works — 3-step visual flow -->
-      <div class="auth-howto">
-        <div class="auth-howto-title">이렇게 동작해요</div>
-        <div class="auth-howto-step">
-          <div class="auth-howto-num">1</div>
-          <div class="auth-howto-txt">
-            <b>수업 시간에 녹음</b>
-            <span>버튼 한 번이면 백그라운드에서 알아서 녹음돼요</span>
-          </div>
-        </div>
-        <div class="auth-howto-line"></div>
-        <div class="auth-howto-step">
-          <div class="auth-howto-num">2</div>
-          <div class="auth-howto-txt">
-            <b>녹음 끝나면 끝</b>
-            <span>업로드 후 앱 닫아도 돼요. 변환은 서버에서 진행</span>
-          </div>
-        </div>
-        <div class="auth-howto-line"></div>
-        <div class="auth-howto-step">
-          <div class="auth-howto-num">3</div>
-          <div class="auth-howto-txt">
-            <b>노트가 알아서 완성</b>
-            <span>재료·조리법·팁이 깔끔하게 정리된 레시피 노트로</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Single-line trust signal -->
-      <div class="auth-trust-compact">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-        </svg>
-        Google 엔터프라이즈 인프라에서 암호화 · 본인만 접근 가능
+      <div class="auth-value-list">
+        <b>ChefNote가 집중하는 것</b><br>
+        기록 자체보다, 시험 전에 다시 꺼내보기 쉬운 노트를 만드는 데 집중합니다.
+        설명은 줄이고 검색과 복습 속도를 높였습니다.
       </div>
 
       <div class="auth-footer">
         계속 진행하면 <a href="#">서비스 약관</a>과 <a href="#">개인정보 처리방침</a>에 동의합니다.
       </div>
-    </div><!-- /auth-content-section -->
-
+    </div>
   </div>
 </div>
 
@@ -2514,10 +2684,15 @@
     <div class="sticky-header" id="home-header">
       <div class="home-top-row">
         <div class="logo">
-          <svg class="logo-icon" viewBox="0 0 30 30" fill="none">
+          <svg class="logo-icon" viewBox="0 0 30 30" fill="none" aria-label="ChefNote">
+            <!-- Chef hat dome -->
             <path d="M15 3C11.3 3 8.2 5.6 7.5 9.2C5.8 9.7 4.5 11.3 4.5 13.2C4.5 15.4 6.3 17.2 8.5 17.2H21.5C23.7 17.2 25.5 15.4 25.5 13.2C25.5 11.3 24.2 9.7 22.5 9.2C21.8 5.6 18.7 3 15 3Z" fill="#0E0E0C"/>
+            <!-- Notebook spine base in sage -->
             <path d="M8.5 19.5H21.5V25C21.5 25.6 21.1 26 20.5 26H9.5C8.9 26 8.5 25.6 8.5 25V19.5Z" fill="#4E6035"/>
-            <path d="M11.5 19.5H13.5V26H11.5V19.5ZM16.5 19.5H18.5V26H16.5V19.5Z" fill="rgba(255,255,255,0.18)"/>
+            <!-- Notebook ruling lines — chef + note 동시 표상 -->
+            <line x1="10.5" y1="21.5" x2="19.5" y2="21.5" stroke="rgba(255,255,255,0.42)" stroke-width="0.8" stroke-linecap="round"/>
+            <line x1="10.5" y1="23"   x2="19.5" y2="23"   stroke="rgba(255,255,255,0.42)" stroke-width="0.8" stroke-linecap="round"/>
+            <line x1="10.5" y1="24.5" x2="17"   y2="24.5" stroke="rgba(255,255,255,0.42)" stroke-width="0.8" stroke-linecap="round"/>
           </svg>
           <div class="logo-text" id="logoText" onclick="secretLogoTap()">Chef<em>Note</em></div>
         </div>
@@ -2527,6 +2702,14 @@
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
               <polyline points="17 8 12 3 7 8"/>
               <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+          </button>
+          <button class="icon-btn home-invite-btn" onclick="inviteFriends()" title="친구 초대">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <line x1="19" y1="8" x2="19" y2="14"/>
+              <line x1="22" y1="11" x2="16" y2="11"/>
             </svg>
           </button>
           <button class="icon-btn" onclick="switchTab('profile')">
@@ -2539,6 +2722,15 @@
       </div>
       <div class="home-greeting" id="homeGreeting">안녕하세요 👋</div>
       <div class="home-greeting-sub" id="homeGreetingSub">오늘 수업도 기록해보세요</div>
+    </div>
+
+    <div class="home-focus-card" id="homeFocusCard">
+      <div style="min-width:0;flex:1">
+        <div class="home-focus-eyebrow" id="homeFocusEyebrow">Today Focus</div>
+        <div class="home-focus-title" id="homeFocusTitle">지금 할 일: 수업 녹음 시작</div>
+        <div class="home-focus-sub" id="homeFocusSub">업로드만 끝나면 노트 생성은 백그라운드에서 계속됩니다.</div>
+      </div>
+      <button class="home-focus-btn" id="homeFocusBtn" onclick="toggleRecording()">지금 시작</button>
     </div>
 
     <!-- Pending draft recordings -->
@@ -3072,10 +3264,22 @@ auth.setPersistence('local').catch(() => {});
 
 /* ───────────────── CONFIG ───────────────── */
 const PROXY = 'https://empty-cherry-ab7c.junhongbag64.workers.dev';
-const ASM_DIRECT = 'https://api.assemblyai.com'; // direct upload for large files
 const BANK_ACCOUNT = '1002-3660-6756'; // 계좌번호
-const OWNER_EMAILS = new Set(['junhongbag64@gmail.com']); // 항상 Pro
+const OWNER_EMAILS = new Set(['junhongbag64@gmail.com']); // 클라 UI 용 (실제 Pro 판정은 Firestore + Worker)
 const FREE_NOTE_LIMIT = 5;
+const MAX_AUDIO_BYTES = 100 * 1024 * 1024; // 100MB — Worker 와 일치
+const MAX_AUDIO_DURATION_SEC = 90 * 60;    // 90분 — 클라 측 안전망
+
+/* ───────────────── Worker fetch helper — idToken 자동 첨부 ─────────────────
+   모든 Worker 호출이 이 helper 를 거치도록 통일. */
+async function workerFetch(path, opts = {}) {
+  const headers = { ...(opts.headers || {}) };
+  try {
+    const tok = await auth.currentUser?.getIdToken();
+    if (tok) headers['x-id-token'] = tok;
+  } catch { /* ignore */ }
+  return fetch(`${PROXY}${path}`, { ...opts, headers });
+}
 
 /* ───────────────── NOTE ACCENT PALETTE (deterministic, not user-facing) ───────────────── */
 // Subtle accent colors assigned automatically based on note id — no user picker
@@ -3120,6 +3324,80 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js')
     .then(() => console.log('[SW] registered'))
     .catch(e => console.warn('[SW] failed:', e));
+}
+
+/* ───────────────── WEB SHARE TARGET — incoming audio queue ─────────────────
+   갤럭시 녹음기 / iOS 음성메모 → "공유" → ChefNote 선택 시,
+   sw.js 가 파일을 'chefnote-share-inbox' 캐시에 저장하고 ?shared-pending=1 로 리다이렉트.
+   여기서는 마커만 확인해서 _pendingSharedAudio 플래그를 세팅하고,
+   실제 처리는 사용자가 로그인 + 노트 로딩 끝난 뒤 consumeSharedAudio() 가 함.
+═════════════════════════════════════════════════════════════════════════════ */
+let _pendingSharedAudio = false;
+(function detectSharedAudioMarker() {
+  try {
+    const sp = new URLSearchParams(location.search);
+    if (sp.get('shared-pending') === '1') {
+      _pendingSharedAudio = true;
+      // URL에서 마커 제거 (사용자가 새로고침해도 다시 안 뜨게)
+      sp.delete('shared-pending');
+      const qs = sp.toString();
+      history.replaceState(null, '', location.pathname + (qs ? ('?' + qs) : '') + location.hash);
+    }
+  } catch {}
+})();
+
+async function consumeSharedAudio() {
+  if (!_pendingSharedAudio) return;
+  _pendingSharedAudio = false;
+  if (!('caches' in window)) return;
+  let cache;
+  try { cache = await caches.open('chefnote-share-inbox'); }
+  catch { return; }
+
+  // meta 먼저 확인
+  let count = 0;
+  try {
+    const metaRes = await cache.match('/__share_meta');
+    if (metaRes) {
+      const meta = await metaRes.json();
+      count = meta.count || 0;
+    }
+  } catch {}
+
+  // 파일들 회수
+  const files = [];
+  for (let i = 0; i < Math.max(count, 4); i++) {
+    try {
+      const res = await cache.match(`/__share_audio_${i}`);
+      if (!res) { if (i >= count) break; else continue; }
+      const blob = await res.blob();
+      const rawName = res.headers.get('x-share-filename') || `recording-${Date.now()}-${i}`;
+      let name;
+      try { name = decodeURIComponent(rawName); } catch { name = rawName; }
+      if (blob && blob.size > 0) {
+        files.push(new File([blob], name, { type: blob.type || 'audio/mpeg' }));
+      }
+      await cache.delete(`/__share_audio_${i}`);
+    } catch { /* try next */ }
+  }
+  await cache.delete('/__share_meta').catch(() => {});
+
+  if (!files.length) {
+    showToast('🤔 공유된 음성 파일을 찾지 못했어요');
+    return;
+  }
+
+  // 여러 파일 공유된 경우 첫 파일만 처리 (대부분 1개)
+  const f = files[0];
+  if (files.length > 1) {
+    showToast(`🎙️ ${files.length}개 중 첫 파일을 변환합니다`);
+  } else {
+    showToast('🎙️ 공유된 녹음을 받았어요');
+  }
+  // 짧은 지연으로 메인 UI 렌더 후 모달 띄우게
+  setTimeout(() => {
+    handleAudioUpload({ files: [f], value: '' });
+  }, 400);
 }
 
 /* ═══════════════════════════════════════════
@@ -3168,14 +3446,44 @@ window.addEventListener('appinstalled', () => {
   showToast('✅ 홈 화면에 추가됐어요!');
 });
 
+/* 카톡/네이버/라인 등 인앱 브라우저는 PWA 설치 자체가 안 됨 →
+   사용자가 매번 같은 URL을 카톡에서 타고 들어와야 함.
+   그래서 인앱 브라우저는 dismiss 효력을 1일로 짧게 (정상 브라우저는 7일). */
+function _installDismissTtlMs() {
+  return _isInAppBrowser ? (24 * 3600 * 1000) : (7 * 24 * 3600 * 1000);
+}
+
+/* install bar 텍스트를 상황에 맞게 갈아끼우기:
+   - 인앱 브라우저(카톡 등) → "카톡에서 매번 들어오지 마세요" 메시지
+   - iOS Safari → 홈 추가 단계 안내 (버튼 라벨은 따로 처리)
+   - Android 일반 → 기본 (홈 화면 추가) */
+function applyInstallBarCopy() {
+  const title = document.getElementById('pwaInstallBarTitle');
+  const sub   = document.getElementById('pwaInstallBarSub');
+  const btn   = document.getElementById('pwaInstallBtn');
+  if (!title || !sub) return;
+  if (_isInAppBrowser) {
+    title.textContent = '카톡에서 매번 들어오지 마세요';
+    sub.textContent   = '홈 화면에 설치하면 한 번만 누르면 끝!';
+    if (btn) btn.textContent = _isIOS ? '방법 보기' : '설치';
+  } else if (_isIOS) {
+    title.textContent = '홈 화면에 ChefNote 추가';
+    sub.textContent   = '앱처럼 한 번에 열고, 녹음 앱에서 바로 공유';
+  } else {
+    title.textContent = '홈 화면에 ChefNote 추가';
+    sub.textContent   = '앱처럼 열고, 녹음 앱에서 공유 → 자동 변환';
+  }
+}
+
 function maybeShowInstallBar() {
   if (_isStandalone) return;                               // Already installed
   if (localStorage.getItem('pwa_dismissed_at')) {
     const t = parseInt(localStorage.getItem('pwa_dismissed_at'));
-    if (Date.now() - t < 7 * 24 * 3600 * 1000) return;   // Dismissed < 7 days ago
+    if (Date.now() - t < _installDismissTtlMs()) return;
   }
   // Delay a bit so it doesn't fight the UI loading
   setTimeout(() => {
+    applyInstallBarCopy();
     document.getElementById('pwaInstallBar')?.classList.remove('hidden');
   }, 3500);
 }
@@ -3215,15 +3523,16 @@ function maybeShowInstallBarIOS() {
   if (_isStandalone) return;
   if (localStorage.getItem('pwa_dismissed_at')) {
     const t = parseInt(localStorage.getItem('pwa_dismissed_at'));
-    if (Date.now() - t < 7 * 24 * 3600 * 1000) return;
+    if (Date.now() - t < _installDismissTtlMs()) return;
   }
   setTimeout(() => {
     const bar = document.getElementById('pwaInstallBar');
     if (bar) {
+      applyInstallBarCopy();
       bar.classList.remove('hidden');
-      // iOS: update button text
+      // iOS: 버튼은 안내 시트를 여니까 라벨 통일
       const btn = document.getElementById('pwaInstallBtn');
-      if (btn) btn.textContent = '방법 보기';
+      if (btn && !_isInAppBrowser) btn.textContent = '방법 보기';
     }
   }, 3500);
 }
@@ -3365,12 +3674,87 @@ async function emailSignup() {
   try {
     const cred = await auth.createUserWithEmailAndPassword(email, pw);
     await cred.user.updateProfile({ displayName: name });
-    // Save profile to Firestore
+    // 가입 즉시 이메일 인증 메일 발송 — Worker는 email_verified 강제
+    try {
+      await cred.user.sendEmailVerification();
+    } catch (e) {
+      console.warn('[Auth] sendEmailVerification 실패:', e.message);
+    }
+    // Save profile to Firestore (Firestore 규칙이 isPro 등 보호해야 함)
     await db.collection('users').doc(cred.user.uid).set({
       name, dept: '조리학과', sem: '1학기'
     }, { merge: true });
+    // 인증 게이트는 onAuthStateChanged 에서 처리됨
   } catch(e) {
     errEl.textContent = authErrMsg(e.code);
+  }
+}
+
+/* 이메일 인증 안 된 사용자에게 보여줄 게이트 화면 */
+function showEmailVerifyGate(user) {
+  const authScr = document.getElementById('auth-screen');
+  const appDiv  = document.getElementById('app');
+  const loading = document.getElementById('app-loading');
+  appDiv.style.display = 'none';
+  loading.classList.add('hidden');
+  authScr.classList.remove('hidden');
+  // auth-screen 내용을 전용 안내로 교체
+  const container = authScr.querySelector('.auth-container');
+  if (!container) return;
+  container.innerHTML = `
+    <div class="auth-hero-section">
+      <div class="auth-topbar" style="padding:0 0 0;position:relative;z-index:2">
+        <div class="auth-brand">
+          <div class="auth-brand-icon">
+            <svg width="20" height="20" viewBox="0 0 30 30" fill="none">
+              <path d="M15 3C11.3 3 8.2 5.6 7.5 9.2C5.8 9.7 4.5 11.3 4.5 13.2C4.5 15.4 6.3 17.2 8.5 17.2H21.5C23.7 17.2 25.5 15.4 25.5 13.2C25.5 11.3 24.2 9.7 22.5 9.2C21.8 5.6 18.7 3 15 3Z" fill="#fff"/>
+              <path d="M8.5 19.5H21.5V25C21.5 25.6 21.1 26 20.5 26H9.5C8.9 26 8.5 25.6 8.5 25V19.5Z" fill="#A8CF6E"/>
+            </svg>
+          </div>
+          <div class="auth-brand-name">Chef<em>Note</em></div>
+        </div>
+      </div>
+      <div class="auth-hero-content" style="padding:48px 8px 24px">
+        <div class="auth-hero-tag">이메일 인증 필요</div>
+        <h1 class="auth-headline">메일함을 확인해주세요</h1>
+        <p class="auth-tagline" style="margin-bottom:16px">
+          <b style="color:#A8CF6E">${user.email || ''}</b> 로 인증 메일을 보냈어요.<br>
+          메일 안의 링크를 누른 뒤 아래 "확인 완료" 를 눌러주세요.
+        </p>
+        <div style="display:flex;flex-direction:column;gap:10px;max-width:280px;margin:0 auto">
+          <button class="auth-google-big" onclick="checkEmailVerifiedNow()" style="background:#A8CF6E;color:#1A2310;border:none">확인 완료</button>
+          <button class="auth-email-toggle" onclick="resendEmailVerification()" style="color:#A8CF6E">메일 다시 보내기</button>
+          <button class="auth-email-toggle" onclick="logout()" style="color:rgba(255,255,255,.5)">다른 계정으로 로그인</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+async function resendEmailVerification() {
+  const u = auth.currentUser;
+  if (!u) return;
+  try {
+    await u.sendEmailVerification();
+    showToast('✉️ 인증 메일을 다시 보냈어요. 메일함을 확인해주세요');
+  } catch (e) {
+    showToast('메일 발송 실패: ' + (e.message || ''));
+  }
+}
+
+async function checkEmailVerifiedNow() {
+  const u = auth.currentUser;
+  if (!u) return;
+  try {
+    await u.reload();
+    if (u.emailVerified) {
+      showToast('✅ 인증 완료! 잠시만요...');
+      // onAuthStateChanged 가 자동으로 다시 트리거되지 않을 수 있음 → 페이지 새로고침
+      setTimeout(() => location.reload(), 600);
+    } else {
+      showToast('아직 인증 안 됨 — 메일함의 링크를 먼저 클릭해주세요');
+    }
+  } catch (e) {
+    showToast('확인 실패: ' + (e.message || ''));
   }
 }
 
@@ -3409,6 +3793,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const appDiv  = document.getElementById('app');
 
     if (user) {
+      // ✋ 이메일 인증 게이트 — 미인증 계정은 앱 진입 차단.
+      // Google 로그인은 email_verified=true 자동, 이메일/패스워드는 사용자 확인 필요.
+      // OWNER_EMAILS 는 백도어 — 본인 계정 잠금 방지.
+      if (!user.emailVerified && !OWNER_EMAILS.has(user.email)) {
+        S.currentUser = null;
+        showEmailVerifyGate(user);
+        return;
+      }
       S.currentUser = user;
       // Load profile from Firestore
       try {
@@ -3444,6 +3836,8 @@ document.addEventListener('DOMContentLoaded', () => {
       // Show PWA install bar if not already installed
       if (_isIOS && _isInBrowser) maybeShowInstallBarIOS();
       else if (_pwaPrompt) maybeShowInstallBar();
+      // 폰 녹음 앱에서 "공유 → ChefNote" 로 들어온 음성 처리 (있을 때만)
+      consumeSharedAudio(); // fire-and-forget
     } else {
       S.currentUser = null;
       S.notes = [];
@@ -3637,9 +4031,17 @@ function stripBinaryFields(note) {
   return n;
 }
 
-/* ── Pro 한도 체크 (현재 전원 무료 무제한) ── */
+/* ── Pro 한도 체크 ──
+   클라이언트는 UX 위해 미리 체크 (Worker 가 서버측 진실 — 일일 한도 KV 카운터). */
 function checkNoteLimit() {
-  return true; // Pro 제한 비활성화 — 오픈 상태
+  // Owner 또는 Pro 는 무제한 (Pro 판정은 Firestore.isPro — 규칙으로 보호 필수)
+  if (S.isPro) return true;
+  if (S.currentUser && OWNER_EMAILS.has(S.currentUser.email)) return true;
+  if ((S.notesCreated || 0) >= FREE_NOTE_LIMIT) {
+    showUpgradeModal();
+    return false;
+  }
+  return true;
 }
 
 async function incrementNotesCreated() {
@@ -4088,7 +4490,7 @@ async function processDraftToNote(draft, isManual = false) {
     console.error('[Draft] process failed:', e);
     // ⚠️ 실패해도 삭제 안 함 — retryCount만 증가. 녹음 보존!
     const retryCount = (draft.retryCount || 0) + 1;
-    const errMsg = e.message || '알 수 없는 오류';
+    const errMsg = normalizePipelineError(e);
     await saveDraftToDB({ ...draft, retryCount, lastError: errMsg, lastAttempt: Date.now() });
     if (isManual) {
       hideProc();
@@ -4185,12 +4587,13 @@ async function onRecordingDone() {
     console.error('[NOTE]', err);
     removeProcessingGuard();
     hideProc();
-    const msg = err.message || '';
+    const msg = (err?.message || '').toLowerCase();
     let reason = '서버 연결 오류';
-    if (msg.includes('ASM_UPLOAD')) reason = '음성 업로드 실패 (네트워크 확인)';
-    else if (msg.includes('ASM_TRANSCRIPT')) reason = `음성 인식 실패 (${msg.split(':')[1]?.trim() || ''})`;
-    else if (msg.includes('API 키')) reason = 'API 키 오류';
-    else if (msg.includes('JSON') || msg.includes('Claude')) reason = 'AI 노트 생성 실패';
+    if (msg.includes('load failed') || msg.includes('failed to fetch') || msg.includes('networkerror')) reason = '네트워크 연결 실패 (서버/인터넷 확인)';
+    else if (msg.includes('asm_upload')) reason = '음성 업로드 실패 (네트워크 확인)';
+    else if (msg.includes('asm_transcript')) reason = `음성 인식 실패 (${msg.split(':')[1]?.trim() || ''})`;
+    else if (msg.includes('api key') || msg.includes('api 키')) reason = 'API 키 오류';
+    else if (msg.includes('json') || msg.includes('claude')) reason = 'AI 노트 생성 실패';
     const existing = (await getAllDrafts()).find(d => d.id === draftId);
     if (existing) await saveDraftToDB({ ...existing, lastError: reason, retryCount: 0 });
     renderPendingDrafts();
@@ -4261,20 +4664,21 @@ function encodeWAV(samples, sampleRate) {
 }
 
 /* ═══════════════════════════════════════════
-   ASSEMBLYAI — split helpers
+   ASSEMBLYAI — 전부 Worker 프록시 경유.
+   AssemblyAI 키가 더 이상 브라우저에 노출되지 않음.
 ═══════════════════════════════════════════ */
-async function asmGetKey() {
-  const r = await fetch(`${PROXY}/get-asm-key`);
-  if (!r.ok) throw new Error('API 키를 가져오지 못했습니다');
-  const { key } = await r.json();
-  return key;
+async function asmGuardSize(blob) {
+  if (blob.size > MAX_AUDIO_BYTES) {
+    throw new Error(`ASM_TOOBIG: 오디오 파일이 너무 큽니다 (${Math.round(blob.size/1024/1024)}MB > ${Math.round(MAX_AUDIO_BYTES/1024/1024)}MB 한도)`);
+  }
 }
 
-async function asmUploadBlob(blob, key) {
+async function asmUploadBlob(blob /*, _ignored */) {
+  await asmGuardSize(blob);
   updateProc('🎙️ 업로드 중...', '음성 파일을 서버로 보내고 있어요...');
-  const r = await fetch('https://api.assemblyai.com/v2/upload', {
+  const r = await workerFetch('/asm-upload', {
     method: 'POST',
-    headers: { 'authorization': key, 'content-type': 'application/octet-stream' },
+    headers: { 'content-type': 'application/octet-stream' },
     body: blob,
   });
   if (!r.ok) {
@@ -4286,37 +4690,30 @@ async function asmUploadBlob(blob, key) {
   return upload_url;
 }
 
-async function asmCreateTranscript(upload_url, key, webhookUrl = null) {
-  const body = { audio_url: upload_url, language_code: 'ko', speech_models: ['universal-2'] };
-  if (webhookUrl) body.webhook_url = webhookUrl;
-
-  const r = await fetch('https://api.assemblyai.com/v2/transcript', {
+async function asmCreateTranscript(upload_url, _ignored, webhookUrl = null) {
+  const r = await workerFetch('/asm-transcript', {
     method: 'POST',
-    headers: { 'authorization': key, 'content-type': 'application/json' },
-    body: JSON.stringify(body),
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ upload_url, webhook_url: webhookUrl || undefined }),
   });
   if (!r.ok) {
     const e = await r.json().catch(() => ({}));
-    throw new Error(`ASM_TRANSCRIPT_${r.status}: ${e.error || e.message || r.status}`);
+    throw new Error(`ASM_TRANSCRIPT_${r.status}: ${e.error || r.status}`);
   }
   const data = await r.json();
-  if (!data.id) throw new Error(`ASM_TRANSCRIPT_NOID: ID 없음 (응답: ${JSON.stringify(data).slice(0, 120)})`);
+  if (!data.id) throw new Error(`ASM_TRANSCRIPT_NOID: ID 없음`);
   return data.id;
 }
 
-async function asmPollTranscript(id, key) {
-  // 어댑티브 인터벌 — 짧은 녹음 즉시 감지, 긴 녹음 부하 줄임
+async function asmPollTranscript(id /*, _ignored */) {
   let elapsed = 0;
   const MAX = 30 * 60 * 1000; // 30분
   let lastProgressMs = 0;
   while (elapsed < MAX) {
-    // 0~30초: 1초 / 30초~2분: 2초 / 그 이후: 3초
     const interval = elapsed < 30000 ? 1000 : elapsed < 120000 ? 2000 : 3000;
     await sleep(interval);
     elapsed += interval;
-    const poll = await fetch(`https://api.assemblyai.com/v2/transcript/${id}`, {
-      headers: { 'authorization': key },
-    });
+    const poll = await workerFetch(`/asm-transcript-status/${id}`, { method: 'GET' });
     if (!poll.ok) {
       const e = await poll.json().catch(() => ({}));
       throw new Error(`ASM_POLL_${poll.status}: ${e.error || '상태 확인 실패'}`);
@@ -4329,7 +4726,6 @@ async function asmPollTranscript(id, key) {
       return txt;
     }
     if (result.status === 'error') throw new Error('Transcription error: ' + result.error);
-    // 진행 상태 — 4초마다 갱신
     if (elapsed - lastProgressMs >= 4000) {
       lastProgressMs = elapsed;
       const sec = Math.round(elapsed / 1000);
@@ -4344,34 +4740,33 @@ async function asmPollTranscript(id, key) {
 
 // Client-side full pipeline (fallback when server path fails)
 async function transcribeAudio(blob) {
-  const key = await asmGetKey();
-  const upload_url = await asmUploadBlob(blob, key);
-  const id = await asmCreateTranscript(upload_url, key);
-  return asmPollTranscript(id, key);
+  const upload_url = await asmUploadBlob(blob);
+  const id = await asmCreateTranscript(upload_url, null);
+  return asmPollTranscript(id);
 }
 
 /* ═══════════════════════════════════════════
    SERVER-SIDE JOB SUBMISSION
 ═══════════════════════════════════════════ */
 async function submitJobToServer(blob, draftId, metadata) {
-  const key = await asmGetKey();
-
   updateProc('🎙️ 업로드 중...', '잠시만요... 업로드가 끝나면 앱 자유롭게 쓸 수 있어요');
-  const upload_url = await asmUploadBlob(blob, key);
+  const upload_url = await asmUploadBlob(blob);
   updateProc('🎙️ 거의 다 됐어요...', '서버에 등록 중...');
 
   const jobId = 'job_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
   const webhookUrl = `${PROXY}/asm-webhook/${jobId}`;
-  const asmId = await asmCreateTranscript(upload_url, key, webhookUrl);
+  const asmId = await asmCreateTranscript(upload_url, null, webhookUrl);
 
-  // Register job with Worker (fire-and-forget metadata)
-  const idToken = await auth.currentUser?.getIdToken().catch(() => null);
-  const regRes = await fetch(`${PROXY}/register-job`, {
+  // Worker 등록 — idToken 은 workerFetch 가 헤더로 자동 첨부
+  const regRes = await workerFetch('/register-job', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ jobId, asmId, uid: S.currentUser.uid, idToken, metadata }),
+    body: JSON.stringify({ jobId, asmId, metadata }),
   });
-  if (!regRes.ok) throw new Error('서버 접수 실패');
+  if (!regRes.ok) {
+    const e = await regRes.json().catch(() => ({}));
+    throw new Error(e.error || '서버 접수 실패');
+  }
 
   // Update draft to server mode (keep audioBlob for fallback recovery)
   await saveDraftToDB({
@@ -4406,7 +4801,7 @@ async function checkServerJobs() {
 async function checkAndFinalizeServerJob(draft) {
   if (!draft.jobId) return;
   try {
-    const res = await fetch(`${PROXY}/job-status/${draft.jobId}`);
+    const res = await workerFetch(`/job-status/${draft.jobId}`);
     const job = await res.json();
 
     if (job.status === 'done' && job.note) {
@@ -4457,7 +4852,7 @@ function startBgJobPoll(jobId, draftId) {
 
     let job;
     try {
-      const r = await fetch(`${PROXY}/job-status/${jobId}`);
+      const r = await workerFetch(`/job-status/${jobId}`);
       job = await r.json();
     } catch (e) { return; } // network error — try again next tick
 
@@ -4606,7 +5001,7 @@ ${transcript}
     const gtimer = setTimeout(() => gctrl.abort(), 60000);
     let gres;
     try {
-      gres = await fetch(`${PROXY}/gemini/generate`, {
+      gres = await workerFetch('/gemini/generate', {
         method: 'POST',
         signal: gctrl.signal,
         headers: { 'content-type': 'application/json' },
@@ -4640,7 +5035,7 @@ ${transcript}
       const claudeTimer = setTimeout(() => ctrl.abort(), 120000);
       let res;
       try {
-        res = await fetch(`${PROXY}/anthropic/v1/messages`, {
+        res = await workerFetch('/anthropic/v1/messages', {
           method: 'POST',
           signal: ctrl.signal,
           headers: { 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
@@ -4680,6 +5075,10 @@ ${transcript}
   }
   console.log('[NoteGen] 사용 모델:', usedModel);
 
+  // 핵심 안전망: LLM이 schema 만 맞추고 content/title 을 비워서 보내는 경우를
+  // smartExtract 폴백으로 보강. 워커(worker.js)의 coerceGeneratedNote 와 동일 로직.
+  parsed = coerceGeneratedNote(parsed, transcript, dur);
+
   // Normalize: ensure `recipes` array exists with proper structure
   if (!parsed.recipes || !Array.isArray(parsed.recipes) || !parsed.recipes.length) {
     parsed.recipes = [{
@@ -4700,6 +5099,46 @@ ${transcript}
     }));
   }
   return parsed;
+}
+
+/* LLM이 schema 는 맞추고 알맹이를 비워서 보내는 경우를 막는 안전망.
+   - recipes 배열 없거나 비면 smartExtract 전체 사용
+   - 모든 recipe.content 가 사실상 비었으면 smartExtract 전체 사용
+   - 일부 필드만 비었으면 그 필드만 폴백에서 보강 */
+function coerceGeneratedNote(parsed, transcript, dur) {
+  const fallback = smartExtract(transcript, dur);
+  const out = (parsed && typeof parsed === 'object') ? { ...parsed } : {};
+
+  if (!Array.isArray(out.recipes) || !out.recipes.length) {
+    return fallback;
+  }
+
+  let hasMeaningfulContent = false;
+  out.recipes = out.recipes.map((r, i) => {
+    const base = (r && typeof r === 'object') ? { ...r } : {};
+    const fb = (fallback.recipes && fallback.recipes[i]) || fallback.recipes[0] || {};
+
+    base.title = String(base.title || '').trim() || String(fb.title || out.title || '레시피');
+    base.type = (base.type === 'recipe' || base.type === 'theory') ? base.type : (fb.type || 'recipe');
+    base.classType = (base.classType === '실습' || base.classType === '이론')
+      ? base.classType
+      : (fb.classType || (base.type === 'theory' ? '이론' : '실습'));
+    base.content = String(base.content || '').trim();
+    if (!base.content) base.content = String(fb.content || '').trim();
+
+    base.ingredients = Array.isArray(base.ingredients) ? base.ingredients.filter(Boolean)
+                      : (Array.isArray(fb.ingredients) ? fb.ingredients : []);
+    base.tips = Array.isArray(base.tips) ? base.tips.filter(Boolean)
+               : (Array.isArray(fb.tips) ? fb.tips : []);
+
+    if (base.content && base.content.length >= 8) hasMeaningfulContent = true;
+    return base;
+  });
+
+  if (!hasMeaningfulContent) return fallback;
+
+  out.title = String(out.title || '').trim() || String(fallback.title || '수업 노트');
+  return out;
 }
 
 /* Robust JSON extraction. Handles code fences, prose prefix, trailing commas,
@@ -4840,7 +5279,7 @@ async function handleAudioUpload(inp) {
   } catch(err) {
     removeProcessingGuard();
     hideProc();
-    showToast('❌ 변환 실패: ' + (err.message || '오류'));
+    showToast('❌ 변환 실패: ' + normalizePipelineError(err));
   }
 }
 
@@ -4981,7 +5420,7 @@ async function convertMemoToNote() {
   } catch(err) {
     removeProcessingGuard();
     hideProc();
-    showToast('❌ 변환 실패: ' + (err.message || '오류'));
+    showToast('❌ 변환 실패: ' + normalizePipelineError(err));
   }
 }
 
@@ -5049,7 +5488,7 @@ async function retryDraft(draftId) {
     if (draft.status === 'done') {
       // Worker가 완료 — 서버에서 노트 받아서 저장
       try {
-        const res = await fetch(`${PROXY}/job-status/${draft.jobId}`);
+        const res = await workerFetch(`/job-status/${draft.jobId}`);
         const job = await res.json();
         if (job.status === 'done' && job.note) {
           await finalizeServerNote(draft, job.note);
@@ -5060,13 +5499,29 @@ async function retryDraft(draftId) {
       return;
     }
     if (draft.status === 'error') {
-      // 에러 시 클라이언트 처리 폴백
-      if (draft.audioBlob) {
-        await saveDraftToDB({ ...draft, mode: undefined, jobId: undefined, retryCount: 0, lastError: null });
-        const updated = { ...draft, mode: undefined };
-        await processDraftToNote(updated, true);
-      } else {
-        showToast('오디오 데이터가 없어 재시도할 수 없어요');
+      // 우선 Worker /retry-llm 시도 — transcript 가 KV 에 살아있으면 STT 재호출 없이 LLM 만 재시도 (비용 절감)
+      let retried = false;
+      if (draft.jobId) {
+        try {
+          const r = await workerFetch(`/retry-llm/${draft.jobId}`, { method: 'POST' });
+          if (r.ok) {
+            retried = true;
+            showToast('🔄 서버에서 노트 다시 만드는 중...');
+            await saveDraftToDB({ ...draft, status: 'generating', lastError: null });
+            renderPendingDrafts();
+            startBgJobPoll(draft.jobId, draft.id);
+          }
+        } catch { /* fall through to client fallback */ }
+      }
+      if (!retried) {
+        // 마지막 폴백: 클라이언트 처리 (STT 재호출 발생 — 비용 ↑)
+        if (draft.audioBlob) {
+          await saveDraftToDB({ ...draft, mode: undefined, jobId: undefined, retryCount: 0, lastError: null });
+          const updated = { ...draft, mode: undefined };
+          await processDraftToNote(updated, true);
+        } else {
+          showToast('오디오 데이터가 없어 재시도할 수 없어요');
+        }
       }
       return;
     }
@@ -5693,6 +6148,15 @@ window.onload = function() {
   win.document.close();
 }
 
+/* 앱 자체 URL — 공유 텍스트 / 초대 링크에 자동 첨부 */
+function getAppShareUrl() {
+  try {
+    return location.origin + location.pathname.replace(/index\.html$/, '');
+  } catch {
+    return 'https://junhongbag64-glitch.github.io/chef-note/';
+  }
+}
+
 function shareNote() {
   const n = S.notes.find(x => x.id === S.activeNote);
   if (!n) return;
@@ -5713,9 +6177,12 @@ function shareNote() {
     }
   });
   text = text.trimEnd();
+  // ChefNote URL footer — 받는 친구가 바로 앱으로 이동 가능
+  const appUrl = getAppShareUrl();
+  text += `\n\n— 🍳 ChefNote에서 자동 정리\n${appUrl}`;
 
   if (navigator.share) {
-    navigator.share({ title: n.title, text }).catch(() => {
+    navigator.share({ title: n.title, text, url: appUrl }).catch(() => {
       navigator.clipboard?.writeText(text).then(() => showToast('✅ 클립보드에 복사됐어요'));
     });
   } else {
@@ -5727,6 +6194,42 @@ function shareNote() {
         document.execCommand('copy'); document.body.removeChild(el);
         showToast('✅ 복사됐어요');
       });
+  }
+}
+
+/* 친구 초대 — 노트 내용 없이 앱 자체만 공유.
+   카톡으로 보낼 때 매번 같은 URL 카피해서 보낼 필요 없게 해주는 진입점. */
+function inviteFriends() {
+  const appUrl = getAppShareUrl();
+  const title = 'ChefNote';
+  const text =
+`🍳 ChefNote — 조리학과 수업 녹음하면 AI가 자동으로 레시피 노트로 정리해줘.
+설치하면 갤럭시 녹음기/iOS 음성메모에서 "공유 → ChefNote" 로 바로 보낼 수 있어.
+
+${appUrl}`;
+
+  if (navigator.share) {
+    navigator.share({ title, text, url: appUrl })
+      .catch(() => fallbackCopyInvite(text));
+    return;
+  }
+  fallbackCopyInvite(text);
+}
+
+function fallbackCopyInvite(text) {
+  const done = () => showToast('✅ 초대 메시지 복사됨 — 카톡에 붙여넣기!');
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(text).then(done).catch(() => {
+      const el = document.createElement('textarea');
+      el.value = text; document.body.appendChild(el); el.select();
+      try { document.execCommand('copy'); done(); }
+      finally { document.body.removeChild(el); }
+    });
+  } else {
+    const el = document.createElement('textarea');
+    el.value = text; document.body.appendChild(el); el.select();
+    try { document.execCommand('copy'); done(); }
+    finally { document.body.removeChild(el); }
   }
 }
 
@@ -5912,6 +6415,41 @@ function updateHomeGreeting() {
     const cnt = S.notes.length;
     sub.textContent = cnt ? `레시피 ${cnt}개 보관 중 · 오늘도 맛있는 수업을` : '첫 번째 레시피를 녹음해보세요';
   }
+  updateHomeFocusCard();
+}
+
+/* Today Focus 카드 동적 내용:
+   - PWA 미설치 + Phase 1 신기능 미경험 → "녹음 앱에서 바로 공유" 안내
+   - 그 외 → 기본 "녹음 시작" CTA */
+function updateHomeFocusCard() {
+  const eye = document.getElementById('homeFocusEyebrow');
+  const ttl = document.getElementById('homeFocusTitle');
+  const sub = document.getElementById('homeFocusSub');
+  const btn = document.getElementById('homeFocusBtn');
+  if (!ttl || !btn) return;
+
+  // 설치 안 했고, 카드를 명시적으로 끄지 않았으면 신기능 프로모션
+  const promoSeen = localStorage.getItem('cn_share_promo_dismissed') === '1';
+  if (!_isStandalone && !promoSeen) {
+    if (eye) eye.textContent = 'New';
+    ttl.textContent = '폰 녹음 앱에서 공유 → 자동 변환';
+    if (sub) sub.textContent = '홈 화면에 ChefNote 설치 후, 갤럭시 녹음기 / 음성메모에서 "공유 → ChefNote"';
+    btn.textContent = '설치 방법';
+    btn.onclick = () => {
+      localStorage.setItem('cn_share_promo_dismissed', '1');
+      triggerInstall();
+      // 짧은 지연 후 카드 갱신
+      setTimeout(updateHomeFocusCard, 300);
+    };
+    return;
+  }
+
+  // 기본 — 녹음 CTA
+  if (eye) eye.textContent = 'Today Focus';
+  ttl.textContent = '지금 할 일: 수업 녹음 시작';
+  if (sub) sub.textContent = '업로드만 끝나면 노트 생성은 백그라운드에서 계속됩니다.';
+  btn.textContent = '지금 시작';
+  btn.onclick = () => toggleRecording();
 }
 
 function editProfile() {
@@ -5981,6 +6519,20 @@ function showToast(msg) {
   el.classList.add('on');
   clearTimeout(_toastTm);
   _toastTm = setTimeout(() => el.classList.remove('on'), 2800);
+}
+
+function normalizePipelineError(err) {
+  const raw = err?.message || String(err || '');
+  const msg = raw.toLowerCase();
+  if (msg.includes('load failed') || msg.includes('failed to fetch') || msg.includes('networkerror')) {
+    return '네트워크 연결 실패 (서버/인터넷 확인)';
+  }
+  if (msg.includes('asm_upload')) return '음성 업로드 실패 (네트워크 확인)';
+  if (msg.includes('asm_transcript')) return '음성 인식 요청 실패';
+  if (msg.includes('asm_poll')) return '음성 인식 상태 확인 실패';
+  if (msg.includes('api key') || msg.includes('api 키')) return 'API 키 오류';
+  if (msg.includes('json') || msg.includes('claude')) return 'AI 노트 생성 실패';
+  return raw || '알 수 없는 오류';
 }
 
 /* ═══════════════════════════════════════════
@@ -6451,8 +7003,8 @@ function delParaAttach(noteId, recipeIdx, paraIdx, attachIdx) {
 <div class="pwa-install-bar hidden" id="pwaInstallBar">
   <div class="pwa-install-bar-ico">📲</div>
   <div class="pwa-install-bar-text">
-    <div class="pwa-install-bar-title">홈 화면에 추가하기</div>
-    <div class="pwa-install-bar-sub">앱처럼 바로 열 수 있어요</div>
+    <div class="pwa-install-bar-title" id="pwaInstallBarTitle">홈 화면에 추가하기</div>
+    <div class="pwa-install-bar-sub" id="pwaInstallBarSub">앱처럼 바로 열 수 있어요</div>
   </div>
   <button class="pwa-install-btn" id="pwaInstallBtn" onclick="triggerInstall()">추가</button>
   <button class="pwa-install-dismiss" onclick="dismissInstallBar()" aria-label="닫기">×</button>

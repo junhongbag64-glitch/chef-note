@@ -1,45 +1,228 @@
 /**
- * ChefNote Cloudflare Worker
+ * ChefNote Cloudflare Worker — 보안 강화 버전 (2026-05)
  *
- * Handles server-side audio processing so the user can leave the app
- * while transcription + note generation runs in the cloud.
+ * 변경 요약:
+ *   - /get-asm-key 제거 (AssemblyAI 키가 더 이상 브라우저에 노출되지 않음)
+ *   - /asm-upload, /asm-transcript, /asm-transcript-status/:id 신규 (Worker가 ASM 프록시)
+ *   - 모든 보호 엔드포인트에 Firebase idToken 검증 + email_verified 강제
+ *   - uid 별 일일 노트 생성 한도 (KV 카운터)
+ *   - 오디오 100MB / transcript 60,000자 상한
+ *   - CORS Origin 화이트리스트
+ *   - /retry-llm/:jobId — 저장된 transcript 로 LLM 만 재실행 (STT 재호출 안 함)
  *
- * Flow:
- *   1. Client uploads audio blob → AssemblyAI (directly, using key from /get-asm-key)
- *   2. Client creates transcript with webhook_url pointing here
- *   3. Client calls POST /register-job  {jobId, asmId, uid, idToken, metadata}
- *   4. AssemblyAI finishes → POST /asm-webhook/:jobId
- *   5. Worker calls Claude → stores completed note in KV
- *   6. Client opens app → GET /job-status/:jobId → gets note → saves to Firestore
+ * Environment bindings:
+ *   JOBS              — KV namespace (jobs + quota counters + JWK cache)
+ *   ASSEMBLYAI_KEY    — AssemblyAI API key (secret)
+ *   CLAUDE_KEY        — Anthropic API key (secret)
+ *   GEMINI_KEY        — Google AI Studio key (secret)
  *
- * Environment bindings (set in Cloudflare dashboard or wrangler.toml):
- *   JOBS              — KV namespace for job state
- *   ASSEMBLYAI_KEY    — AssemblyAI API key  (secret)
- *   CLAUDE_KEY        — Anthropic API key   (secret)
+ * Configuration constants (env-overridable):
+ *   FIREBASE_PROJECT_ID    (default 'chefnote-1833f')
+ *   FREE_NOTES_PER_DAY     (default 5)
+ *   OWNER_EMAILS           comma-separated, bypass quota
+ *   ALLOWED_ORIGINS        comma-separated origins (default: GitHub Pages)
  */
 
 const ASM_API = 'https://api.assemblyai.com';
-// Cloudflare AI Gateway — direct Anthropic 호출이 edge WAF에 차단되므로 Gateway 경유
 const ANTHROPIC_API = 'https://gateway.ai.cloudflare.com/v1/d872f29764b5c5b238824decd2dc6d91/chefnote/anthropic';
 
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, anthropic-version, anthropic-beta, x-api-key',
-};
+const DEFAULT_FIREBASE_PROJECT_ID = 'chefnote-1833f';
+const DEFAULT_FREE_NOTES_PER_DAY = 5;
+const DEFAULT_ALLOWED_ORIGINS = [
+  'https://junhongbag64-glitch.github.io',
+  'http://localhost:8080',
+  'http://localhost:3000',
+];
 
-function ok(data, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { ...CORS, 'Content-Type': 'application/json' },
-  });
+const MAX_AUDIO_BYTES = 100 * 1024 * 1024;    // 100MB
+const MAX_TRANSCRIPT_CHARS = 60000;            // LLM 입력 상한 (요금 폭탄 방지)
+
+/* ═══════════════════════════════════════════
+   CORS — Origin 화이트리스트
+═══════════════════════════════════════════ */
+function getAllowedOrigins(env) {
+  if (env.ALLOWED_ORIGINS) {
+    return env.ALLOWED_ORIGINS.split(',').map(s => s.trim()).filter(Boolean);
+  }
+  return DEFAULT_ALLOWED_ORIGINS;
 }
 
-function err(msg, status = 500) {
-  return new Response(JSON.stringify({ error: msg }), {
-    status,
-    headers: { ...CORS, 'Content-Type': 'application/json' },
-  });
+function corsHeaders(request, env) {
+  const origin = request.headers.get('Origin') || '';
+  const allowed = getAllowedOrigins(env);
+  const allowedOrigin = allowed.includes(origin) ? origin : allowed[0];
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, anthropic-version, anthropic-beta, x-id-token',
+    'Access-Control-Max-Age': '86400',
+    'Vary': 'Origin',
+  };
+}
+
+function ok(data, status = 200, request = null, env = null) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (request && env) Object.assign(headers, corsHeaders(request, env));
+  return new Response(JSON.stringify(data), { status, headers });
+}
+
+function err(msg, status = 500, request = null, env = null) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (request && env) Object.assign(headers, corsHeaders(request, env));
+  return new Response(JSON.stringify({ error: msg }), { status, headers });
+}
+
+/* ═══════════════════════════════════════════
+   FIREBASE ID TOKEN 검증 (RS256 / JWK)
+═══════════════════════════════════════════ */
+let _jwkCache = { fetchedAt: 0, keys: {} };
+
+async function getGoogleJWKs() {
+  const now = Date.now();
+  // Google 의 JWK 응답은 보통 ~6시간 캐시 권장 — 1시간 마다 refresh
+  if (now - _jwkCache.fetchedAt < 60 * 60 * 1000 && Object.keys(_jwkCache.keys).length) {
+    return _jwkCache.keys;
+  }
+  const r = await fetch('https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com');
+  if (!r.ok) throw new Error('JWK fetch failed: ' + r.status);
+  const data = await r.json();
+  const keys = {};
+  for (const k of data.keys || []) keys[k.kid] = k;
+  _jwkCache = { fetchedAt: now, keys };
+  return keys;
+}
+
+function base64UrlToBytes(s) {
+  const norm = s.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = norm + '='.repeat((4 - norm.length % 4) % 4);
+  const bin = atob(padded);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
+function base64UrlToJson(s) {
+  const bytes = base64UrlToBytes(s);
+  return JSON.parse(new TextDecoder().decode(bytes));
+}
+
+async function verifyFirebaseIdToken(token, env) {
+  if (!token || typeof token !== 'string') throw new Error('TOKEN_MISSING');
+  const parts = token.split('.');
+  if (parts.length !== 3) throw new Error('TOKEN_MALFORMED');
+
+  const [headerB64, payloadB64, sigB64] = parts;
+  let header, payload;
+  try {
+    header = base64UrlToJson(headerB64);
+    payload = base64UrlToJson(payloadB64);
+  } catch { throw new Error('TOKEN_DECODE_FAIL'); }
+
+  const projectId = env.FIREBASE_PROJECT_ID || DEFAULT_FIREBASE_PROJECT_ID;
+
+  // Claim 검증
+  const now = Math.floor(Date.now() / 1000);
+  if (typeof payload.exp !== 'number' || payload.exp <= now) throw new Error('TOKEN_EXPIRED');
+  if (typeof payload.iat !== 'number' || payload.iat > now + 300) throw new Error('TOKEN_IAT_FUTURE');
+  if (payload.aud !== projectId) throw new Error('TOKEN_AUD_MISMATCH');
+  if (payload.iss !== `https://securetoken.google.com/${projectId}`) throw new Error('TOKEN_ISS_MISMATCH');
+  if (!payload.sub || typeof payload.sub !== 'string') throw new Error('TOKEN_NO_SUBJECT');
+  if (payload.auth_time && payload.auth_time > now + 300) throw new Error('TOKEN_AUTH_TIME_FUTURE');
+
+  // Signature 검증
+  if (header.alg !== 'RS256') throw new Error('TOKEN_WRONG_ALG');
+  const jwks = await getGoogleJWKs();
+  const jwk = jwks[header.kid];
+  if (!jwk) throw new Error('TOKEN_KID_UNKNOWN');
+
+  const cryptoKey = await crypto.subtle.importKey(
+    'jwk', jwk,
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+    false, ['verify']
+  );
+  const sigBytes = base64UrlToBytes(sigB64);
+  const dataBytes = new TextEncoder().encode(`${headerB64}.${payloadB64}`);
+  const valid = await crypto.subtle.verify('RSASSA-PKCS1-v1_5', cryptoKey, sigBytes, dataBytes);
+  if (!valid) throw new Error('TOKEN_SIG_INVALID');
+
+  return payload; // { sub, email, email_verified, ... }
+}
+
+/* idToken 을 헤더 또는 body 에서 추출 → 검증 → user 정보 반환.
+   - email_verified === true 필수
+   - 검증 실패 시 throw */
+async function requireUser(request, env, bodyFallback = null) {
+  let token = request.headers.get('x-id-token') || '';
+  if (!token) {
+    const auth = request.headers.get('Authorization') || '';
+    if (auth.startsWith('Bearer ')) token = auth.slice(7);
+  }
+  if (!token && bodyFallback && typeof bodyFallback === 'object' && bodyFallback.idToken) {
+    token = bodyFallback.idToken;
+  }
+  if (!token) throw new Error('AUTH_REQUIRED');
+
+  const payload = await verifyFirebaseIdToken(token, env);
+  if (!payload.email_verified) throw new Error('EMAIL_NOT_VERIFIED');
+  return {
+    uid: payload.sub,
+    email: payload.email || '',
+    emailVerified: !!payload.email_verified,
+    name: payload.name || '',
+  };
+}
+
+/* ═══════════════════════════════════════════
+   사용자 일일 한도 (KV 카운터)
+═══════════════════════════════════════════ */
+function todayKey() {
+  const d = new Date();
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function isOwner(email, env) {
+  if (!email || !env.OWNER_EMAILS) return false;
+  const list = env.OWNER_EMAILS.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+  return list.includes(email.toLowerCase());
+}
+
+function freeNotesPerDay(env) {
+  const n = parseInt(env.FREE_NOTES_PER_DAY || '');
+  return Number.isFinite(n) && n > 0 ? n : DEFAULT_FREE_NOTES_PER_DAY;
+}
+
+async function getDailyNoteCount(env, uid) {
+  try {
+    const v = await env.JOBS.get(`quota:notes:${uid}:${todayKey()}`);
+    const n = parseInt(v || '0');
+    return Number.isFinite(n) ? n : 0;
+  } catch { return 0; }
+}
+
+async function bumpDailyNoteCount(env, uid) {
+  const key = `quota:notes:${uid}:${todayKey()}`;
+  try {
+    const v = await env.JOBS.get(key);
+    const n = (parseInt(v || '0') || 0) + 1;
+    await env.JOBS.put(key, String(n), { expirationTtl: 60 * 60 * 36 }); // 36h
+    return n;
+  } catch { return 0; }
+}
+
+/* 노트 생성 한도 검사. 한도 초과 시 throw */
+async function checkAndChargeQuota(env, user) {
+  if (isOwner(user.email, env)) return; // Owner bypass
+  const cur = await getDailyNoteCount(env, user.uid);
+  const max = freeNotesPerDay(env);
+  if (cur >= max) {
+    const e = new Error(`QUOTA_EXCEEDED: 일일 노트 생성 한도(${max}개)를 초과했습니다`);
+    e.status = 429;
+    throw e;
+  }
+  await bumpDailyNoteCount(env, user.uid);
 }
 
 /* ═══════════════════════════════════════════
@@ -49,63 +232,190 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
-    if (request.method === 'OPTIONS') return new Response(null, { headers: CORS });
-
-    // ── Existing endpoints (backward compat) ──
-    if (url.pathname === '/get-asm-key' && request.method === 'GET') {
-      return ok({ key: env.ASSEMBLYAI_KEY });
+    if (request.method === 'OPTIONS') {
+      return new Response(null, { headers: corsHeaders(request, env) });
     }
 
-    // ── New: job lifecycle ──
-    if (url.pathname === '/register-job' && request.method === 'POST') {
-      return handleRegisterJob(request, env);
-    }
+    try {
+      // ── AssemblyAI webhook (인증 없음 — jobId 가 capability 토큰) ──
+      if (url.pathname.startsWith('/asm-webhook/') && request.method === 'POST') {
+        const jobId = url.pathname.slice('/asm-webhook/'.length);
+        ctx.waitUntil(handleAsmWebhook(jobId, request, env));
+        return new Response('OK', { headers: corsHeaders(request, env) });
+      }
 
-    if (url.pathname.startsWith('/asm-webhook/') && request.method === 'POST') {
-      const jobId = url.pathname.slice('/asm-webhook/'.length);
-      ctx.waitUntil(handleAsmWebhook(jobId, request, env));
-      return new Response('OK', { headers: CORS });
-    }
+      // ── AssemblyAI 프록시 (인증 + 한도 필요) ──
+      if (url.pathname === '/asm-upload' && request.method === 'POST') {
+        return handleAsmUpload(request, env);
+      }
+      if (url.pathname === '/asm-transcript' && request.method === 'POST') {
+        return handleAsmTranscript(request, env);
+      }
+      if (url.pathname.startsWith('/asm-transcript-status/') && request.method === 'GET') {
+        const id = url.pathname.slice('/asm-transcript-status/'.length);
+        return handleAsmTranscriptStatus(id, request, env);
+      }
 
-    if (url.pathname.startsWith('/job-status/') && request.method === 'GET') {
-      const jobId = url.pathname.slice('/job-status/'.length);
-      return handleJobStatus(jobId, env, ctx);
-    }
+      // ── Job lifecycle ──
+      if (url.pathname === '/register-job' && request.method === 'POST') {
+        return handleRegisterJob(request, env);
+      }
+      if (url.pathname.startsWith('/job-status/') && request.method === 'GET') {
+        const jobId = url.pathname.slice('/job-status/'.length);
+        return handleJobStatus(jobId, request, env, ctx);
+      }
+      if (url.pathname.startsWith('/retry-llm/') && request.method === 'POST') {
+        const jobId = url.pathname.slice('/retry-llm/'.length);
+        return handleRetryLlm(jobId, request, env, ctx);
+      }
 
-    // ── Anthropic proxy (existing) ──
-    if (url.pathname.startsWith('/anthropic/')) {
-      return handleAnthropicProxy(request, env, url);
-    }
+      // ── LLM 프록시 (인증 필요) ──
+      if (url.pathname.startsWith('/anthropic/')) {
+        return handleAnthropicProxy(request, env, url);
+      }
+      if (url.pathname === '/gemini/generate' && request.method === 'POST') {
+        return handleGeminiProxy(request, env);
+      }
 
-    // ── Gemini proxy (free tier primary) ──
-    if (url.pathname === '/gemini/generate' && request.method === 'POST') {
-      return handleGeminiProxy(request, env);
+      return err('Not found', 404, request, env);
+    } catch (e) {
+      const status = e.status || 500;
+      const msg = e.message || 'Internal error';
+      return err(msg, status, request, env);
     }
-
-    return new Response('Not found', { status: 404, headers: CORS });
   },
 };
+
+/* ═══════════════════════════════════════════
+   ASSEMBLYAI 프록시
+   - upload: 클라가 보낸 raw 오디오를 ASM 으로 forward
+   - transcript: webhook 자동 첨부, 키는 서버측만
+   - status: poll (클라이언트 풀 폴백용)
+═══════════════════════════════════════════ */
+async function handleAsmUpload(request, env) {
+  let user;
+  try { user = await requireUser(request, env); }
+  catch (e) { return err(e.message, 401, request, env); }
+
+  // 한도 사전 체크 (실제 차감은 transcript 등록 시점)
+  if (!isOwner(user.email, env)) {
+    const cur = await getDailyNoteCount(env, user.uid);
+    if (cur >= freeNotesPerDay(env)) {
+      return err(`일일 노트 생성 한도(${freeNotesPerDay(env)}개) 초과 — 내일 다시 시도해주세요`, 429, request, env);
+    }
+  }
+
+  // 크기 상한
+  const lenHdr = parseInt(request.headers.get('Content-Length') || '0');
+  if (lenHdr && lenHdr > MAX_AUDIO_BYTES) {
+    return err(`오디오 파일이 너무 큽니다 (최대 ${Math.round(MAX_AUDIO_BYTES/1024/1024)}MB)`, 413, request, env);
+  }
+
+  // ASM 으로 forward — content-type 은 항상 octet-stream 으로 정규화
+  const r = await fetch(`${ASM_API}/v2/upload`, {
+    method: 'POST',
+    headers: {
+      'authorization': env.ASSEMBLYAI_KEY,
+      'content-type': 'application/octet-stream',
+    },
+    body: request.body,
+    // @ts-ignore — Cloudflare Workers 가 streaming POST 필요로 함
+    duplex: 'half',
+  });
+  if (!r.ok) {
+    const t = await r.text().catch(() => '');
+    return err(`AssemblyAI 업로드 실패: ${r.status} ${t.slice(0, 150)}`, r.status, request, env);
+  }
+  const data = await r.json();
+  return ok({ upload_url: data.upload_url }, 200, request, env);
+}
+
+async function handleAsmTranscript(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return err('Invalid JSON', 400, request, env); }
+
+  let user;
+  try { user = await requireUser(request, env, body); }
+  catch (e) { return err(e.message, 401, request, env); }
+
+  const { upload_url, webhook_url } = body || {};
+  if (!upload_url) return err('upload_url required', 400, request, env);
+
+  const payload = {
+    audio_url: upload_url,
+    language_code: 'ko',
+    speech_models: ['universal-2'],
+  };
+  if (webhook_url) payload.webhook_url = webhook_url;
+
+  const r = await fetch(`${ASM_API}/v2/transcript`, {
+    method: 'POST',
+    headers: {
+      'authorization': env.ASSEMBLYAI_KEY,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!r.ok) {
+    const t = await r.text().catch(() => '');
+    return err(`AssemblyAI transcript 등록 실패: ${r.status} ${t.slice(0, 150)}`, r.status, request, env);
+  }
+  const data = await r.json();
+  return ok({ id: data.id }, 200, request, env);
+}
+
+async function handleAsmTranscriptStatus(id, request, env) {
+  if (!id) return err('id required', 400, request, env);
+  let user;
+  try { user = await requireUser(request, env); }
+  catch (e) { return err(e.message, 401, request, env); }
+
+  const r = await fetch(`${ASM_API}/v2/transcript/${id}`, {
+    headers: { 'authorization': env.ASSEMBLYAI_KEY },
+  });
+  if (!r.ok) {
+    const t = await r.text().catch(() => '');
+    return err(`ASM 상태 확인 실패: ${r.status} ${t.slice(0, 150)}`, r.status, request, env);
+  }
+  const data = await r.json();
+  // 클라이언트는 status/text/error 만 필요
+  return ok({
+    id: data.id,
+    status: data.status,
+    text: data.text || '',
+    error: data.error || null,
+    audio_duration: data.audio_duration || null,
+  }, 200, request, env);
+}
 
 /* ═══════════════════════════════════════════
    JOB REGISTRATION
 ═══════════════════════════════════════════ */
 async function handleRegisterJob(request, env) {
   let body;
-  try { body = await request.json(); } catch { return err('Invalid JSON', 400); }
+  try { body = await request.json(); } catch { return err('Invalid JSON', 400, request, env); }
 
-  const { jobId, asmId, uid, idToken, metadata } = body;
-  if (!jobId || !asmId || !uid) return err('jobId, asmId, uid required', 400);
+  let user;
+  try { user = await requireUser(request, env, body); }
+  catch (e) { return err(e.message, 401, request, env); }
+
+  const { jobId, asmId, metadata } = body;
+  if (!jobId || !asmId) return err('jobId, asmId required', 400, request, env);
+
+  // 한도 차감 — 실제 노트가 만들어질 시점에 한 번
+  try { await checkAndChargeQuota(env, user); }
+  catch (e) { return err(e.message, e.status || 429, request, env); }
 
   await putJob(env, jobId, {
-    uid,
-    idToken: idToken || null,
+    uid: user.uid,
+    email: user.email,
     asmId,
     metadata: metadata || {},
     status: 'transcribing',
     createdAt: Date.now(),
   });
 
-  return ok({ ok: true, jobId });
+  return ok({ ok: true, jobId }, 200, request, env);
 }
 
 /* ═══════════════════════════════════════════
@@ -124,10 +434,8 @@ async function handleAsmWebhook(jobId, request, env) {
   }
   if (body.status !== 'completed') return;
 
-  // AssemblyAI includes full transcript in webhook body
   let text = body.text || '';
 
-  // Safety: re-fetch if text is missing
   if (!text && (body.transcript_id || body.id)) {
     const asmId = body.transcript_id || body.id;
     try {
@@ -144,7 +452,12 @@ async function handleAsmWebhook(jobId, request, env) {
     return;
   }
 
-  // Mark as generating so client can show correct status
+  // transcript 글자수 상한 (LLM 비용 폭탄 방지)
+  if (text.length > MAX_TRANSCRIPT_CHARS) {
+    console.warn(`[Webhook] transcript truncated: ${text.length} → ${MAX_TRANSCRIPT_CHARS}`);
+    text = text.slice(0, MAX_TRANSCRIPT_CHARS);
+  }
+
   await putJob(env, jobId, { ...job, status: 'generating', transcript: text });
 
   try {
@@ -153,25 +466,34 @@ async function handleAsmWebhook(jobId, request, env) {
       ...job,
       status: 'done',
       note,
+      transcript: text, // 재시도용으로 보존
       completedAt: Date.now(),
-      // keep transcript for debugging (stripped client-side)
     });
   } catch (e) {
-    await putJob(env, jobId, { ...job, status: 'error', error: `노트 생성 실패: ${e.message}` });
+    // 실패해도 transcript 는 보존 → /retry-llm 으로 재시도 가능
+    await putJob(env, jobId, { ...job, status: 'error', transcript: text, error: `노트 생성 실패: ${e.message}` });
   }
 }
 
 /* ═══════════════════════════════════════════
-   JOB STATUS ENDPOINT — with webhook-failure fallback
-   If job is stuck in 'transcribing', poll AssemblyAI directly + start Claude in background.
-   Always responds quickly; heavy work happens in ctx.waitUntil.
+   JOB STATUS — webhook 실패 폴백 포함
 ═══════════════════════════════════════════ */
-async function handleJobStatus(jobId, env, ctx) {
-  if (!jobId) return err('jobId required', 400);
-  let job = await getJob(env, jobId);
-  if (!job) return ok({ status: 'not_found' }, 404);
+async function handleJobStatus(jobId, request, env, ctx) {
+  if (!jobId) return err('jobId required', 400, request, env);
 
-  // ── Webhook fallback: 'transcribing' 상태가 5초 이상 지속되면 AssemblyAI 직접 체크 ──
+  let user;
+  try { user = await requireUser(request, env); }
+  catch (e) { return err(e.message, 401, request, env); }
+
+  let job = await getJob(env, jobId);
+  if (!job) return ok({ status: 'not_found' }, 404, request, env);
+
+  // 본인 job 만 조회 가능
+  if (job.uid !== user.uid && !isOwner(user.email, env)) {
+    return err('Forbidden', 403, request, env);
+  }
+
+  // 'transcribing' 5초 이상 → ASM 직접 체크
   if (job.status === 'transcribing' && job.asmId) {
     const ageSec = (Date.now() - (job.createdAt || 0)) / 1000;
     if (ageSec > 5) {
@@ -181,18 +503,20 @@ async function handleJobStatus(jobId, env, ctx) {
         });
         const asmData = await r.json();
         if (asmData.status === 'completed' && asmData.text) {
-          // ASM 완료 → 'generating'으로 표시하고 Claude를 백그라운드로
+          let text = asmData.text;
+          if (text.length > MAX_TRANSCRIPT_CHARS) text = text.slice(0, MAX_TRANSCRIPT_CHARS);
           job.status = 'generating';
+          job.transcript = text;
           await putJob(env, jobId, job);
           if (ctx && ctx.waitUntil) {
             ctx.waitUntil((async () => {
               const fresh = await getJob(env, jobId);
-              if (!fresh || fresh.status === 'done') return; // already done
+              if (!fresh || fresh.status === 'done') return;
               try {
-                const note = await generateNote(asmData.text, fresh.metadata || {}, env);
-                await putJob(env, jobId, { ...fresh, status: 'done', note, completedAt: Date.now() });
+                const note = await generateNote(text, fresh.metadata || {}, env);
+                await putJob(env, jobId, { ...fresh, status: 'done', note, transcript: text, completedAt: Date.now() });
               } catch (e) {
-                await putJob(env, jobId, { ...fresh, status: 'error', error: `노트 생성 실패: ${e.message}` });
+                await putJob(env, jobId, { ...fresh, status: 'error', transcript: text, error: `노트 생성 실패: ${e.message}` });
               }
             })());
           }
@@ -200,29 +524,57 @@ async function handleJobStatus(jobId, env, ctx) {
           job = { ...job, status: 'error', error: asmData.error || '음성 인식 실패' };
           await putJob(env, jobId, job);
         }
-      } catch (e) { /* swallow — keep status as is */ }
+      } catch (e) { /* swallow */ }
     }
   }
 
-  // Strip sensitive data before returning
-  const { idToken: _tok, transcript: _tr, ...safe } = job;
-  return ok(safe);
+  // 민감 정보 strip — transcript / uid 등은 클라에 안 줌
+  const { transcript: _tr, uid: _u, email: _e, asmId: _a, ...safe } = job;
+  return ok(safe, 200, request, env);
 }
 
 /* ═══════════════════════════════════════════
-   NOTE GENERATION (Gemini 1차 + Claude Haiku 백업)
-
-   두 모델 모두 schema 강제 사용으로 깨진 JSON 자체가 발생할 수 없게 함.
-   - Gemini : responseSchema (OpenAPI 3.0)
-   - Claude : tool_use + tool_choice
-   파싱 실패 시 트랜스크립트 기반 smartExtract 로 폴백 — 빈 노트 절대 안 만듦.
+   /retry-llm/:jobId — 저장된 transcript 로 LLM 만 재실행
 ═══════════════════════════════════════════ */
+async function handleRetryLlm(jobId, request, env, ctx) {
+  if (!jobId) return err('jobId required', 400, request, env);
 
-// Gemini 용 OpenAPI 3.0 schema (responseSchema)
+  let user;
+  try { user = await requireUser(request, env); }
+  catch (e) { return err(e.message, 401, request, env); }
+
+  const job = await getJob(env, jobId);
+  if (!job) return err('not_found', 404, request, env);
+  if (job.uid !== user.uid && !isOwner(user.email, env)) {
+    return err('Forbidden', 403, request, env);
+  }
+  if (!job.transcript || job.transcript.trim().length < 5) {
+    return err('transcript 없음 — STT 부터 다시 해야 합니다', 409, request, env);
+  }
+
+  await putJob(env, jobId, { ...job, status: 'generating', error: null });
+
+  ctx.waitUntil((async () => {
+    try {
+      const note = await generateNote(job.transcript, job.metadata || {}, env);
+      const fresh = await getJob(env, jobId);
+      await putJob(env, jobId, { ...(fresh || job), status: 'done', note, completedAt: Date.now(), error: null });
+    } catch (e) {
+      const fresh = await getJob(env, jobId);
+      await putJob(env, jobId, { ...(fresh || job), status: 'error', error: `노트 재생성 실패: ${e.message}` });
+    }
+  })());
+
+  return ok({ ok: true, jobId }, 200, request, env);
+}
+
+/* ═══════════════════════════════════════════
+   NOTE GENERATION (Gemini → Claude 백업 → smartExtract)
+═══════════════════════════════════════════ */
 const NOTE_SCHEMA_GEMINI = {
   type: 'object',
   properties: {
-    title: { type: 'string', description: '수업 제목' },
+    title: { type: 'string' },
     recipes: {
       type: 'array',
       items: {
@@ -242,7 +594,6 @@ const NOTE_SCHEMA_GEMINI = {
   required: ['title', 'recipes'],
 };
 
-// Claude tool_use 스키마
 const NOTE_TOOL = {
   name: 'save_class_note',
   description: '조리학과 수업 녹음에서 추출한 노트를 저장한다. 한 수업에 여러 요리가 있으면 recipes 에 분리.',
@@ -272,6 +623,11 @@ const NOTE_TOOL = {
 };
 
 async function generateNote(transcript, metadata, env) {
+  // 입력 상한 한번 더 (방어적)
+  if (transcript.length > MAX_TRANSCRIPT_CHARS) {
+    transcript = transcript.slice(0, MAX_TRANSCRIPT_CHARS);
+  }
+
   const { duration = 0, memos = [] } = metadata;
 
   const memoSection = memos.length
@@ -297,7 +653,7 @@ ${transcript}
   let parsed = null;
   let usedModel = '';
 
-  // 1) Gemini 2.5 Flash (responseSchema 강제) — 무료, 한국어 우수
+  // 1) Gemini 2.5 Flash
   if (env.GEMINI_KEY) {
     try {
       const gres = await fetch(
@@ -325,7 +681,6 @@ ${transcript}
         if (raw) {
           parsed = parseClaudeJSON(raw);
           if (parsed) usedModel = 'gemini-2.5-flash';
-          else console.warn('[Gemini] responseSchema 했는데도 파싱 실패:', raw.slice(0, 200));
         }
       } else {
         console.warn('[Gemini]', gres.status, (await gres.text()).slice(0, 200));
@@ -335,7 +690,7 @@ ${transcript}
     }
   }
 
-  // 2) Claude Haiku (tool_use 강제) — 백업
+  // 2) Claude Haiku
   if (!parsed && env.CLAUDE_KEY) {
     try {
       const res = await fetch(`${ANTHROPIC_API}/v1/messages`, {
@@ -361,7 +716,6 @@ ${transcript}
           parsed = toolUse.input;
           usedModel = 'claude-haiku-4-5';
         } else {
-          // 모델이 도구 미사용 시 텍스트 폴백
           const raw = data.content?.find(b => b.type === 'text')?.text || '';
           parsed = parseClaudeJSON(raw);
           if (parsed) usedModel = 'claude-haiku-4-5(text)';
@@ -374,7 +728,7 @@ ${transcript}
     }
   }
 
-  // 3) 둘 다 실패 → 트랜스크립트에서 직접 추출 (빈 노트 절대 안 만듦)
+  // 3) 둘 다 실패 → smartExtract
   if (!parsed) {
     console.warn('[NoteGen] LLM 둘 다 실패 — smartExtract 사용');
     parsed = smartExtract(transcript);
@@ -382,7 +736,8 @@ ${transcript}
   }
   console.log('[NoteGen] used:', usedModel);
 
-  // Normalize recipes array
+  parsed = coerceGeneratedNote(parsed, transcript);
+
   if (!parsed.recipes || !Array.isArray(parsed.recipes) || !parsed.recipes.length) {
     parsed.recipes = [{
       id: 'r0',
@@ -416,21 +771,54 @@ ${transcript}
   };
 }
 
-/* Robust JSON extraction. Handles code fences, prose prefix, trailing commas,
-   and literal newlines/tabs/CRs inside string values. Returns parsed object or null. */
+function coerceGeneratedNote(parsed, transcript) {
+  const fallback = smartExtract(transcript);
+  const out = (parsed && typeof parsed === 'object') ? { ...parsed } : {};
+
+  if (!Array.isArray(out.recipes) || !out.recipes.length) {
+    return fallback;
+  }
+
+  let hasMeaningfulContent = false;
+  out.recipes = out.recipes.map((r, i) => {
+    const base = (r && typeof r === 'object') ? { ...r } : {};
+    const fb = (fallback.recipes && fallback.recipes[i]) || fallback.recipes[0] || {};
+
+    base.title = String(base.title || '').trim() || String(fb.title || out.title || '레시피');
+    base.type = (base.type === 'recipe' || base.type === 'theory') ? base.type : (fb.type || 'recipe');
+    base.classType = (base.classType === '실습' || base.classType === '이론') ? base.classType : (fb.classType || (base.type === 'theory' ? '이론' : '실습'));
+    base.content = String(base.content || '').trim();
+    if (!base.content) base.content = String(fb.content || '').trim();
+
+    base.ingredients = Array.isArray(base.ingredients) ? base.ingredients.filter(Boolean) : (Array.isArray(fb.ingredients) ? fb.ingredients : []);
+    base.tips = Array.isArray(base.tips) ? base.tips.filter(Boolean) : (Array.isArray(fb.tips) ? fb.tips : []);
+
+    if (base.content && base.content.length >= 8) hasMeaningfulContent = true;
+    return base;
+  });
+
+  if (!hasMeaningfulContent) return fallback;
+
+  out.title = String(out.title || '').trim() || String(fallback.title || '수업 노트');
+  return out;
+}
+
 function parseClaudeJSON(raw) {
   if (!raw) return null;
+
   const text = raw.replace(/```(?:json)?\s*/gi, '').replace(/```/g, '').trim();
-  const first = text.indexOf('{');
-  const last = text.lastIndexOf('}');
-  if (first < 0 || last <= first) return null;
-  const candidate = text.slice(first, last + 1);
+  const candidate = extractLikelyJson(text);
+  if (!candidate) return null;
+
   const attempts = [
     candidate,
     candidate.replace(/,\s*([}\]])/g, '$1'),
     repairJsonStringNewlines(candidate),
     repairJsonStringNewlines(candidate.replace(/,\s*([}\]])/g, '$1')),
+    repairJsonLenient(candidate),
+    repairJsonLenient(repairJsonStringNewlines(candidate)),
   ];
+
   for (const a of attempts) {
     try { return JSON.parse(a); } catch { /* next */ }
   }
@@ -455,7 +843,235 @@ function repairJsonStringNewlines(s) {
   return out;
 }
 
-/* 트랜스크립트에서 직접 노트 추출 (LLM 둘 다 실패 시 최후 폴백) */
+function extractLikelyJson(text) {
+  if (!text) return null;
+  const starts = ['{', '['];
+  let best = null;
+  for (const ch of starts) {
+    const idx = text.indexOf(ch);
+    if (idx < 0) continue;
+    const sub = text.slice(idx);
+    const end = findBalancedJsonEnd(sub);
+    if (end > 0) {
+      const cand = sub.slice(0, end);
+      if (!best || cand.length > best.length) best = cand;
+    }
+  }
+  return best;
+}
+
+function findBalancedJsonEnd(s) {
+  let inStr = false;
+  let esc = false;
+  let quote = '"';
+  const st = [];
+
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (inStr) {
+      if (esc) { esc = false; continue; }
+      if (c === '\\') { esc = true; continue; }
+      if (c === quote) { inStr = false; continue; }
+      continue;
+    }
+    if (c === '"' || c === '\'') { inStr = true; quote = c; continue; }
+    if (c === '{' || c === '[') st.push(c);
+    else if (c === '}' || c === ']') {
+      const top = st[st.length - 1];
+      if (!top) return -1;
+      if ((top === '{' && c === '}') || (top === '[' && c === ']')) st.pop();
+      else return -1;
+      if (!st.length) return i + 1;
+    }
+  }
+  return -1;
+}
+
+function repairJsonLenient(input) {
+  let s = String(input || '');
+  s = s.replace(/^﻿/, '');
+  s = s
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, '\'')
+    .replace(/ /g, ' ');
+
+  let out = '';
+  let i = 0;
+  const stack = [];
+
+  function ctx() { return stack[stack.length - 1] || null; }
+  function isWs(ch) { return ch === ' ' || ch === '\n' || ch === '\r' || ch === '\t'; }
+  function isNumStart(ch) { return ch === '-' || (ch >= '0' && ch <= '9'); }
+  function isIdentStart(ch) {
+    const code = ch ? ch.charCodeAt(0) : 0;
+    return (code >= 65 && code <= 90) || (code >= 97 && code <= 122) || ch === '_' || ch === '$';
+  }
+  function isValueStart(ch) {
+    return ch === '{' || ch === '[' || ch === '"' || ch === '\'' || isNumStart(ch) || isIdentStart(ch);
+  }
+  function markValueDone() {
+    const c = ctx();
+    if (!c) return;
+    if (c.type === 'array') c.state = 'comma_or_end';
+    else if (c.type === 'object' && c.state === 'value') c.state = 'comma_or_end';
+  }
+  function ensureCommaIfNeeded(ch) {
+    const c = ctx();
+    if (!c) return;
+    if (c.type === 'array' && c.state === 'comma_or_end' && isValueStart(ch)) {
+      out += ',';
+      c.state = 'value_or_end';
+    } else if (c.type === 'object' && c.state === 'comma_or_end' && (ch === '"' || ch === '\'' || isIdentStart(ch))) {
+      out += ',';
+      c.state = 'key_or_end';
+    }
+  }
+  function parseString() {
+    const q = s[i];
+    i++;
+    let str = '';
+    while (i < s.length) {
+      const ch = s[i++];
+      if (ch === q) break;
+      if (ch === '\\') {
+        if (i >= s.length) { str += '\\\\'; break; }
+        const nx = s[i++];
+        if ('"\\/bfnrtu'.includes(nx)) {
+          if (nx === 'u') {
+            const hex = s.slice(i, i + 4);
+            if (/^[0-9a-fA-F]{4}$/.test(hex)) {
+              str += '\\u' + hex;
+              i += 4;
+            } else {
+              str += '\\\\u';
+            }
+          } else {
+            str += '\\' + nx;
+          }
+        } else {
+          str += '\\\\' + nx;
+        }
+        continue;
+      }
+      if (ch === '\n') { str += '\\n'; continue; }
+      if (ch === '\r') { str += '\\r'; continue; }
+      if (ch === '\t') { str += '\\t'; continue; }
+      if (ch < ' ') { str += '\\u' + ch.charCodeAt(0).toString(16).padStart(4, '0'); continue; }
+      if (ch === '"') { str += '\\"'; continue; }
+      str += ch;
+    }
+    out += '"' + str + '"';
+  }
+  function parseNumberOrLiteral() {
+    const stIdx = i;
+    while (i < s.length) {
+      const ch = s[i];
+      if (isWs(ch) || ch === ',' || ch === ':' || ch === '}' || ch === ']') break;
+      i++;
+    }
+    let tok = s.slice(stIdx, i).trim();
+    if (!tok) return;
+    if (tok === 'True') tok = 'true';
+    else if (tok === 'False') tok = 'false';
+    else if (tok === 'None') tok = 'null';
+    out += tok;
+  }
+  function parseUnquotedKey() {
+    const stIdx = i;
+    while (i < s.length) {
+      const ch = s[i];
+      if (isWs(ch) || ch === ':' || ch === ',' || ch === '}') break;
+      i++;
+    }
+    const key = s.slice(stIdx, i).trim();
+    out += '"' + key.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
+  }
+
+  while (i < s.length) {
+    const ch = s[i];
+    if (isWs(ch)) { i++; continue; }
+
+    if (ch === '/' && s[i + 1] === '/') {
+      i += 2;
+      while (i < s.length && s[i] !== '\n') i++;
+      continue;
+    }
+    if (ch === '/' && s[i + 1] === '*') {
+      i += 2;
+      while (i + 1 < s.length && !(s[i] === '*' && s[i + 1] === '/')) i++;
+      i += 2;
+      continue;
+    }
+
+    ensureCommaIfNeeded(ch);
+    const c = ctx();
+
+    if (ch === '{') {
+      if (c && c.type === 'object' && c.state === 'value') markValueDone();
+      out += '{';
+      stack.push({ type: 'object', state: 'key_or_end' });
+      i++;
+      continue;
+    }
+    if (ch === '[') {
+      if (c && c.type === 'object' && c.state === 'value') markValueDone();
+      out += '[';
+      stack.push({ type: 'array', state: 'value_or_end' });
+      i++;
+      continue;
+    }
+    if (ch === '}' || ch === ']') {
+      const cur = ctx();
+      if (cur && cur.type === 'object' && cur.state === 'colon') out += 'null';
+      if (cur && cur.type === 'object' && cur.state === 'value') out += 'null';
+      out += ch;
+      stack.pop();
+      i++;
+      markValueDone();
+      continue;
+    }
+    if (ch === ',') {
+      if (c) {
+        if (c.type === 'array') c.state = 'value_or_end';
+        else if (c.type === 'object') c.state = 'key_or_end';
+      }
+      out += ',';
+      i++;
+      continue;
+    }
+    if (ch === ':') {
+      if (c && c.type === 'object') c.state = 'value';
+      out += ':';
+      i++;
+      continue;
+    }
+
+    if (ch === '"' || ch === '\'') {
+      parseString();
+      const cur = ctx();
+      if (cur && cur.type === 'object') {
+        if (cur.state === 'key_or_end') cur.state = 'colon';
+        else if (cur.state === 'value') cur.state = 'comma_or_end';
+      } else if (cur && cur.type === 'array') {
+        cur.state = 'comma_or_end';
+      }
+      continue;
+    }
+
+    if (c && c.type === 'object' && c.state === 'key_or_end' && isIdentStart(ch)) {
+      parseUnquotedKey();
+      c.state = 'colon';
+      continue;
+    }
+
+    parseNumberOrLiteral();
+    markValueDone();
+  }
+
+  out = out.replace(/,\s*([}\]])/g, '$1');
+  return out;
+}
+
 function smartExtract(transcript) {
   const d = new Date().toLocaleDateString('ko-KR');
   const recipeKw = ['재료', '계량', '손질', '조리', '볶', '끓', '굽', '튀기', '레시피', '소금', '설탕', '기름', '양념', '밀가루', '달걀', '버터', '육수'];
@@ -491,14 +1107,16 @@ function smartExtract(transcript) {
 }
 
 /* ═══════════════════════════════════════════
-   ANTHROPIC PROXY — pass only minimal headers (avoid 403 from edge WAF)
+   ANTHROPIC PROXY — 인증 필수
 ═══════════════════════════════════════════ */
 async function handleAnthropicProxy(request, env, url) {
+  let user;
+  try { user = await requireUser(request, env); }
+  catch (e) { return err(e.message, 401, request, env); }
+
   const targetPath = url.pathname.replace('/anthropic', '');
   const targetUrl = `${ANTHROPIC_API}${targetPath}${url.search}`;
 
-  // 클라이언트 헤더 전부를 forward하면 Anthropic edge WAF가 차단함.
-  // 정확히 필요한 헤더만 새로 만들어서 보내기.
   const cleanHeaders = {
     'x-api-key': env.CLAUDE_KEY,
     'anthropic-version': request.headers.get('anthropic-version') || '2023-06-01',
@@ -521,39 +1139,43 @@ async function handleAnthropicProxy(request, env, url) {
   const respText = await response.text();
   return new Response(respText, {
     status: response.status,
-    headers: { ...CORS, 'Content-Type': 'application/json' },
+    headers: { ...corsHeaders(request, env), 'Content-Type': 'application/json' },
   });
 }
 
 /* ═══════════════════════════════════════════
-   GEMINI PROXY — Google Generative Language API
-   무료 티어: gemini-2.5-flash 250 req/day, 한국어 우수, 구조화 JSON 안정
+   GEMINI PROXY — 인증 필수
 ═══════════════════════════════════════════ */
 async function handleGeminiProxy(request, env) {
   if (!env.GEMINI_KEY) {
-    return err('GEMINI_KEY not configured', 500);
+    return err('GEMINI_KEY not configured', 500, request, env);
   }
   let body;
-  try {
-    body = await request.json();
-  } catch {
-    return err('Invalid JSON body', 400);
-  }
-  // body: { prompt: string, model?: string, temperature?: number, maxOutputTokens?: number }
+  try { body = await request.json(); } catch { return err('Invalid JSON body', 400, request, env); }
+
+  let user;
+  try { user = await requireUser(request, env, body); }
+  catch (e) { return err(e.message, 401, request, env); }
+
   const model = body.model || 'gemini-2.5-flash';
-  // CF AI Gateway 경유 — Worker 리전이 Gemini 미지원 지역일 때 우회
   const targetUrl = `https://gateway.ai.cloudflare.com/v1/d872f29764b5c5b238824decd2dc6d91/chefnote/google-ai-studio/v1beta/models/${model}:generateContent`;
   const generationConfig = {
     responseMimeType: 'application/json',
     temperature: typeof body.temperature === 'number' ? body.temperature : 0.2,
     maxOutputTokens: body.maxOutputTokens || 2500,
   };
-  // 클라이언트가 responseSchema 를 명시한 경우 forward (Gemini 가 schema 강제하여 깨진 JSON 안 나옴)
   if (body.responseSchema && typeof body.responseSchema === 'object') {
     generationConfig.responseSchema = body.responseSchema;
   }
+
+  // 입력 prompt 길이 상한
+  const promptText = (body.prompt || '').toString();
+  if (promptText.length > MAX_TRANSCRIPT_CHARS + 5000) {
+    return err('prompt 가 너무 깁니다', 413, request, env);
+  }
+
   const payload = {
-    contents: [{ parts: [{ text: body.prompt }] }],
+    contents: [{ parts: [{ text: promptText }] }],
     generationConfig,
   };
   try {
@@ -568,10 +1190,10 @@ async function handleGeminiProxy(request, env) {
     const respText = await response.text();
     return new Response(respText, {
       status: response.status,
-      headers: { ...CORS, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders(request, env), 'Content-Type': 'application/json' },
     });
   } catch (e) {
-    return err('Gemini proxy error: ' + e.message, 502);
+    return err('Gemini proxy error: ' + e.message, 502, request, env);
   }
 }
 

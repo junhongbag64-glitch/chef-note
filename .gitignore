@@ -1,0 +1,42 @@
+# ─── Secrets ───
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ─── Node / build ───
+node_modules/
+dist/
+build/
+.cache/
+.parcel-cache/
+
+# ─── Firebase ───
+# firebase.json / firestore.rules / .firebaserc 는 커밋해야 함 (버전 관리 대상)
+.firebase/
+firebase-debug.log
+firestore-debug.log
+
+# ─── Wrangler / Cloudflare ───
+.wrangler/
+wrangler.toml.local
+.dev.vars
+
+# ─── OS / IDE ───
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~
+
+# ─── Logs ───
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ─── Misc ───
+.tmp/
+tmp/

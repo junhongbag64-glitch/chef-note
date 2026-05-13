@@ -1,4 +1,5 @@
-const CACHE_NAME = 'chefnote-v23';
+const CACHE_NAME = 'chefnote-v25';
+const SHARE_CACHE = 'chefnote-share-inbox';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -26,9 +27,47 @@ self.addEventListener('activate', event => {
   self.clients.claim();
 });
 
+// ─── Web Share Target: receive audio shared from phone voice recorder apps ───
+// 갤럭시 녹음기 / iOS 음성메모 → "공유" → ChefNote(설치된 PWA) 선택 시 진입.
+// POST 요청을 가로채서 파일을 캐시에 임시 저장 후, 앱 메인으로 redirect.
+// 메인 페이지가 ?shared-pending=1 마커를 보고 캐시에서 꺼내 처리한다.
+async function handleShareTarget(request) {
+  try {
+    const formData = await request.formData();
+    const files = formData.getAll('audio').filter(f => f && f.size > 0);
+    if (files.length > 0) {
+      const cache = await caches.open(SHARE_CACHE);
+      // Store each file (보통 1개) under indexed keys
+      for (let i = 0; i < files.length; i++) {
+        const f = files[i];
+        const headers = new Headers();
+        headers.set('content-type', f.type || 'application/octet-stream');
+        headers.set('x-share-filename', encodeURIComponent(f.name || `recording-${Date.now()}`));
+        await cache.put(`/__share_audio_${i}`, new Response(f, { headers }));
+      }
+      await cache.put('/__share_meta', new Response(JSON.stringify({
+        count: files.length,
+        sharedAt: Date.now(),
+        title: formData.get('title') || '',
+        text: formData.get('text') || '',
+      }), { headers: { 'content-type': 'application/json' } }));
+    }
+  } catch (e) {
+    // Swallow — main page will show "공유 받기 실패" if no cache present
+  }
+  // 303 → 클라이언트가 GET으로 메인 페이지를 다시 요청하도록
+  return Response.redirect('/chef-note/?shared-pending=1', 303);
+}
+
 // Fetch: cache-first for static, network-first for API
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
+
+  // Web Share Target POST 인터셉트 (반드시 non-GET 거름망보다 먼저)
+  if (event.request.method === 'POST' && url.searchParams.get('share-target') === '1') {
+    event.respondWith(handleShareTarget(event.request));
+    return;
+  }
 
   // Skip non-GET and API calls
   if (event.request.method !== 'GET') return;
