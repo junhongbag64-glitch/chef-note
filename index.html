@@ -4664,13 +4664,25 @@ function encodeWAV(samples, sampleRate) {
 }
 
 /* ═══════════════════════════════════════════
-   ASSEMBLYAI — 전부 Worker 프록시 경유.
-   AssemblyAI 키가 더 이상 브라우저에 노출되지 않음.
+   ASSEMBLYAI — Worker 프록시 우선.
+   Worker 가 신버전이 아닐 때 (배포 격차) 한정으로 옛 /get-asm-key 폴백 사용.
+   Worker 가 신버전이면 폴백 경로는 자동으로 우회됨.
 ═══════════════════════════════════════════ */
 async function asmGuardSize(blob) {
   if (blob.size > MAX_AUDIO_BYTES) {
     throw new Error(`ASM_TOOBIG: 오디오 파일이 너무 큽니다 (${Math.round(blob.size/1024/1024)}MB > ${Math.round(MAX_AUDIO_BYTES/1024/1024)}MB 한도)`);
   }
+}
+
+/* 레거시 폴백 — Worker 가 신엔드포인트 없을 때만 사용 */
+let _asmKeyCache = null;
+async function asmGetKeyLegacy() {
+  if (_asmKeyCache) return _asmKeyCache;
+  const r = await fetch(`${PROXY}/get-asm-key`);
+  if (!r.ok) throw new Error('API 키를 가져오지 못했습니다 (Worker 미배포)');
+  const { key } = await r.json();
+  _asmKeyCache = key;
+  return key;
 }
 
 async function asmUploadBlob(blob /*, _ignored */) {
@@ -4681,6 +4693,23 @@ async function asmUploadBlob(blob /*, _ignored */) {
     headers: { 'content-type': 'application/octet-stream' },
     body: blob,
   });
+  if (r.status === 404) {
+    // 폴백 — 옛 Worker (asm-upload 미배포)
+    console.warn('[ASM] /asm-upload 404 — legacy 폴백 (Worker 배포 대기 중)');
+    const key = await asmGetKeyLegacy();
+    const r2 = await fetch('https://api.assemblyai.com/v2/upload', {
+      method: 'POST',
+      headers: { 'authorization': key, 'content-type': 'application/octet-stream' },
+      body: blob,
+    });
+    if (!r2.ok) {
+      const e = await r2.json().catch(() => ({}));
+      throw new Error(`ASM_UPLOAD_${r2.status}: ${e.error || '오디오 업로드 실패'}`);
+    }
+    const { upload_url } = await r2.json();
+    if (!upload_url) throw new Error('ASM_UPLOAD_NOURL');
+    return upload_url;
+  }
   if (!r.ok) {
     const e = await r.json().catch(() => ({}));
     throw new Error(`ASM_UPLOAD_${r.status}: ${e.error || '오디오 업로드 실패'}`);
@@ -4696,6 +4725,25 @@ async function asmCreateTranscript(upload_url, _ignored, webhookUrl = null) {
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ upload_url, webhook_url: webhookUrl || undefined }),
   });
+  if (r.status === 404) {
+    // 폴백
+    console.warn('[ASM] /asm-transcript 404 — legacy 폴백');
+    const key = await asmGetKeyLegacy();
+    const body = { audio_url: upload_url, language_code: 'ko', speech_models: ['universal-2'] };
+    if (webhookUrl) body.webhook_url = webhookUrl;
+    const r2 = await fetch('https://api.assemblyai.com/v2/transcript', {
+      method: 'POST',
+      headers: { 'authorization': key, 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!r2.ok) {
+      const e = await r2.json().catch(() => ({}));
+      throw new Error(`ASM_TRANSCRIPT_${r2.status}: ${e.error || r2.status}`);
+    }
+    const data = await r2.json();
+    if (!data.id) throw new Error('ASM_TRANSCRIPT_NOID');
+    return data.id;
+  }
   if (!r.ok) {
     const e = await r.json().catch(() => ({}));
     throw new Error(`ASM_TRANSCRIPT_${r.status}: ${e.error || r.status}`);
@@ -4707,22 +4755,45 @@ async function asmCreateTranscript(upload_url, _ignored, webhookUrl = null) {
 
 async function asmPollTranscript(id /*, _ignored */) {
   let elapsed = 0;
-  const MAX = 30 * 60 * 1000; // 30분
+  const MAX = 30 * 60 * 1000;
   let lastProgressMs = 0;
+  let useLegacy = false;
+  let legacyKey = null;
+
   while (elapsed < MAX) {
     const interval = elapsed < 30000 ? 1000 : elapsed < 120000 ? 2000 : 3000;
     await sleep(interval);
     elapsed += interval;
-    const poll = await workerFetch(`/asm-transcript-status/${id}`, { method: 'GET' });
-    if (!poll.ok) {
-      const e = await poll.json().catch(() => ({}));
-      throw new Error(`ASM_POLL_${poll.status}: ${e.error || '상태 확인 실패'}`);
+
+    let result;
+    if (!useLegacy) {
+      const poll = await workerFetch(`/asm-transcript-status/${id}`, { method: 'GET' });
+      if (poll.status === 404) {
+        console.warn('[ASM] /asm-transcript-status 404 — legacy 폴백');
+        useLegacy = true;
+        legacyKey = await asmGetKeyLegacy();
+        continue; // 다음 틱에 legacy 경로로
+      }
+      if (!poll.ok) {
+        const e = await poll.json().catch(() => ({}));
+        throw new Error(`ASM_POLL_${poll.status}: ${e.error || '상태 확인 실패'}`);
+      }
+      result = await poll.json();
+    } else {
+      const poll2 = await fetch(`https://api.assemblyai.com/v2/transcript/${id}`, {
+        headers: { 'authorization': legacyKey },
+      });
+      if (!poll2.ok) {
+        const e = await poll2.json().catch(() => ({}));
+        throw new Error(`ASM_POLL_${poll2.status}: ${e.error || '상태 확인 실패'}`);
+      }
+      result = await poll2.json();
     }
-    const result = await poll.json();
+
     if (result.status === 'completed') {
       const txt = result.text || '';
       if (!txt) throw new Error('음성 인식 결과가 비어있습니다. 파일에 음성이 없거나 지원 안 되는 형식입니다.');
-      console.log('[ASM] 완료 글자수:', txt.length, '소요:', Math.round(elapsed/1000) + '초');
+      console.log('[ASM] 완료 글자수:', txt.length, '소요:', Math.round(elapsed/1000) + '초', 'legacy=' + useLegacy);
       return txt;
     }
     if (result.status === 'error') throw new Error('Transcription error: ' + result.error);
