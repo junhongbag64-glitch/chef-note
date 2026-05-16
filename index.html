@@ -245,6 +245,26 @@
     }
     .note-card-fav { font-size: 12px; color: var(--danger); }
 
+    /* 검색 결과 스니펫 + 키워드 하이라이트 */
+    .note-card-snippet {
+      font-size: 11.5px;
+      color: var(--text-2);
+      line-height: 1.5;
+      margin-bottom: 8px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      letter-spacing: -.1px;
+    }
+    mark.hl {
+      background: rgba(168, 207, 110, .42);
+      color: var(--text-1);
+      padding: 0 2px;
+      border-radius: 3px;
+      font-weight: 600;
+    }
+
     /* Note list container — 2-column card grid */
     .note-list {
       display: grid;
@@ -1313,6 +1333,81 @@
       font-size: 28px; animation: bounce .8s ease-in-out infinite alternate;
     }
     @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(6px); } }
+
+    /* ═══════ Upload Help (녹음 파일 가져오기 모달) ═══════ */
+    .upload-help-overlay {
+      position: fixed; inset: 0; z-index: 700;
+      background: rgba(14,18,8,.55);
+      display: flex; align-items: flex-end; justify-content: center;
+      opacity: 0; pointer-events: none;
+      transition: opacity .22s;
+    }
+    .upload-help-overlay.open { opacity: 1; pointer-events: auto; }
+    .upload-help-sheet {
+      background: var(--bg-card);
+      width: 100%; max-width: 430px;
+      border-radius: 22px 22px 0 0;
+      padding: 22px 22px calc(28px + var(--safe-b));
+      max-height: 88vh; overflow-y: auto;
+      transform: translateY(20px);
+      transition: transform .22s cubic-bezier(.22,.68,0,1.2);
+    }
+    .upload-help-overlay.open .upload-help-sheet { transform: translateY(0); }
+    .upload-help-handle {
+      width: 36px; height: 4px; background: var(--border-2);
+      border-radius: 2px; margin: -8px auto 16px;
+    }
+    .upload-help-title {
+      font-family: var(--f-serif); font-size: 19px; font-weight: 700;
+      color: var(--text-1); margin-bottom: 4px;
+    }
+    .upload-help-sub {
+      font-size: 13px; color: var(--text-2); margin-bottom: 16px;
+    }
+    .upload-help-tabs {
+      display: flex; gap: 6px;
+      background: var(--bg);
+      border-radius: 10px; padding: 4px;
+      margin-bottom: 14px;
+    }
+    .uh-tab {
+      flex: 1; background: none; border: none;
+      padding: 8px 12px; border-radius: 7px;
+      font-family: var(--f-sans); font-size: 13px; font-weight: 600;
+      color: var(--text-2); cursor: pointer;
+      transition: background .15s, color .15s;
+    }
+    .uh-tab.active {
+      background: var(--bg-card);
+      color: var(--text-1);
+      box-shadow: 0 1px 3px rgba(0,0,0,.07);
+    }
+    .uh-pane { display: none; flex-direction: column; gap: 14px; }
+    .uh-pane.active { display: flex; }
+    .uh-step {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border-1);
+    }
+    .uh-step:last-of-type { border-bottom: none; padding-bottom: 4px; }
+    .uh-num {
+      width: 26px; height: 26px; border-radius: 50%;
+      background: var(--accent); color: #fff;
+      font-size: 13px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; margin-top: 1px;
+    }
+    .uh-step b { display: block; font-size: 14px; color: var(--text-1); margin-bottom: 2px; }
+    .uh-step span { font-size: 12.5px; color: var(--text-2); line-height: 1.5; }
+    .uh-pick-btn {
+      margin-top: 10px;
+      width: 100%; padding: 14px;
+      background: var(--text-1); color: var(--bg);
+      border: none; border-radius: 14px;
+      font-size: 15px; font-weight: 700;
+      cursor: pointer;
+    }
+    .uh-pick-btn:active { opacity: .85; }
 
     /* ═══════ CATEGORY CARDS ═══════ */
     .cat-grid {
@@ -2697,11 +2792,16 @@
           <div class="logo-text" id="logoText" onclick="secretLogoTap()">Chef<em>Note</em></div>
         </div>
         <div class="header-actions">
-          <button class="icon-btn home-upload-btn" onclick="document.getElementById('audioIn').click()" title="파일 업로드">
+          <button class="icon-btn home-upload-btn" onclick="openUploadHelp()" title="녹음 파일 업로드">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
               <polyline points="17 8 12 3 7 8"/>
               <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+          </button>
+          <button class="icon-btn" onclick="goToSearch()" title="검색">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/>
             </svg>
           </button>
           <button class="icon-btn home-invite-btn" onclick="inviteFriends()" title="친구 초대">
@@ -3432,17 +3532,12 @@ if (_isInAppBrowser && _isAndroid && !_isStandalone) {
   } catch(e) { /* Chrome 없음 — 아래 수동 안내 카드가 표시됨 */ }
 }
 
-// Capture the Android install prompt
+// PWA install prompt — 캡처만 하고 표시 안 함 (사용자가 직접 브라우저 메뉴로 설치할 수도 있음)
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
-  _pwaPrompt = e;
-  maybeShowInstallBar();
-  updateAuthInstallNudge(); // also update auth screen nudge if visible
+  _pwaPrompt = e; // 미래 사용 위해 보관
 });
-
-// After Android install
 window.addEventListener('appinstalled', () => {
-  dismissInstallBar(true);
   showToast('✅ 홈 화면에 추가됐어요!');
 });
 
@@ -3475,40 +3570,18 @@ function applyInstallBarCopy() {
   }
 }
 
-function maybeShowInstallBar() {
-  if (_isStandalone) return;                               // Already installed
-  if (localStorage.getItem('pwa_dismissed_at')) {
-    const t = parseInt(localStorage.getItem('pwa_dismissed_at'));
-    if (Date.now() - t < _installDismissTtlMs()) return;
-  }
-  // Delay a bit so it doesn't fight the UI loading
-  setTimeout(() => {
-    applyInstallBarCopy();
-    document.getElementById('pwaInstallBar')?.classList.remove('hidden');
-  }, 3500);
-}
-
+// 아래 함수들은 더 이상 UI 표시 안 함 — 호환성 위해 no-op 으로만 유지 (2026-05-16).
+function maybeShowInstallBar() {}
+function maybeShowInstallBarIOS() {}
+function dismissInstallBar(silent) {}
+function closeIOSSheet(e) {}
+function applyInstallBarCopy() {}
 async function triggerInstall() {
-  if (_isIOS) {
-    // Show iOS instruction sheet
-    document.getElementById('iosInstallOverlay')?.classList.add('open');
-    return;
+  // 사용자가 직접 호출 시 브라우저 native install prompt 만 (UI 강요 없음)
+  if (_pwaPrompt) {
+    try { _pwaPrompt.prompt(); await _pwaPrompt.userChoice; _pwaPrompt = null; }
+    catch {}
   }
-  if (!_pwaPrompt) return;
-  _pwaPrompt.prompt();
-  await _pwaPrompt.userChoice;
-  _pwaPrompt = null;
-  dismissInstallBar(true);
-}
-
-function dismissInstallBar(silent) {
-  document.getElementById('pwaInstallBar')?.classList.add('hidden');
-  if (!silent) localStorage.setItem('pwa_dismissed_at', Date.now().toString());
-}
-
-function closeIOSSheet(e) {
-  if (e.target === document.getElementById('iosInstallOverlay'))
-    document.getElementById('iosInstallOverlay')?.classList.remove('open');
 }
 
 // Init auth screen install nudge + iOS bottom bar
@@ -3519,122 +3592,45 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-function maybeShowInstallBarIOS() {
-  if (_isStandalone) return;
-  if (localStorage.getItem('pwa_dismissed_at')) {
-    const t = parseInt(localStorage.getItem('pwa_dismissed_at'));
-    if (Date.now() - t < _installDismissTtlMs()) return;
-  }
-  setTimeout(() => {
-    const bar = document.getElementById('pwaInstallBar');
-    if (bar) {
-      applyInstallBarCopy();
-      bar.classList.remove('hidden');
-      // iOS: 버튼은 안내 시트를 여니까 라벨 통일
-      const btn = document.getElementById('pwaInstallBtn');
-      if (btn && !_isInAppBrowser) btn.textContent = '방법 보기';
-    }
-  }, 3500);
-}
-
-/* ───────────────── AUTH SCREEN INSTALL NUDGE ───────────────── */
-// Shows the right install guidance on the auth/landing screen, mobile-first.
-// Called once on DOMContentLoaded; also called again if beforeinstallprompt fires later.
+/* AUTH SCREEN INSTALL NUDGE — 제거됨 (2026-05-16, 일반 웹사이트 모드).
+   호환성 위해 함수 시그니처는 유지하지만 모두 no-op + 노드 숨김. */
 function initAuthInstallNudge() {
-  if (_isStandalone) return; // Already running as installed app
-  updateAuthInstallNudge();
+  const el = document.getElementById('authInstallNudge');
+  if (el) el.style.display = 'none';
 }
-
 function updateAuthInstallNudge() {
   const el = document.getElementById('authInstallNudge');
-  if (!el) return;
-  if (_isStandalone) { el.style.display = 'none'; return; }
+  if (el) el.style.display = 'none';
+}
+async function triggerInstallFromAuth() { return triggerInstall(); }
 
-  // Case 1: In-app browser (KakaoTalk, etc.)
-  // Android: intent:// redirect already attempted above — this card is shown only if that failed
-  // iOS: can't auto-redirect, show manual steps
-  if (_isInAppBrowser) {
-    if (_isIOS) {
-      el.innerHTML = `
-        <div class="ain-header">
-          <span class="ain-icon">📲</span>
-          <div>
-            <div class="ain-title">앱으로 저장하려면 Safari에서 열어요</div>
-            <div class="ain-sub">카카오톡에서는 홈 화면 설치가 안 돼요</div>
-          </div>
-        </div>
-        <div class="ain-steps">
-          <div class="ain-step"><span class="ain-step-num">1</span><span>하단 오른쪽 <strong>···</strong> 버튼 탭</span></div>
-          <div class="ain-step"><span class="ain-step-num">2</span><span><strong>Safari로 열기</strong> 선택</span></div>
-          <div class="ain-step"><span class="ain-step-num">3</span><span>Safari 하단 공유 버튼 → <strong>홈 화면에 추가</strong></span></div>
-        </div>`;
-      el.style.display = 'block';
-    } else {
-      // Android: Chrome이 없거나 intent redirect 실패한 경우 수동 안내
-      el.innerHTML = `
-        <div class="ain-header">
-          <span class="ain-icon">📲</span>
-          <div>
-            <div class="ain-title">앱으로 저장하려면 Chrome에서 열어요</div>
-            <div class="ain-sub">카카오톡에서는 홈 화면 설치가 안 돼요</div>
-          </div>
-        </div>
-        <div class="ain-steps">
-          <div class="ain-step"><span class="ain-step-num">1</span><span>우측 상단 <strong>⋮</strong> → <strong>다른 앱으로 열기</strong></span></div>
-          <div class="ain-step"><span class="ain-step-num">2</span><span><strong>Chrome</strong> 선택</span></div>
-          <div class="ain-step"><span class="ain-step-num">3</span><span>Chrome 우측 상단 <strong>⋮</strong> → <strong>홈 화면에 추가</strong></span></div>
-        </div>`;
-      el.style.display = 'block';
-    }
-    return;
-  }
-
-  // Case 2: iOS Safari — show inline install instructions
-  if (_isIOS && _isInBrowser) {
-    el.innerHTML = `
-      <div class="ain-header">
-        <span class="ain-icon">📲</span>
-        <div>
-          <div class="ain-title">홈 화면에 앱으로 저장하기</div>
-          <div class="ain-sub">Safari에서 바로 설치할 수 있어요!</div>
-        </div>
-      </div>
-      <div class="ain-steps">
-        <div class="ain-step"><span class="ain-step-num">1</span><span>하단 중앙 공유 버튼 탭 <strong style="font-size:18px">□↑</strong></span></div>
-        <div class="ain-step"><span class="ain-step-num">2</span><span>스크롤해서 <strong>"홈 화면에 추가"</strong> 선택</span></div>
-        <div class="ain-step"><span class="ain-step-num">3</span><span>오른쪽 상단 <strong>"추가"</strong> 탭 → 완료!</span></div>
-      </div>`;
-    el.style.display = 'block';
-    return;
-  }
-
-  // Case 3: Android Chrome with install prompt ready
-  if (_pwaPrompt && _isAndroid) {
-    el.innerHTML = `
-      <div class="ain-header">
-        <span class="ain-icon">📲</span>
-        <div>
-          <div class="ain-title">홈 화면에 앱으로 저장하기</div>
-          <div class="ain-sub">한 번만 설치하면 앱처럼 바로 열려요!</div>
-        </div>
-      </div>
-      <button class="ain-install-btn" onclick="triggerInstallFromAuth()">홈 화면에 설치하기</button>`;
-    el.style.display = 'block';
-    return;
-  }
-
-  // Hide if none of the above match
-  el.style.display = 'none';
+/* ───────────────── 검색 진입점 ─────────────────
+   홈 헤더 검색 아이콘 → archive 탭 + input 자동 포커스 */
+function goToSearch() {
+  switchTab('archive');
+  setTimeout(() => {
+    const inp = document.getElementById('archiveQ');
+    if (inp) { inp.focus(); inp.select?.(); }
+  }, 80);
 }
 
-async function triggerInstallFromAuth() {
-  if (!_pwaPrompt) return;
-  _pwaPrompt.prompt();
-  const choice = await _pwaPrompt.userChoice;
-  if (choice.outcome === 'accepted') {
-    document.getElementById('authInstallNudge').style.display = 'none';
-    showToast('✅ 홈 화면에 추가됐어요!');
-  }
+/* ───────────────── 업로드 도움말 모달 ───────────────── */
+function openUploadHelp(e) {
+  e?.preventDefault?.();
+  const ov = document.getElementById('uploadHelpOverlay');
+  if (!ov) return;
+  // 폰 종류 자동 선택
+  const target = _isIOS ? 'iphone' : 'galaxy';
+  uhSwitch(target);
+  ov.classList.add('open');
+}
+function closeUploadHelp(e) {
+  if (e && e.target !== document.getElementById('uploadHelpOverlay')) return;
+  document.getElementById('uploadHelpOverlay')?.classList.remove('open');
+}
+function uhSwitch(which) {
+  document.querySelectorAll('.uh-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === which));
+  document.querySelectorAll('.uh-pane').forEach(p => p.classList.toggle('active', p.id === 'uh-' + which));
 }
 
 /* ───────────────── AUTH UI ───────────────── */
@@ -3833,9 +3829,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Check for any unfinished recordings saved before page close
       checkAndResumeDrafts(); // fire-and-forget
       renderPendingDrafts();  // 실패한 기존 drafts도 즉시 표시
-      // Show PWA install bar if not already installed
-      if (_isIOS && _isInBrowser) maybeShowInstallBarIOS();
-      else if (_pwaPrompt) maybeShowInstallBar();
+      // PWA install bar 호출 제거됨 (2026-05-16) — 일반 웹사이트 모드
       // 폰 녹음 앱에서 "공유 → ChefNote" 로 들어온 음성 처리 (있을 때만)
       consumeSharedAudio(); // fire-and-forget
     } else {
@@ -5619,25 +5613,61 @@ async function discardDraft(draftId) {
 function renderNotes() {
   renderCategories();
   renderList('homeList', S.notes.slice(0, 5));
-  const filt = getFiltered();
-  renderList('archiveList', filt);
+  const q = (document.getElementById('archiveQ')?.value || '').toLowerCase();
+  const filt = getFiltered(q);
+  renderList('archiveList', filt, q);
   renderPendingDrafts(); // 대기 중인 녹음 카드 업데이트
 }
 
-function renderList(id, notes) {
+function renderList(id, notes, query = '') {
   const el = document.getElementById(id);
   if (!notes.length) {
+    const isSearch = !!query;
     el.innerHTML = `<div class="empty-state">
-      <div class="empty-icon">📓</div>
-      <div class="empty-title">노트가 없어요</div>
-      <div class="empty-desc">녹음을 시작하면<br>자동으로 생성됩니다</div>
+      <div class="empty-icon">${isSearch ? '🔍' : '📓'}</div>
+      <div class="empty-title">${isSearch ? `"${esc(query)}" 와 일치하는 노트가 없어요` : '노트가 없어요'}</div>
+      <div class="empty-desc">${isSearch ? '다른 단어로 검색해보세요' : '녹음을 시작하면<br>자동으로 생성됩니다'}</div>
     </div>`;
     return;
   }
-  el.innerHTML = notes.map(noteCardHTML).join('');
+  el.innerHTML = notes.map(n => noteCardHTML(n, query)).join('');
 }
 
-function noteCardHTML(n) {
+/* 본문에서 query 와 일치하는 첫 부분의 짧은 스니펫 + ‹mark› */
+function searchSnippet(n, q) {
+  if (!q) return '';
+  const recipes = getRecipes(n);
+  const fields = [
+    ...recipes.map(r => r.content || ''),
+    ...recipes.flatMap(r => r.ingredients || []),
+    ...recipes.flatMap(r => r.tips || []),
+  ];
+  for (const f of fields) {
+    const lower = f.toLowerCase();
+    const idx = lower.indexOf(q);
+    if (idx >= 0) {
+      const start = Math.max(0, idx - 24);
+      const end = Math.min(f.length, idx + q.length + 40);
+      const before = (start > 0 ? '…' : '') + f.slice(start, idx);
+      const hit = f.slice(idx, idx + q.length);
+      const after = f.slice(idx + q.length, end) + (end < f.length ? '…' : '');
+      return `${esc(before)}<mark class="hl">${esc(hit)}</mark>${esc(after)}`;
+    }
+  }
+  return '';
+}
+
+function highlight(text, q) {
+  if (!q || !text) return esc(text);
+  const lower = text.toLowerCase();
+  const idx = lower.indexOf(q);
+  if (idx < 0) return esc(text);
+  return esc(text.slice(0, idx)) +
+    '<mark class="hl">' + esc(text.slice(idx, idx + q.length)) + '</mark>' +
+    esc(text.slice(idx + q.length));
+}
+
+function noteCardHTML(n, query = '') {
   const recipes = getRecipes(n);
   const coverSrc = n.coverPhoto || recipes[0]?.coverPhoto || n.media?.[0]?.dataUrl || null;
   const rCount = recipes.length;
@@ -5659,6 +5689,9 @@ function noteCardHTML(n) {
        </div>`;
 
   const fav = n.favorite ? '<span class="note-card-fav">♥</span>' : '';
+  const titleHTML = query ? highlight(n.title, query) : esc(n.title);
+  const snippet = query ? searchSnippet(n, query) : '';
+  const snippetHTML = snippet ? `<div class="note-card-snippet">${snippet}</div>` : '';
   return `<div class="note-card" style="--nc:${accentColor}" onclick="openNote('${n.id}')">
     <div class="note-card-top-bar"></div>
     <div class="note-card-photo">
@@ -5667,7 +5700,8 @@ function noteCardHTML(n) {
       <div class="note-card-badge-wrap"><span class="badge ${badgeCls}">${badgeTxt}</span></div>
     </div>
     <div class="note-card-body">
-      <div class="note-card-title">${esc(n.title)}</div>
+      <div class="note-card-title">${titleHTML}</div>
+      ${snippetHTML}
       <div class="note-card-meta">
         <span class="note-card-date">${n.date || ''}</span>
         ${fav}
@@ -5689,7 +5723,7 @@ function setFilter(f, el) {
 
 function filterNotes() {
   const q = (document.getElementById('archiveQ')?.value || '').toLowerCase();
-  renderList('archiveList', getFiltered(q));
+  renderList('archiveList', getFiltered(q), q);
 }
 
 function getFiltered(q = '') {
@@ -6489,9 +6523,8 @@ function updateHomeGreeting() {
   updateHomeFocusCard();
 }
 
-/* Today Focus 카드 동적 내용:
-   - PWA 미설치 + Phase 1 신기능 미경험 → "녹음 앱에서 바로 공유" 안내
-   - 그 외 → 기본 "녹음 시작" CTA */
+/* Today Focus 카드 — install promo 제거 (2026-05-16).
+   대신 녹음 시작 CTA + 녹음 파일 가져오는 도움말 토글. */
 function updateHomeFocusCard() {
   const eye = document.getElementById('homeFocusEyebrow');
   const ttl = document.getElementById('homeFocusTitle');
@@ -6499,26 +6532,9 @@ function updateHomeFocusCard() {
   const btn = document.getElementById('homeFocusBtn');
   if (!ttl || !btn) return;
 
-  // 설치 안 했고, 카드를 명시적으로 끄지 않았으면 신기능 프로모션
-  const promoSeen = localStorage.getItem('cn_share_promo_dismissed') === '1';
-  if (!_isStandalone && !promoSeen) {
-    if (eye) eye.textContent = 'New';
-    ttl.textContent = '폰 녹음 앱에서 공유 → 자동 변환';
-    if (sub) sub.textContent = '홈 화면에 ChefNote 설치 후, 갤럭시 녹음기 / 음성메모에서 "공유 → ChefNote"';
-    btn.textContent = '설치 방법';
-    btn.onclick = () => {
-      localStorage.setItem('cn_share_promo_dismissed', '1');
-      triggerInstall();
-      // 짧은 지연 후 카드 갱신
-      setTimeout(updateHomeFocusCard, 300);
-    };
-    return;
-  }
-
-  // 기본 — 녹음 CTA
   if (eye) eye.textContent = 'Today Focus';
   ttl.textContent = '지금 할 일: 수업 녹음 시작';
-  if (sub) sub.textContent = '업로드만 끝나면 노트 생성은 백그라운드에서 계속됩니다.';
+  if (sub) sub.innerHTML = '바로 녹음하거나, 폰 녹음 앱 파일을 <a href="#" onclick="openUploadHelp(event)" style="color:#A8CF6E;text-decoration:underline">업로드</a> 하세요.';
   btn.textContent = '지금 시작';
   btn.onclick = () => toggleRecording();
 }
@@ -7071,41 +7087,42 @@ function delParaAttach(noteId, recipeIdx, paraIdx, attachIdx) {
 <input type="file" id="paraPhotoInput" accept="image/*" style="display:none" onchange="onParaPhotoSelected(event)">
 
 <!-- ═══════════════════ PWA INSTALL BANNER ═══════════════════ -->
-<div class="pwa-install-bar hidden" id="pwaInstallBar">
-  <div class="pwa-install-bar-ico">📲</div>
-  <div class="pwa-install-bar-text">
-    <div class="pwa-install-bar-title" id="pwaInstallBarTitle">홈 화면에 추가하기</div>
-    <div class="pwa-install-bar-sub" id="pwaInstallBarSub">앱처럼 바로 열 수 있어요</div>
+<!-- pwaInstallBar 제거됨 (2026-05-16) — 일반 웹사이트 모드 -->
+<div id="pwaInstallBar" hidden></div>
+
+<!-- iOS install overlay 제거됨 (2026-05-16) — 일반 웹사이트 모드 -->
+<div id="iosInstallOverlay" hidden></div>
+
+<!-- ═══════════════════ Upload Help Modal ═══════════════════ -->
+<div class="upload-help-overlay" id="uploadHelpOverlay" onclick="closeUploadHelp(event)">
+  <div class="upload-help-sheet" onclick="event.stopPropagation()">
+    <div class="upload-help-handle"></div>
+    <div class="upload-help-title">📱 폰 녹음 파일 가져오기</div>
+    <div class="upload-help-sub">녹음 앱마다 살짝 달라요 — 너 폰 골라봐</div>
+
+    <div class="upload-help-tabs" id="uhTabs">
+      <button class="uh-tab active" data-tab="galaxy" onclick="uhSwitch('galaxy')">갤럭시</button>
+      <button class="uh-tab" data-tab="iphone" onclick="uhSwitch('iphone')">아이폰</button>
+    </div>
+
+    <div class="uh-pane active" id="uh-galaxy">
+      <div class="uh-step"><span class="uh-num">1</span><div><b>녹음 앱 열기</b><span>Samsung Voice Recorder 또는 기본 녹음 앱</span></div></div>
+      <div class="uh-step"><span class="uh-num">2</span><div><b>저장된 녹음 길게 누르기 → 공유</b><span>또는 ⋮ → 공유</span></div></div>
+      <div class="uh-step"><span class="uh-num">3</span><div><b>"내 파일"에 저장</b><span>또는 "Drive" / "다운로드" 아무거나</span></div></div>
+      <div class="uh-step"><span class="uh-num">4</span><div><b>아래 "파일 선택" → 방금 저장한 파일</b><span>"내 파일 → Voice Recorder 폴더" 에 보통 m4a 파일</span></div></div>
+      <button class="uh-pick-btn" onclick="closeUploadHelp();document.getElementById('audioIn').click()">📁 파일 선택 열기</button>
+    </div>
+
+    <div class="uh-pane" id="uh-iphone">
+      <div class="uh-step"><span class="uh-num">1</span><div><b>음성 메모 앱 열기</b><span>Voice Memos</span></div></div>
+      <div class="uh-step"><span class="uh-num">2</span><div><b>녹음 탭 → ⋯ → 공유</b></div></div>
+      <div class="uh-step"><span class="uh-num">3</span><div><b>"파일에 저장"</b><span>"내 iPhone" / "iCloud Drive" 둘 다 OK</span></div></div>
+      <div class="uh-step"><span class="uh-num">4</span><div><b>아래 "파일 선택" → 방금 저장한 파일</b><span>m4a 파일</span></div></div>
+      <button class="uh-pick-btn" onclick="closeUploadHelp();document.getElementById('audioIn').click()">📁 파일 선택 열기</button>
+    </div>
   </div>
-  <button class="pwa-install-btn" id="pwaInstallBtn" onclick="triggerInstall()">추가</button>
-  <button class="pwa-install-dismiss" onclick="dismissInstallBar()" aria-label="닫기">×</button>
 </div>
 
-<!-- iOS install instruction sheet -->
-<div class="ios-install-overlay" id="iosInstallOverlay" onclick="closeIOSSheet(event)">
-  <div class="ios-install-sheet">
-    <div class="ios-install-handle"></div>
-    <div class="ios-install-title">홈 화면에 ChefNote 추가</div>
-    <div class="ios-install-sub">Safari에서 홈 화면에 추가하면<br>앱처럼 바로 열 수 있어요.</div>
-    <div class="ios-install-steps">
-      <div class="ios-install-step">
-        <div class="ios-install-step-num">1</div>
-        <div class="ios-install-step-text">하단 중앙의 <strong>공유 버튼</strong> 탭
-          <div style="font-size:22px;margin-top:4px">□↑</div>
-        </div>
-      </div>
-      <div class="ios-install-step">
-        <div class="ios-install-step-num">2</div>
-        <div class="ios-install-step-text">스크롤해서 <strong>"홈 화면에 추가"</strong> 선택</div>
-      </div>
-      <div class="ios-install-step">
-        <div class="ios-install-step-num">3</div>
-        <div class="ios-install-step-text">오른쪽 상단 <strong>"추가"</strong> 탭 → 완료!</div>
-      </div>
-    </div>
-    <div class="ios-install-arrow">↓</div>
-  </div>
-</div>
 </body>
 </html>
 
