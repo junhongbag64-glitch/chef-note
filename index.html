@@ -16,6 +16,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 
   <style>
     /* ═══════════════════════════════════════════
@@ -3358,8 +3359,9 @@ const firebaseConfig = {
   measurementId: "G-T4J7T6XMV4"
 };
 firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db   = firebase.firestore();
+const auth    = firebase.auth();
+const db      = firebase.firestore();
+const storage = firebase.storage();
 auth.setPersistence('local').catch(() => {});
 
 /* ───────────────── CONFIG ───────────────── */
@@ -3367,7 +3369,7 @@ const PROXY = 'https://empty-cherry-ab7c.junhongbag64.workers.dev';
 const BANK_ACCOUNT = '1002-3660-6756'; // 계좌번호
 const OWNER_EMAILS = new Set(['junhongbag64@gmail.com']); // 클라 UI 용 (실제 Pro 판정은 Firestore + Worker)
 const FREE_NOTE_LIMIT = 5;
-const MAX_AUDIO_BYTES = 100 * 1024 * 1024; // 100MB — Worker 와 일치
+const MAX_AUDIO_BYTES = 2 * 1024 * 1024 * 1024; // 2GB — Firebase Storage 한도
 const MAX_AUDIO_DURATION_SEC = 90 * 60;    // 90분 — 클라 측 안전망
 
 /* ───────────────── Worker fetch helper — idToken 자동 첨부 ─────────────────
@@ -4658,29 +4660,63 @@ function encodeWAV(samples, sampleRate) {
 }
 
 /* ═══════════════════════════════════════════
-   ASSEMBLYAI — Cloudflare Worker 프록시
+   ASSEMBLYAI — Firebase Storage 경유 업로드
+   대용량 파일(1시간+)을 Cloudflare Worker 대신 Firebase Storage 에 직접 업로드.
+   AssemblyAI 가 Storage URL 로 파일을 가져가므로 API 키는 여전히 Worker 에만 존재.
 ═══════════════════════════════════════════ */
 async function asmGuardSize(blob) {
   if (blob.size > MAX_AUDIO_BYTES) {
-    throw new Error(`ASM_TOOBIG: 오디오 파일이 너무 큽니다 (${Math.round(blob.size/1024/1024)}MB > ${Math.round(MAX_AUDIO_BYTES/1024/1024)}MB 한도)`);
+    const mb = Math.round(blob.size / 1024 / 1024);
+    throw new Error(`ASM_TOOBIG: 오디오 파일이 너무 큽니다 (${mb}MB > 2048MB 한도)`);
   }
 }
 
+// 업로드 도중 취소/정리용 ref 보관
+let _pendingAudioRef = null;
+
 async function asmUploadBlob(blob) {
   await asmGuardSize(blob);
-  updateProc('🎙️ 업로드 중...', '음성 파일을 서버로 보내고 있어요...');
-  const r = await workerFetch('/asm-upload', {
-    method: 'POST',
-    headers: { 'content-type': 'application/octet-stream' },
-    body: blob,
+
+  const user = auth.currentUser;
+  if (!user) throw new Error('AUTH_REQUIRED: 로그인 필요');
+
+  // 파일 확장자 결정
+  const ext = blob.type.includes('mp4') || blob.type.includes('m4a') ? 'm4a'
+             : blob.type.includes('ogg') ? 'ogg'
+             : blob.type.includes('wav') ? 'wav'
+             : 'webm';
+  const path = `audio-tmp/${user.uid}/${Date.now()}.${ext}`;
+  const ref  = storage.ref(path);
+  _pendingAudioRef = ref;
+
+  const totalMB = Math.round(blob.size / 1024 / 1024);
+  updateProc('🎙️ 업로드 중...', `음성 파일 업로드 중... (0 / ${totalMB}MB)`);
+
+  // Firebase Storage 업로드 (진행률 표시)
+  await new Promise((resolve, reject) => {
+    const task = ref.put(blob, { contentType: blob.type || 'audio/webm' });
+    task.on('state_changed',
+      snap => {
+        const doneMB = Math.round(snap.bytesTransferred / 1024 / 1024);
+        const pct    = Math.round(snap.bytesTransferred / snap.totalBytes * 100);
+        updateProc('🎙️ 업로드 중...', `음성 파일 업로드 중... (${doneMB} / ${totalMB}MB, ${pct}%)`);
+      },
+      reject,
+      resolve
+    );
   });
-  if (!r.ok) {
-    const e = await r.json().catch(() => ({}));
-    throw new Error(`ASM_UPLOAD_${r.status}: ${e.error || '오디오 업로드 실패'}`);
+
+  const downloadUrl = await ref.getDownloadURL();
+  return downloadUrl; // AssemblyAI 가 이 URL 로 파일 다운로드
+}
+
+// 임시 Storage 파일 정리 (성공/실패 모두 호출)
+async function cleanupPendingAudio() {
+  if (_pendingAudioRef) {
+    const r = _pendingAudioRef;
+    _pendingAudioRef = null;
+    await r.delete().catch(() => {});
   }
-  const { upload_url } = await r.json();
-  if (!upload_url) throw new Error('ASM_UPLOAD_NOURL: Upload URL 없음');
-  return upload_url;
 }
 
 async function asmCreateTranscript(upload_url, webhookUrl = null) {
@@ -4734,11 +4770,16 @@ async function asmPollTranscript(id) {
   throw new Error('Transcription timed out (30분 초과)');
 }
 
-// Client-side full pipeline (fallback when server path fails)
+// Client-side full pipeline
 async function transcribeAudio(blob) {
-  const upload_url = await asmUploadBlob(blob);
-  const id = await asmCreateTranscript(upload_url, null);
-  return asmPollTranscript(id);
+  try {
+    const upload_url = await asmUploadBlob(blob);
+    const id = await asmCreateTranscript(upload_url);
+    return await asmPollTranscript(id);
+  } finally {
+    // ASM 이 다운로드 완료 후 임시 파일 삭제
+    cleanupPendingAudio();
+  }
 }
 
 /* ═══════════════════════════════════════════
@@ -4751,7 +4792,7 @@ async function submitJobToServer(blob, draftId, metadata) {
 
   const jobId = 'job_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
   const webhookUrl = `${PROXY}/asm-webhook/${jobId}`;
-  const asmId = await asmCreateTranscript(upload_url, null, webhookUrl);
+  const asmId = await asmCreateTranscript(upload_url, webhookUrl);
 
   // Worker 등록 — idToken 은 workerFetch 가 헤더로 자동 첨부
   const regRes = await workerFetch('/register-job', {
@@ -4777,6 +4818,11 @@ async function submitJobToServer(blob, draftId, metadata) {
     duration: metadata.duration || 0,
     timestamp: Date.now(),
   });
+
+  // ASM 이 다운로드할 시간(10분) 후 임시 Storage 파일 삭제
+  const refToClean = _pendingAudioRef;
+  _pendingAudioRef = null;
+  setTimeout(() => refToClean?.delete().catch(() => {}), 10 * 60 * 1000);
 
   return jobId;
 }
