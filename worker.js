@@ -631,33 +631,123 @@ async function generateNote(transcript, metadata, env) {
   const { duration = 0, memos = [] } = metadata;
 
   const memoSection = memos.length
-    ? `\n수업 중 추가 메모 (반드시 반영):\n${memos.map((m, i) => `${i + 1}. ${m}`).join('\n')}\n`
+    ? `\n[학생이 수업 중 직접 메모한 내용 — 반드시 노트에 자연스럽게 통합할 것]\n${memos.map((m, i) => `${i + 1}. ${m}`).join('\n')}\n`
     : '';
 
-  const prompt = `다음은 조리학과 수업 녹음을 텍스트로 변환한 내용입니다.
-${memoSection}
-텍스트:
+  const durHint = duration ? `\n[참고: 녹음 길이 ${Math.round(duration/60)}분]\n` : '';
+
+  const prompt = `당신은 한국 조리학과 학생의 수업 녹음을 정리하는 전문 셰프 노트 정리사입니다.
+학생이 시험 전에 이 노트만 보고도 요리를 재현할 수 있도록 정밀하게 정리해야 합니다.
+${memoSection}${durHint}
+=== 수업 녹취 ===
 """
 ${transcript}
 """
+=== 녹취 끝 ===
 
-이 수업 내용을 분석해 노트를 만들어주세요.
+【작업 지침】
 
-판단 기준:
-- 실제 조리/요리/실습이면 type="recipe", classType="실습"
-- 이론·역사·영양학·위생·서비스이면 type="theory", classType="이론"
-- 한 수업에 여러 요리가 명확히 구분되면 recipes 에 각각 분리 (예: 토마토 소스 + 알르망드 소스 → recipes 2개)
-- content 는 단계별로 \\n 으로 줄바꿈
-- ingredients 는 "재료명 + 용량" 형식 (예: "당근 50g"). 이론 수업이면 빈 배열`;
+1. 수업 분류
+   - 실제 조리 / 손질 / 실습 → type="recipe", classType="실습"
+   - 이론 / 역사 / 위생 / 영양학 / 서비스 / 평가 → type="theory", classType="이론"
+
+2. 여러 요리 분리
+   한 수업에서 명확히 다른 메뉴를 다루면 recipes 배열에 각각 분리.
+   예) "오늘은 토마토 소스랑 알르망드 소스 두 개" → recipes 2개
+   예) "오늘 등심 스테이크 만들고 그 다음 감자 퓨레" → recipes 2개
+   단, 한 요리의 곁들임/소스는 같은 recipe content 안에 통합.
+
+3. 제목 (title)
+   요리명을 정확하게. "수업 노트", "오늘의 수업" 같은 두루뭉술한 제목 금지.
+   교수가 부른 이름 그대로 쓰되, 한글이 자연스러우면 한글로.
+   예) "비프 부르기뇽", "닭다리살 콩피", "홀랜다이즈 소스"
+
+4. 재료 (ingredients) — 실습일 때만
+   - 형식: "재료명 + 정확한 용량/단위" (예: "양파 1/2개", "버터 30g", "올리브유 2큰술")
+   - 교수가 언급한 모든 재료. 빠뜨리지 말 것.
+   - 용량 불명이면 "재료명 (적당량)" 또는 그냥 "재료명".
+   - 같은 재료가 여러 번 쓰이면 합쳐서 한 줄.
+
+5. 본문 (content) — 가장 중요
+   조리 순서를 단계별로, "\\n" 줄바꿈으로 분리.
+   각 단계는 다음을 최대한 포함:
+   - 동작 (썰다 / 볶다 / 끓이다 / 굽다 / 졸이다…)
+   - 온도 / 시간 (예: "180도에서 15분", "센 불 3분")
+   - 상태 판단 기준 (예: "갈색이 날 때까지", "물기가 날아갈 때까지")
+   - 도구 / 기물 (팬 종류, 칼 종류 등 교수가 강조한 경우)
+
+   금지 사항:
+   ❌ "맛있게 만든다", "잘 익힌다" 같은 추상적 표현
+   ❌ 녹취에 없는 내용을 지어내기
+   ❌ 단계를 압축해서 누락하기 — 교수가 말한 디테일 다 살리기
+
+   이론 수업이면 content 에 학습 내용을 항목별로 정리 (역사 → 종류 → 특징 등 논리적 흐름).
+
+6. 팁 (tips) — 매우 중요
+   교수가 강조한 핵심 포인트를 추출. 다음 신호를 잡아라:
+   - "중요해요", "꼭", "반드시", "주의", "포인트", "절대"
+   - "이게 망하면…", "이거 안 하면…", "시험 때…"
+   - 실수했을 때 어떻게 되는지 설명한 부분
+   - 노하우 / 비법 / 셰프의 개인적 견해
+
+   각 tip 은 완결된 문장으로. "왜" 까지 포함하면 best.
+   예) "양파는 약불에서 천천히 볶아야 단맛이 제대로 빠진다 — 센 불이면 탄맛만 남음"
+   예) "버터는 차갑게 유지해야 머랭처럼 부풀어 — 녹으면 처음부터 다시"
+
+7. 학생 메모 통합
+   위 [학생 메모] 가 있으면 해당 단계 / 팁에 자연스럽게 녹여넣기. 별도 섹션으로 두지 말 것.
+
+8. 사실 충실
+   녹취에 없는 정보는 추가하지 말 것. 음성 인식 오류가 의심되면 (예: "토마토" 가 "고마토" 로 잘못 들림) 맥락으로 자연스럽게 교정.
+
+【출력】 위 형식의 JSON 만 출력. 다른 설명 없이.`;
 
   let parsed = null;
   let usedModel = '';
 
-  // 1) Gemini 2.5 Flash
-  if (env.GEMINI_KEY) {
+  // 1) Claude Sonnet 4.5 — 가장 이해력 좋음, 한국어 조리 용어 최강
+  if (env.CLAUDE_KEY) {
+    try {
+      const res = await fetch(`${ANTHROPIC_API}/v1/messages`, {
+        method: 'POST',
+        headers: {
+          'x-api-key': env.CLAUDE_KEY,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-5',
+          max_tokens: 8000,
+          temperature: 0.3,
+          tools: [NOTE_TOOL],
+          tool_choice: { type: 'tool', name: NOTE_TOOL.name },
+          messages: [{ role: 'user', content: prompt }],
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const toolUse = (data.content || []).find(b => b.type === 'tool_use');
+        if (toolUse?.input) {
+          parsed = toolUse.input;
+          usedModel = 'claude-sonnet-4-5';
+        } else {
+          const raw = data.content?.find(b => b.type === 'text')?.text || '';
+          parsed = parseClaudeJSON(raw);
+          if (parsed) usedModel = 'claude-sonnet-4-5(text)';
+        }
+      } else {
+        console.warn('[Claude Sonnet]', res.status, (await res.text()).slice(0, 200));
+      }
+    } catch (e) {
+      console.warn('[Claude Sonnet] error:', e.message);
+    }
+  }
+
+  // 2) Gemini 2.5 Pro 백업 — Flash 보다 이해도 좋음
+  if (!parsed && env.GEMINI_KEY) {
     try {
       const gres = await fetch(
-        `https://gateway.ai.cloudflare.com/v1/d872f29764b5c5b238824decd2dc6d91/chefnote/google-ai-studio/v1beta/models/gemini-2.5-flash:generateContent`,
+        `https://gateway.ai.cloudflare.com/v1/d872f29764b5c5b238824decd2dc6d91/chefnote/google-ai-studio/v1beta/models/gemini-2.5-pro:generateContent`,
         {
           method: 'POST',
           headers: {
@@ -669,8 +759,8 @@ ${transcript}
             generationConfig: {
               responseMimeType: 'application/json',
               responseSchema: NOTE_SCHEMA_GEMINI,
-              temperature: 0.2,
-              maxOutputTokens: 2500,
+              temperature: 0.3,
+              maxOutputTokens: 8000,
             },
           }),
         }
@@ -680,17 +770,17 @@ ${transcript}
         const raw = gdata.candidates?.[0]?.content?.parts?.[0]?.text || '';
         if (raw) {
           parsed = parseClaudeJSON(raw);
-          if (parsed) usedModel = 'gemini-2.5-flash';
+          if (parsed) usedModel = 'gemini-2.5-pro';
         }
       } else {
-        console.warn('[Gemini]', gres.status, (await gres.text()).slice(0, 200));
+        console.warn('[Gemini Pro]', gres.status, (await gres.text()).slice(0, 200));
       }
     } catch (e) {
-      console.warn('[Gemini] error:', e.message);
+      console.warn('[Gemini Pro] error:', e.message);
     }
   }
 
-  // 2) Claude Haiku
+  // 3) Claude Haiku 마지막 백업
   if (!parsed && env.CLAUDE_KEY) {
     try {
       const res = await fetch(`${ANTHROPIC_API}/v1/messages`, {
@@ -702,8 +792,8 @@ ${transcript}
         },
         body: JSON.stringify({
           model: 'claude-haiku-4-5',
-          max_tokens: 2500,
-          temperature: 0.2,
+          max_tokens: 4000,
+          temperature: 0.3,
           tools: [NOTE_TOOL],
           tool_choice: { type: 'tool', name: NOTE_TOOL.name },
           messages: [{ role: 'user', content: prompt }],
@@ -715,16 +805,12 @@ ${transcript}
         if (toolUse?.input) {
           parsed = toolUse.input;
           usedModel = 'claude-haiku-4-5';
-        } else {
-          const raw = data.content?.find(b => b.type === 'text')?.text || '';
-          parsed = parseClaudeJSON(raw);
-          if (parsed) usedModel = 'claude-haiku-4-5(text)';
         }
       } else {
-        console.warn('[Claude]', res.status, (await res.text()).slice(0, 200));
+        console.warn('[Claude Haiku]', res.status, (await res.text()).slice(0, 200));
       }
     } catch (e) {
-      console.warn('[Claude] error:', e.message);
+      console.warn('[Claude Haiku] error:', e.message);
     }
   }
 
