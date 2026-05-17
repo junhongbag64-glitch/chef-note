@@ -4680,11 +4680,20 @@ async function asmUploadBlob(blob) {
   const user = auth.currentUser;
   if (!user) throw new Error('AUTH_REQUIRED: 로그인 필요');
 
-  // 파일 확장자 결정
-  const ext = blob.type.includes('mp4') || blob.type.includes('m4a') ? 'm4a'
-             : blob.type.includes('ogg') ? 'ogg'
-             : blob.type.includes('wav') ? 'wav'
-             : 'webm';
+  // 파일 확장자 결정 — AssemblyAI 가 인식할 수 있도록 정확한 content-type 강제
+  let contentType, ext;
+  if (blob.type.includes('mp4') || blob.type.includes('m4a') || blob.type.includes('aac')) {
+    contentType = 'audio/mp4'; ext = 'm4a';
+  } else if (blob.type.includes('ogg')) {
+    contentType = 'audio/ogg'; ext = 'ogg';
+  } else if (blob.type.includes('wav')) {
+    contentType = 'audio/wav'; ext = 'wav';
+  } else if (blob.type.includes('mpeg') || blob.type.includes('mp3')) {
+    contentType = 'audio/mpeg'; ext = 'mp3';
+  } else {
+    contentType = 'audio/webm'; ext = 'webm';
+  }
+
   const path = `audio-tmp/${user.uid}/${Date.now()}.${ext}`;
   const ref  = storage.ref(path);
   _pendingAudioRef = ref;
@@ -4692,9 +4701,13 @@ async function asmUploadBlob(blob) {
   const totalMB = Math.round(blob.size / 1024 / 1024);
   updateProc('🎙️ 업로드 중...', `음성 파일 업로드 중... (0 / ${totalMB}MB)`);
 
-  // Firebase Storage 업로드 (진행률 표시)
+  // Firebase Storage 업로드 — 명시적 metadata 로 cache-control / content-type 보장
   await new Promise((resolve, reject) => {
-    const task = ref.put(blob, { contentType: blob.type || 'audio/webm' });
+    const task = ref.put(blob, {
+      contentType,
+      cacheControl: 'public, max-age=3600',
+      customMetadata: { uploadedAt: String(Date.now()) }
+    });
     task.on('state_changed',
       snap => {
         const doneMB = Math.round(snap.bytesTransferred / 1024 / 1024);
@@ -4707,7 +4720,36 @@ async function asmUploadBlob(blob) {
   });
 
   const downloadUrl = await ref.getDownloadURL();
-  return downloadUrl; // AssemblyAI 가 이 URL 로 파일 다운로드
+
+  // ─── 핵심: AssemblyAI 가 이 URL 에 접근 가능한지 우리가 먼저 검증 ───
+  // 'No content found' 에러는 Firebase 규칙이 게시 안 됐거나 새 버킷이 토큰을 무시할 때 발생.
+  // 한 번 더 retry — 새 버킷은 규칙 전파에 수 초 걸릴 수 있음.
+  updateProc('🎙️ 검증 중...', '업로드된 파일 접근 가능 여부 확인 중...');
+  let verifyOk = false;
+  let lastStatus = 0;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) await sleep(2000);
+    try {
+      const head = await fetch(downloadUrl, { method: 'HEAD', cache: 'no-store' });
+      lastStatus = head.status;
+      if (head.ok) { verifyOk = true; break; }
+    } catch (e) {
+      console.warn('[ASM] URL verify fetch fail (attempt ' + attempt + '):', e.message);
+    }
+  }
+  if (!verifyOk) {
+    // 업로드된 파일 정리
+    await ref.delete().catch(() => {});
+    _pendingAudioRef = null;
+    throw new Error(
+      `STORAGE_NOT_PUBLIC: 업로드는 됐지만 AssemblyAI 가 파일을 가져갈 수 없습니다 (HTTP ${lastStatus}). ` +
+      `Firebase Console → Storage → Rules 에서 "allow read: if true" 가 실제로 "게시"되었는지 확인해주세요. ` +
+      `URL: ${downloadUrl.slice(0, 80)}...`
+    );
+  }
+  console.log('[ASM] Storage URL 검증 OK (HTTP ' + lastStatus + ')');
+
+  return downloadUrl;
 }
 
 // 임시 Storage 파일 정리 (성공/실패 모두 호출)
@@ -4775,10 +4817,16 @@ async function transcribeAudio(blob) {
   try {
     const upload_url = await asmUploadBlob(blob);
     const id = await asmCreateTranscript(upload_url);
-    return await asmPollTranscript(id);
-  } finally {
-    // ASM 이 다운로드 완료 후 임시 파일 삭제
+    const result = await asmPollTranscript(id);
+    // 성공 시점에는 AssemblyAI 가 이미 다운로드 끝났으므로 즉시 삭제 OK
     cleanupPendingAudio();
+    return result;
+  } catch (e) {
+    // 실패 시 — 30분 후에 정리 (재시도 / 디버깅 여지)
+    const refToClean = _pendingAudioRef;
+    _pendingAudioRef = null;
+    if (refToClean) setTimeout(() => refToClean.delete().catch(() => {}), 30 * 60 * 1000);
+    throw e;
   }
 }
 
