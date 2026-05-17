@@ -4721,33 +4721,25 @@ async function asmUploadBlob(blob) {
 
   const downloadUrl = await ref.getDownloadURL();
 
-  // ─── 핵심: AssemblyAI 가 이 URL 에 접근 가능한지 우리가 먼저 검증 ───
-  // 'No content found' 에러는 Firebase 규칙이 게시 안 됐거나 새 버킷이 토큰을 무시할 때 발생.
-  // 한 번 더 retry — 새 버킷은 규칙 전파에 수 초 걸릴 수 있음.
-  updateProc('🎙️ 검증 중...', '업로드된 파일 접근 가능 여부 확인 중...');
-  let verifyOk = false;
-  let lastStatus = 0;
-  for (let attempt = 0; attempt < 3; attempt++) {
-    if (attempt > 0) await sleep(2000);
-    try {
-      const head = await fetch(downloadUrl, { method: 'HEAD', cache: 'no-store' });
-      lastStatus = head.status;
-      if (head.ok) { verifyOk = true; break; }
-    } catch (e) {
-      console.warn('[ASM] URL verify fetch fail (attempt ' + attempt + '):', e.message);
+  // ─── 진단: 우리 브라우저로 GET 시도해서 status 만 로그.
+  // CORS 로 막히면 status=0 — 이건 브라우저 한정 이슈, AssemblyAI(서버) 와는 무관.
+  // 4xx 가 명확히 나오면 그때만 차단.
+  try {
+    const probe = await fetch(downloadUrl, { method: 'GET', cache: 'no-store', headers: { 'Range': 'bytes=0-0' } });
+    console.log('[ASM] Storage probe HTTP ' + probe.status + ' content-type=' + probe.headers.get('content-type'));
+    if (probe.status === 403 || probe.status === 404) {
+      await ref.delete().catch(() => {});
+      _pendingAudioRef = null;
+      throw new Error(
+        `STORAGE_NOT_PUBLIC: 업로드는 됐지만 공개 접근 불가 (HTTP ${probe.status}). ` +
+        `Firebase Console → Storage → Rules 에 "allow read: if true" 가 게시되어 있는지 확인해주세요.`
+      );
     }
+  } catch (e) {
+    if (e.message?.startsWith('STORAGE_NOT_PUBLIC')) throw e;
+    // CORS / network error → 브라우저 한정, AssemblyAI 는 OK 일 수 있음 → 진행
+    console.log('[ASM] Storage probe blocked by browser (CORS or network) — proceeding anyway:', e.message);
   }
-  if (!verifyOk) {
-    // 업로드된 파일 정리
-    await ref.delete().catch(() => {});
-    _pendingAudioRef = null;
-    throw new Error(
-      `STORAGE_NOT_PUBLIC: 업로드는 됐지만 AssemblyAI 가 파일을 가져갈 수 없습니다 (HTTP ${lastStatus}). ` +
-      `Firebase Console → Storage → Rules 에서 "allow read: if true" 가 실제로 "게시"되었는지 확인해주세요. ` +
-      `URL: ${downloadUrl.slice(0, 80)}...`
-    );
-  }
-  console.log('[ASM] Storage URL 검증 OK (HTTP ' + lastStatus + ')');
 
   return downloadUrl;
 }
