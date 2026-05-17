@@ -4814,7 +4814,7 @@ async function asmPollTranscript(id) {
     if (result.status === 'completed') {
       const txt = result.text || '';
       if (!txt) throw new Error('음성 인식 결과가 비어있습니다. 파일에 음성이 없거나 지원 안 되는 형식입니다.');
-      console.log('[ASM] 완료 글자수:', txt.length, '소요:', Math.round(elapsed/1000) + '초', 'legacy=' + useLegacy);
+      console.log('[ASM] 완료 글자수:', txt.length, '소요:', Math.round(elapsed/1000) + '초');
       return txt;
     }
     if (result.status === 'error') throw new Error('Transcription error: ' + result.error);
