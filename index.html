@@ -4665,6 +4665,13 @@ function encodeWAV(samples, sampleRate) {
    AssemblyAI 가 Storage URL 로 파일을 가져가므로 API 키는 여전히 Worker 에만 존재.
 ═══════════════════════════════════════════ */
 async function asmGuardSize(blob) {
+  console.log('[ASM] guardSize blob.size=' + blob.size + ' blob.type=' + (blob.type || '(none)'));
+  if (!blob || blob.size === 0) {
+    throw new Error('ASM_EMPTY_BLOB: 녹음 파일이 비어 있습니다 (0바이트). 녹음이 제대로 저장되지 않았습니다 — 다시 시도해주세요.');
+  }
+  if (blob.size < 2048) {
+    throw new Error(`ASM_TOO_SMALL: 녹음 파일이 너무 작습니다 (${blob.size}바이트). 음성이 거의 없습니다.`);
+  }
   if (blob.size > MAX_AUDIO_BYTES) {
     const mb = Math.round(blob.size / 1024 / 1024);
     throw new Error(`ASM_TOOBIG: 오디오 파일이 너무 큽니다 (${mb}MB > 2048MB 한도)`);
@@ -4718,6 +4725,25 @@ async function asmUploadBlob(blob) {
       resolve
     );
   });
+
+  // ─── 업로드 직후 실제 저장된 크기 검증 (빈 파일 / 잘림 감지) ───
+  try {
+    const meta = await ref.getMetadata();
+    console.log('[ASM] uploaded size=' + meta.size + ' (expected ' + blob.size + ')');
+    if (meta.size === 0) {
+      await ref.delete().catch(() => {});
+      _pendingAudioRef = null;
+      throw new Error('ASM_UPLOAD_EMPTY: 업로드는 됐지만 서버에 저장된 파일이 0바이트입니다. 브라우저가 blob 을 전송 못한 것 같습니다 — 다른 브라우저로 시도하거나 녹음을 다시 해주세요.');
+    }
+    if (meta.size < blob.size * 0.5) {
+      await ref.delete().catch(() => {});
+      _pendingAudioRef = null;
+      throw new Error(`ASM_UPLOAD_TRUNCATED: 파일이 잘렸습니다 (${meta.size}/${blob.size}바이트). 네트워크 끊김 가능성 — 다시 시도해주세요.`);
+    }
+  } catch (e) {
+    if (e.message?.startsWith('ASM_UPLOAD_')) throw e;
+    console.warn('[ASM] getMetadata 실패 (계속 진행):', e.message);
+  }
 
   const downloadUrl = await ref.getDownloadURL();
 
