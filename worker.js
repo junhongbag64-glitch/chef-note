@@ -269,6 +269,11 @@ export default {
         return handleRetryLlm(jobId, request, env, ctx);
       }
 
+      // ── 클라이언트가 transcript 만 보내고 노트 생성 (단일 경로) ──
+      if (url.pathname === '/generate-note' && request.method === 'POST') {
+        return handleGenerateNote(request, env);
+      }
+
       // ── LLM 프록시 (인증 필요) ──
       if (url.pathname.startsWith('/anthropic/')) {
         return handleAnthropicProxy(request, env, url);
@@ -569,7 +574,38 @@ async function handleRetryLlm(jobId, request, env, ctx) {
 }
 
 /* ═══════════════════════════════════════════
-   NOTE GENERATION (Gemini → Claude 백업 → smartExtract)
+   /generate-note — 클라이언트가 transcript 보내면 노트 생성
+   클라이언트 LLM 직접 호출 경로를 대체 (단일 경로 = 동일 품질)
+═══════════════════════════════════════════ */
+async function handleGenerateNote(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return err('Invalid JSON', 400, request, env); }
+
+  let user;
+  try { user = await requireUser(request, env, body); }
+  catch (e) { return err(e.message, 401, request, env); }
+
+  const transcript = (body.transcript || '').toString();
+  if (!transcript || transcript.trim().length < 5) {
+    return err('transcript 가 비어있습니다', 400, request, env);
+  }
+
+  const metadata = (body.metadata && typeof body.metadata === 'object') ? body.metadata : {};
+
+  try {
+    const note = await generateNote(transcript, metadata, env);
+    return ok({
+      note,
+      model: note._genModel || 'unknown',
+      llmErrors: note._llmErrors || [],
+    }, 200, request, env);
+  } catch (e) {
+    return err('노트 생성 실패: ' + (e.message || e), 500, request, env);
+  }
+}
+
+/* ═══════════════════════════════════════════
+   NOTE GENERATION (Claude Sonnet → Gemini Pro → Haiku → smartExtract)
 ═══════════════════════════════════════════ */
 const NOTE_SCHEMA_GEMINI = {
   type: 'object',
@@ -704,6 +740,7 @@ ${transcript}
 
   let parsed = null;
   let usedModel = '';
+  const llmErrors = [];
 
   // 1) Claude Sonnet 4.5 — 가장 이해력 좋음, 한국어 조리 용어 최강
   if (env.CLAUDE_KEY) {
@@ -734,13 +771,19 @@ ${transcript}
           const raw = data.content?.find(b => b.type === 'text')?.text || '';
           parsed = parseClaudeJSON(raw);
           if (parsed) usedModel = 'claude-sonnet-4-5(text)';
+          else llmErrors.push('Sonnet: tool_use 없음 + JSON 파싱 실패');
         }
       } else {
-        console.warn('[Claude Sonnet]', res.status, (await res.text()).slice(0, 200));
+        const t = (await res.text()).slice(0, 200);
+        console.warn('[Claude Sonnet]', res.status, t);
+        llmErrors.push(`Sonnet HTTP ${res.status}: ${t}`);
       }
     } catch (e) {
       console.warn('[Claude Sonnet] error:', e.message);
+      llmErrors.push('Sonnet 예외: ' + e.message);
     }
+  } else {
+    llmErrors.push('CLAUDE_KEY 미설정');
   }
 
   // 2) Gemini 2.5 Pro 백업 — Flash 보다 이해도 좋음
@@ -771,13 +814,21 @@ ${transcript}
         if (raw) {
           parsed = parseClaudeJSON(raw);
           if (parsed) usedModel = 'gemini-2.5-pro';
+          else llmErrors.push('Gemini Pro: JSON 파싱 실패');
+        } else {
+          llmErrors.push('Gemini Pro: 빈 응답 (' + JSON.stringify(gdata).slice(0, 120) + ')');
         }
       } else {
-        console.warn('[Gemini Pro]', gres.status, (await gres.text()).slice(0, 200));
+        const t = (await gres.text()).slice(0, 200);
+        console.warn('[Gemini Pro]', gres.status, t);
+        llmErrors.push(`Gemini Pro HTTP ${gres.status}: ${t}`);
       }
     } catch (e) {
       console.warn('[Gemini Pro] error:', e.message);
+      llmErrors.push('Gemini Pro 예외: ' + e.message);
     }
+  } else if (!parsed && !env.GEMINI_KEY) {
+    llmErrors.push('GEMINI_KEY 미설정');
   }
 
   // 3) Claude Haiku 마지막 백업
@@ -805,18 +856,23 @@ ${transcript}
         if (toolUse?.input) {
           parsed = toolUse.input;
           usedModel = 'claude-haiku-4-5';
+        } else {
+          llmErrors.push('Haiku: tool_use 없음');
         }
       } else {
-        console.warn('[Claude Haiku]', res.status, (await res.text()).slice(0, 200));
+        const t = (await res.text()).slice(0, 200);
+        console.warn('[Claude Haiku]', res.status, t);
+        llmErrors.push(`Haiku HTTP ${res.status}: ${t}`);
       }
     } catch (e) {
       console.warn('[Claude Haiku] error:', e.message);
+      llmErrors.push('Haiku 예외: ' + e.message);
     }
   }
 
-  // 3) 둘 다 실패 → smartExtract
+  // 셋 다 실패 → smartExtract
   if (!parsed) {
-    console.warn('[NoteGen] LLM 둘 다 실패 — smartExtract 사용');
+    console.warn('[NoteGen] LLM 전부 실패 — smartExtract 사용 / 원인:', llmErrors.join(' | '));
     parsed = smartExtract(transcript);
     usedModel = 'smartExtract';
   }
@@ -853,6 +909,8 @@ ${transcript}
     memos,
     media: [],
     audioBlob: null,
+    _genModel: usedModel,
+    _llmErrors: usedModel === 'smartExtract' ? llmErrors : undefined,
     ...parsed,
   };
 }

@@ -5079,134 +5079,53 @@ const NOTE_TOOL = {
 async function generateNote(transcript, dur, memos = []) {
   if (!transcript || transcript.trim().length < 5) return fallbackNote(dur);
 
-  const memoSection = memos.length
-    ? `\n수업 중 추가 메모 (반드시 반영):\n${memos.map((m,i) => `${i+1}. ${m}`).join('\n')}\n`
-    : '';
+  updateProc('🎙️ 레시피 노트 만드는 중...', '잠깐만요, 거의 다 됐어요!\nAI가 레시피 정리 중...');
 
-  const prompt = `다음은 조리학과 수업 녹음을 텍스트로 변환한 내용입니다.
-${memoSection}
-텍스트:
-"""
-${transcript}
-"""
-
-이 수업 내용을 분석해 노트를 만들어주세요.
-
-판단 기준:
-- 실제 조리/요리/실습이면 type="recipe", classType="실습"
-- 이론·역사·영양학·위생·서비스이면 type="theory", classType="이론"
-- 한 수업에 여러 요리가 명확히 구분되면 recipes 에 각각 분리
-- content 는 단계별로 \\n 으로 줄바꿈
-- ingredients 는 "재료명 + 용량" 형식 (예: "당근 50g"). 이론 수업이면 빈 배열`;
-
-  updateProc('🎙️ 레시피 노트 만드는 중...', '잠깐만요, 거의 다 됐어요!\n레시피 정리 중...');
-  let parsed = null;
-  let usedModel = '';
-
-  // 1) Gemini 2.5 Flash (responseSchema 강제) — 무료, 한국어 우수
+  // ── 단일 경로: 워커 /generate-note (Claude Sonnet 4.5 → Gemini Pro → Haiku) ──
+  // 클라이언트가 직접 LLM 호출하던 경로(약한 모델·옛 프롬프트)를 폐기하고
+  // 워커의 고품질 generateNote 한 곳으로 통일.
   try {
-    const gctrl = new AbortController();
-    const gtimer = setTimeout(() => gctrl.abort(), 60000);
-    let gres;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 180000); // 3분
+    let res;
     try {
-      gres = await workerFetch('/gemini/generate', {
+      res = await workerFetch('/generate-note', {
         method: 'POST',
-        signal: gctrl.signal,
+        signal: ctrl.signal,
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          model: 'gemini-2.5-flash',
-          temperature: 0.2,
-          maxOutputTokens: 2500,
-          prompt,
-          responseSchema: NOTE_SCHEMA_GEMINI,
-        }),
+        body: JSON.stringify({ transcript, metadata: { duration: dur, memos } }),
       });
-    } finally { clearTimeout(gtimer); }
-    if (gres && gres.ok) {
-      const gdata = await gres.json();
-      const raw = gdata.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      if (raw) {
-        parsed = parseClaudeJSON(raw);
-        if (parsed) usedModel = 'gemini-2.5-flash';
+    } finally { clearTimeout(timer); }
+
+    if (res.ok) {
+      const data = await res.json();
+      const note = data.note;
+      if (note && Array.isArray(note.recipes) && note.recipes.length) {
+        console.log('[NoteGen] 모델:', data.model);
+        if (data.model === 'smartExtract') {
+          // LLM 전부 실패 — 워커가 알려준 원인 표시
+          const reason = (data.llmErrors && data.llmErrors.length)
+            ? data.llmErrors.join(' / ')
+            : '원인 불명';
+          console.error('[NoteGen] LLM 전부 실패:', reason);
+          showToast('⚠️ AI 정리 실패 — 임시 노트입니다. 원인: ' + reason.slice(0, 80));
+        }
+        note.recipes = note.recipes.map((r, i) => ({ id: 'r' + i, paragraphAttachments: {}, ...r }));
+        return note;
       }
-    } else if (gres) {
-      console.warn('[Gemini]', gres.status, (await gres.text().catch(() => '')).slice(0, 200));
+      console.warn('[NoteGen] /generate-note 응답에 recipes 없음');
+    } else {
+      const e = await res.json().catch(() => ({}));
+      console.warn('[NoteGen] /generate-note HTTP', res.status, e.error);
+      throw new Error(e.error || ('서버 오류 ' + res.status));
     }
   } catch (e) {
-    console.warn('[Gemini] error:', e.message);
+    console.warn('[NoteGen] /generate-note 호출 실패:', e.message);
   }
 
-  // 2) Claude Haiku (tool_use 강제) — 백업
-  if (!parsed) {
-    try {
-      const ctrl = new AbortController();
-      const claudeTimer = setTimeout(() => ctrl.abort(), 120000);
-      let res;
-      try {
-        res = await workerFetch('/anthropic/v1/messages', {
-          method: 'POST',
-          signal: ctrl.signal,
-          headers: { 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-          body: JSON.stringify({
-            model: 'claude-haiku-4-5',
-            max_tokens: 2500,
-            temperature: 0.2,
-            tools: [NOTE_TOOL],
-            tool_choice: { type: 'tool', name: NOTE_TOOL.name },
-            messages: [{ role: 'user', content: prompt }],
-          }),
-        });
-      } finally { clearTimeout(claudeTimer); }
-      if (res.ok) {
-        const data = await res.json();
-        const toolUse = (data.content || []).find(b => b.type === 'tool_use');
-        if (toolUse?.input) {
-          parsed = toolUse.input;
-          usedModel = 'claude-haiku-4-5';
-        } else {
-          const raw = data.content?.find(b => b.type === 'text')?.text || '';
-          parsed = parseClaudeJSON(raw);
-          if (parsed) usedModel = 'claude-haiku-4-5(text)';
-        }
-      } else {
-        console.warn('[Claude] API 오류', res.status, (await res.text().catch(() => '')).slice(0, 200));
-      }
-    } catch (e) {
-      console.warn('[Claude] 연결 실패:', e.message);
-    }
-  }
-
-  // 3) 둘 다 실패 → smartExtract (빈 fallbackNote 안 만듦)
-  if (!parsed) {
-    console.warn('[NoteGen] LLM 둘 다 실패 — smartExtract 사용');
-    return smartExtract(transcript, dur);
-  }
-  console.log('[NoteGen] 사용 모델:', usedModel);
-
-  // 핵심 안전망: LLM이 schema 만 맞추고 content/title 을 비워서 보내는 경우를
-  // smartExtract 폴백으로 보강. 워커(worker.js)의 coerceGeneratedNote 와 동일 로직.
-  parsed = coerceGeneratedNote(parsed, transcript, dur);
-
-  // Normalize: ensure `recipes` array exists with proper structure
-  if (!parsed.recipes || !Array.isArray(parsed.recipes) || !parsed.recipes.length) {
-    parsed.recipes = [{
-      id: 'r0',
-      title: parsed.title || '레시피',
-      type: parsed.type || 'recipe',
-      classType: parsed.classType || '실습',
-      ingredients: parsed.ingredients || [],
-      content: parsed.content || '',
-      tips: parsed.tips || [],
-      paragraphAttachments: {},
-    }];
-  } else {
-    parsed.recipes = parsed.recipes.map((r, i) => ({
-      id: 'r' + i,
-      paragraphAttachments: {},
-      ...r,
-    }));
-  }
-  return parsed;
+  // ── 최후 폴백: 워커 자체가 닿지 않을 때만 ──
+  console.warn('[NoteGen] 서버 노트 생성 불가 — smartExtract 폴백');
+  return smartExtract(transcript, dur);
 }
 
 /* LLM이 schema 는 맞추고 알맹이를 비워서 보내는 경우를 막는 안전망.
