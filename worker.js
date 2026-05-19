@@ -29,6 +29,8 @@ const ANTHROPIC_API = 'https://gateway.ai.cloudflare.com/v1/d872f29764b5c5b23882
 const DEFAULT_FIREBASE_PROJECT_ID = 'chefnote-1833f';
 const DEFAULT_FREE_NOTES_PER_DAY = 5;
 const DEFAULT_ALLOWED_ORIGINS = [
+  'https://chefnote.kr',
+  'https://www.chefnote.kr',
   'https://junhongbag64-glitch.github.io',
   'http://localhost:8080',
   'http://localhost:3000',
