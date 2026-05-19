@@ -1,9 +1,10 @@
-const CACHE_NAME = 'chefnote-v25';
+const CACHE_NAME = 'chefnote-v26';
 const SHARE_CACHE = 'chefnote-share-inbox';
+// 상대경로 — 서브패스(/chef-note/) / 루트도메인(/) 모두에서 정상 동작
 const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
+  './',
+  './index.html',
+  './manifest.json',
   'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Noto+Serif+KR:wght@400;600&family=Noto+Sans+KR:wght@300;400;500&display=swap'
 ];
 
@@ -56,7 +57,8 @@ async function handleShareTarget(request) {
     // Swallow — main page will show "공유 받기 실패" if no cache present
   }
   // 303 → 클라이언트가 GET으로 메인 페이지를 다시 요청하도록
-  return Response.redirect('/chef-note/?shared-pending=1', 303);
+  // self.registration.scope = 배포 위치 (서브패스/루트 모두 대응)
+  return Response.redirect(self.registration.scope + '?shared-pending=1', 303);
 }
 
 // Fetch: cache-first for static, network-first for API
@@ -98,7 +100,7 @@ self.addEventListener('fetch', event => {
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         }
         return response;
-      }).catch(() => caches.match('/index.html'));
+      }).catch(() => caches.match('./index.html'));
     })
   );
 });

@@ -346,6 +346,14 @@ async function handleAsmTranscript(request, env) {
   const { upload_url, webhook_url } = body || {};
   if (!upload_url) return err('upload_url required', 400, request, env);
 
+  // 사용량 한도 — 클라이언트 모드(webhook 없음)는 여기서 차감.
+  // 서버 모드(webhook 있음)는 /register-job 에서 차감하므로 스킵 (이중 차감 방지).
+  // AssemblyAI 변환이 시작되기 전에 막아야 비용이 안 나감.
+  if (!webhook_url) {
+    try { await checkAndChargeQuota(env, user); }
+    catch (e) { return err(e.message, e.status || 429, request, env); }
+  }
+
   const payload = {
     audio_url: upload_url,
     language_code: 'ko',
