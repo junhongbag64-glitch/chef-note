@@ -27,7 +27,7 @@ const ASM_API = 'https://api.assemblyai.com';
 const ANTHROPIC_API = 'https://gateway.ai.cloudflare.com/v1/d872f29764b5c5b238824decd2dc6d91/chefnote/anthropic';
 
 const DEFAULT_FIREBASE_PROJECT_ID = 'chefnote-1833f';
-const DEFAULT_FREE_NOTES_PER_DAY = 5;
+const DEFAULT_FREE_NOTES_PER_DAY = 30;
 const DEFAULT_ALLOWED_ORIGINS = [
   'https://chefnote.kr',
   'https://www.chefnote.kr',
