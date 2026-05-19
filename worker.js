@@ -28,6 +28,7 @@ const ANTHROPIC_API = 'https://gateway.ai.cloudflare.com/v1/d872f29764b5c5b23882
 
 const DEFAULT_FIREBASE_PROJECT_ID = 'chefnote-1833f';
 const DEFAULT_FREE_NOTES_PER_DAY = 30;
+const DEFAULT_OWNER_EMAILS = ['junhongbag64@gmail.com']; // 소유자 — 일일 한도 면제
 const DEFAULT_ALLOWED_ORIGINS = [
   'https://chefnote.kr',
   'https://www.chefnote.kr',
@@ -186,8 +187,9 @@ function todayKey() {
 }
 
 function isOwner(email, env) {
-  if (!email || !env.OWNER_EMAILS) return false;
-  const list = env.OWNER_EMAILS.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+  if (!email) return false;
+  const raw = env.OWNER_EMAILS || DEFAULT_OWNER_EMAILS.join(',');
+  const list = raw.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
   return list.includes(email.toLowerCase());
 }
 
