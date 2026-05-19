@@ -2152,6 +2152,59 @@
     }
     .auth-mockup-badge::before { content: '✨'; font-size: 12px; }
 
+    /* ─── Product preview section ─── */
+    .auth-preview-section { margin: 2px 0 34px; }
+    .auth-preview-label {
+      font-size: 11px; font-weight: 700;
+      letter-spacing: 1.2px; text-transform: uppercase;
+      color: var(--text-3);
+      text-align: center;
+      margin-bottom: 18px;
+    }
+
+    /* ─── FAQ — native <details> accordion (zero JS) ─── */
+    .auth-faq { margin: 28px 0 20px; }
+    .auth-faq-title {
+      font-size: 11px; font-weight: 700;
+      letter-spacing: 1.2px; text-transform: uppercase;
+      color: var(--text-3);
+      margin-bottom: 12px;
+    }
+    .auth-faq-item {
+      background: var(--bg-card);
+      border: 1px solid var(--border-1);
+      border-radius: 12px;
+      margin-bottom: 8px;
+    }
+    .auth-faq-item summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 14px 16px;
+      font-size: 14px; font-weight: 600;
+      color: var(--text-1);
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px;
+    }
+    .auth-faq-item summary::-webkit-details-marker { display: none; }
+    .auth-faq-mark {
+      width: 13px; height: 13px; position: relative; flex-shrink: 0;
+    }
+    .auth-faq-mark::before, .auth-faq-mark::after {
+      content: ''; position: absolute;
+      background: var(--accent); border-radius: 1px;
+    }
+    .auth-faq-mark::before { top: 5.5px; left: 0; width: 13px; height: 2px; }
+    .auth-faq-mark::after  {
+      top: 0; left: 5.5px; width: 2px; height: 13px;
+      transition: transform .2s ease, opacity .2s ease;
+    }
+    .auth-faq-item[open] .auth-faq-mark::after { transform: rotate(90deg); opacity: 0; }
+    .auth-faq-a {
+      padding: 0 16px 15px;
+      font-size: 13px; color: var(--text-2);
+      line-height: 1.65;
+    }
+
     /* ─── Content section (below hero) ─── */
     .auth-content-section {
       padding: 40px 28px 0;
@@ -2690,6 +2743,48 @@
         <div class="auth-proof-item"><b>백그라운드 처리</b>앱 닫아도 진행</div>
       </div>
 
+      <div class="auth-preview-section">
+        <div class="auth-preview-label">완성되는 노트 미리보기</div>
+        <div class="auth-mockup-wrap">
+          <div class="auth-mockup-card">
+            <div class="auth-mockup-topbar"></div>
+            <div class="auth-mockup-header">
+              <div>
+                <div class="auth-mockup-eyebrow">실습 · 양식</div>
+                <div class="auth-mockup-title">비프 부르기뇽</div>
+              </div>
+              <div class="auth-mockup-date-chip">5월 17일</div>
+            </div>
+            <div class="auth-mockup-body">
+              <div class="auth-mockup-section-label">재료</div>
+              <div class="auth-mockup-ingr">
+                <span>소고기 양지 <b>600g</b></span>
+                <span>레드와인 <b>500ml</b></span>
+                <span>양파 <b>1개</b></span>
+                <span>베이컨 <b>100g</b></span>
+                <span>당근 <b>2개</b></span>
+                <span>버터 <b>30g</b></span>
+              </div>
+              <div class="auth-mockup-section-label">조리 순서</div>
+              <div class="auth-mockup-step-row">
+                <div class="auth-mockup-step-num">1</div>
+                <div class="auth-mockup-step-text">소고기를 3cm 큐브로 썰어 소금·후추로 밑간한다.</div>
+              </div>
+              <div class="auth-mockup-step-row">
+                <div class="auth-mockup-step-num">2</div>
+                <div class="auth-mockup-step-text">팬을 센 불로 달궈 겉면을 진한 갈색이 나게 시어링한다.</div>
+              </div>
+              <div class="auth-mockup-step-row">
+                <div class="auth-mockup-step-num">3</div>
+                <div class="auth-mockup-step-text">레드와인을 붓고 약불에서 2시간 뭉근히 졸인다.</div>
+              </div>
+              <div class="auth-mockup-tip"><b>교수님 팁</b> · 와인은 먼저 끓여 알코올을 날린 뒤 부어야 신맛이 남지 않는다.</div>
+            </div>
+          </div>
+          <div class="auth-mockup-badge">AI가 자동 정리</div>
+        </div>
+      </div>
+
       <div class="auth-cta-block" style="margin-bottom:28px;margin-top:0">
         <button class="auth-google-big" onclick="googleLogin()">
           <svg viewBox="0 0 48 48">
@@ -2751,6 +2846,30 @@
             <span>재료, 조리 순서, 교수님 팁까지 구조화되어 저장됩니다.</span>
           </div>
         </div>
+      </div>
+
+      <div class="auth-faq">
+        <div class="auth-faq-title">자주 묻는 질문</div>
+        <details class="auth-faq-item">
+          <summary>무료인가요?<span class="auth-faq-mark"></span></summary>
+          <div class="auth-faq-a">네, 무료로 시작할 수 있어요. 별도 결제 없이 바로 수업 녹음을 노트로 만들 수 있습니다.</div>
+        </details>
+        <details class="auth-faq-item">
+          <summary>1시간이 넘는 긴 수업도 되나요?<span class="auth-faq-mark"></span></summary>
+          <div class="auth-faq-a">네. 1시간 30분이 넘는 실습 수업도 통째로 업로드해 정리할 수 있어요. 업로드가 끝나면 앱을 닫아도 변환은 백그라운드에서 계속 진행됩니다.</div>
+        </details>
+        <details class="auth-faq-item">
+          <summary>수업 중에 녹음을 못 했어요<span class="auth-faq-mark"></span></summary>
+          <div class="auth-faq-a">괜찮아요. 갤럭시 녹음기·아이폰 음성 메모 등으로 녹음한 파일을 업로드하거나, 녹음 앱의 '공유'에서 ChefNote로 바로 보낼 수 있습니다.</div>
+        </details>
+        <details class="auth-faq-item">
+          <summary>제 녹음 파일은 안전한가요?<span class="auth-faq-mark"></span></summary>
+          <div class="auth-faq-a">녹음 파일은 노트로 변환하는 데에만 쓰이고 처리 후 삭제됩니다. 완성된 노트는 본인 계정에만 저장되어 다른 사람은 볼 수 없어요.</div>
+        </details>
+        <details class="auth-faq-item">
+          <summary>노트 내용이 틀릴 수도 있나요?<span class="auth-faq-mark"></span></summary>
+          <div class="auth-faq-a">AI가 음성을 듣고 정리하기 때문에 100% 완벽하지는 않아요. 모든 노트는 직접 수정할 수 있으니, 중요한 재료나 수치는 한 번 확인하는 것을 권장합니다.</div>
+        </details>
       </div>
 
       <div class="auth-value-list">
