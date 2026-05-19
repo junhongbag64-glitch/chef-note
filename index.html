@@ -24,8 +24,8 @@
     ═══════════════════════════════════════════ */
     :root {
       --bg:          #FAF6EF;
-      --bg-card:     #FEFCF7;
-      --bg-elevated: #FFF9F0;
+      --bg-card:     #FFFFFF;
+      --bg-elevated: #FFFFFF;
       --text-1:      #1A1814;
       --text-2:      #6B6860;
       --text-3:      #ABA89F;
@@ -37,6 +37,13 @@
       --accent-mid:  #6E8A4E;
       --danger:      #C0392B;
       --danger-lt:   #FDECEA;
+
+      /* 발랄 요리 팔레트 — 카테고리·노트 액센트용 (그린은 브랜드 전용) */
+      --food-tomato:    #D9533C;
+      --food-carrot:    #D17F33;
+      --food-honey:     #C99030;
+      --food-berry:     #8458A6;
+      --food-blueberry: #4F6D9E;
 
       --f-display: 'Playfair Display', 'Noto Serif KR', Georgia, serif;
       --f-serif:   'Noto Serif KR', 'Playfair Display', Georgia, serif;
@@ -2730,8 +2737,8 @@
           바로 정리됩니다
         </h1>
         <p class="auth-tagline">
-          메모하느라 놓치지 말고 수업에만 집중하세요.
-          변환 완료 후에는 재료, 조리 순서, 팁을 빠르게 찾을 수 있어요.
+          녹음만 하세요. 노트는 완성돼 있어요.<br>
+          재료·조리 순서·교수님 팁까지 자동으로요.
         </p>
       </div>
     </div>
@@ -3505,12 +3512,12 @@ async function workerFetch(path, opts = {}) {
 /* ───────────────── NOTE ACCENT PALETTE (deterministic, not user-facing) ───────────────── */
 // Subtle accent colors assigned automatically based on note id — no user picker
 const NOTE_COLORS = [
-  '#4E6035', // sage
-  '#5A6E7A', // slate
-  '#8B5E3C', // cognac
-  '#3A6E5C', // teal
-  '#5B5080', // plum
-  '#6E5030', // warm brown
+  '#D9533C', // tomato
+  '#D17F33', // carrot
+  '#4E6035', // sage (브랜드 그린)
+  '#8458A6', // berry
+  '#4F6D9E', // blueberry
+  '#C99030', // honey
 ];
 
 /* ───────────────── STATE ───────────────── */
