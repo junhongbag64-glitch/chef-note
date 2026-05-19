@@ -4349,10 +4349,18 @@ async function startRecording() {
     /* Choose best MIME type */
     const mime = getBestMime();
     S.chunks = [];
+    S.recId = 'rec_' + Date.now();
+    S.recChunkN = 0;
+    liveRecBegin(S.recId, mime);   // 라이브 녹음 시작 마커
     S.recorder = new MediaRecorder(S.stream, mime ? { mimeType: mime } : {});
 
-    /* Collect chunks every second — essential for background survival */
-    S.recorder.ondataavailable = e => { if (e.data?.size > 0) S.chunks.push(e.data); };
+    /* 1초마다 청크 수집 + 즉시 IndexedDB 영속화 (앱이 죽어도 복구 가능) */
+    S.recorder.ondataavailable = e => {
+      if (e.data?.size > 0) {
+        S.chunks.push(e.data);
+        liveRecPush(S.recId, S.recChunkN++, e.data);
+      }
+    };
     S.recorder.onstop = onRecordingDone;
     S.recorder.start(1000);
 
@@ -4496,13 +4504,26 @@ function updateRecCounts() {
    INDEXEDDB — Draft persistence
    Saves raw audio blob before AI processing so we can recover if page closes
 ═══════════════════════════════════════════ */
+let _draftDB = null;
 function openDraftDB() {
+  if (_draftDB) return Promise.resolve(_draftDB);
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open('chefnote-drafts', 1);
+    const req = indexedDB.open('chefnote-drafts', 2);
     req.onupgradeneeded = e => {
-      e.target.result.createObjectStore('drafts', { keyPath: 'id' });
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains('drafts')) {
+        db.createObjectStore('drafts', { keyPath: 'id' });
+      }
+      // 녹음 도중 1초 청크를 즉시 보관 — 앱이 죽어도 복구용
+      if (!db.objectStoreNames.contains('liveChunks')) {
+        db.createObjectStore('liveChunks', { keyPath: 'key' });
+      }
     };
-    req.onsuccess = e => resolve(e.target.result);
+    req.onsuccess = e => {
+      _draftDB = e.target.result;
+      _draftDB.onversionchange = () => { try { _draftDB.close(); } catch {} _draftDB = null; };
+      resolve(_draftDB);
+    };
     req.onerror = () => reject(req.error);
   });
 }
@@ -4538,6 +4559,88 @@ async function deleteDraftFromDB(id) {
   } catch(e) { console.warn('[Draft] delete failed:', e); }
 }
 
+/* ═══════════════════════════════════════════
+   LIVE RECORDING 영속화 — 녹음 유실 방지의 핵심
+   녹음 도중 1초 청크를 즉시 IndexedDB 에 저장.
+   앱/탭이 녹음 중 죽어도 다음 실행에서 복구한다.
+═══════════════════════════════════════════ */
+async function liveRecBegin(recId, mime) {
+  try {
+    const db = await openDraftDB();
+    await new Promise((res, rej) => {
+      const tx = db.transaction('liveChunks', 'readwrite');
+      tx.objectStore('liveChunks').put({
+        key: 'meta:' + recId, kind: 'meta', recId,
+        startedAt: Date.now(), mime: mime || 'audio/webm',
+      });
+      tx.oncomplete = res; tx.onerror = () => rej(tx.error);
+    });
+  } catch (e) { console.warn('[LiveRec] begin failed:', e); }
+}
+function liveRecPush(recId, idx, blob) {
+  // fire-and-forget — ondataavailable 을 절대 막지 않음
+  openDraftDB().then(db => {
+    const tx = db.transaction('liveChunks', 'readwrite');
+    const key = 'c:' + recId + ':' + String(idx).padStart(7, '0');
+    tx.objectStore('liveChunks').put({ key, kind: 'chunk', recId, idx, blob });
+  }).catch(e => console.warn('[LiveRec] push failed:', e));
+}
+async function liveRecClear(recId) {
+  if (!recId) return;
+  try {
+    const db = await openDraftDB();
+    await new Promise((res) => {
+      const tx = db.transaction('liveChunks', 'readwrite');
+      const store = tx.objectStore('liveChunks');
+      store.delete('meta:' + recId);
+      store.delete(IDBKeyRange.bound('c:' + recId + ':', 'c:' + recId + ':￿'));
+      tx.oncomplete = res; tx.onerror = res;
+    });
+  } catch (e) { console.warn('[LiveRec] clear failed:', e); }
+}
+/* 앱 시작 시: 끝나지 않은(고아) 라이브 녹음을 draft 로 복구. 복구 개수 반환. */
+async function liveRecRecover() {
+  let recovered = 0;
+  try {
+    const db = await openDraftDB();
+    const all = await new Promise((res, rej) => {
+      const tx = db.transaction('liveChunks', 'readonly');
+      const req = tx.objectStore('liveChunks').getAll();
+      req.onsuccess = () => res(req.result || []);
+      req.onerror = () => rej(req.error);
+    });
+    if (!all.length) return 0;
+    const groups = {};
+    for (const rec of all) {
+      if (!rec || !rec.recId) continue;
+      groups[rec.recId] = groups[rec.recId] || { meta: null, chunks: [] };
+      if (rec.kind === 'meta') groups[rec.recId].meta = rec;
+      else if (rec.kind === 'chunk' && rec.blob) groups[rec.recId].chunks.push(rec);
+    }
+    for (const recId in groups) {
+      const g = groups[recId];
+      g.chunks.sort((a, b) => a.idx - b.idx);
+      if (g.chunks.length) {
+        const mime = (g.meta && g.meta.mime) || g.chunks[0].blob.type || 'audio/webm';
+        const blob = new Blob(g.chunks.map(c => c.blob), { type: mime });
+        if (blob.size > 2048) {
+          await saveDraftToDB({
+            id: 'draft_recovered_' + recId,
+            audioBlob: blob,
+            media: [], memos: [],
+            duration: g.chunks.length,           // 1초/청크 ≈ 길이(초)
+            timestamp: (g.meta && g.meta.startedAt) || Date.now(),
+            recovered: true,
+          });
+          recovered++;
+        }
+      }
+      await liveRecClear(recId);
+    }
+  } catch (e) { console.warn('[LiveRec] recover failed:', e); }
+  return recovered;
+}
+
 // Show/hide the draft recovery banner
 function showDraftBanner(text) {
   const b = document.getElementById('draftBanner');
@@ -4551,6 +4654,12 @@ function showDraftBanner(text) {
 
 // Called after auth: check for any unfinished drafts and process them
 async function checkAndResumeDrafts() {
+  // 녹음 도중 앱이 죽어 남은 '고아' 녹음을 먼저 draft 로 복구 (녹음 유실 방지 핵심)
+  try {
+    const recovered = await liveRecRecover();
+    if (recovered > 0) showToast(`🎙️ 끊긴 녹음 ${recovered}개를 복구했어요 — 노트로 변환합니다`);
+  } catch (e) { console.warn('[LiveRec] recover error:', e); }
+
   const drafts = await getAllDrafts();
   if (!drafts.length) return;
   renderPendingDrafts();
@@ -4640,17 +4749,25 @@ function removeProcessingGuard() {
    RECORDING COMPLETE → TRANSCRIBE → NOTE
 ═══════════════════════════════════════════ */
 async function onRecordingDone() {
-  if (!S.chunks.length) { showToast('녹음 데이터가 없습니다'); return; }
-  if (!checkNoteLimit()) return;
+  if (!S.chunks.length) { showToast('녹음 데이터가 없습니다'); liveRecClear(S.recId); return; }
 
   const dur   = Math.floor((Date.now() - S.recStart) / 1000);
   const blob  = new Blob(S.chunks, { type: S.chunks[0]?.type || 'audio/webm' });
   const media = [...S.media];
   const memos = [...S.memos];
 
-  // IndexedDB에 오디오 보존 (앱 종료 대비)
+  // ① 녹음을 무조건 먼저 기기에 저장 — 한도 체크보다 먼저 (녹음 유실 절대 방지)
   const draftId = 'draft_' + Date.now();
   await saveDraftToDB({ id: draftId, audioBlob: blob, media, memos, duration: dur, timestamp: Date.now() });
+  // draft 에 안전하게 들어갔으니 라이브 청크 정리
+  liveRecClear(S.recId);
+
+  // ② 한도 체크 — 막혀도 녹음은 draft 로 보존되어 나중에 변환 가능
+  if (!checkNoteLimit()) {
+    renderPendingDrafts();
+    showToast('🎙️ 녹음은 저장됐어요 — 한도 때문에 지금은 노트 생성을 못 해요. 홈에서 나중에 변환할 수 있어요');
+    return;
+  }
 
   showProc('🎙️ 업로드 중...', '잠시만요... 업로드가 끝나면 앱 자유롭게 쓸 수 있어요');
   addProcessingGuard();
