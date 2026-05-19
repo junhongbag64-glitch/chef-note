@@ -538,6 +538,40 @@
       background: #B9DC82;
     }
 
+    /* ─── 새 노트 카드 (coconote-style 입력 카드) ─── */
+    .home-newnote {
+      margin: 16px 20px 6px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .newnote-card {
+      display: flex; align-items: center; gap: 14px;
+      width: 100%;
+      background: var(--bg-card);
+      border: 1.5px solid var(--border-1);
+      border-radius: 16px;
+      padding: 15px 16px;
+      cursor: pointer; text-align: left;
+      font-family: var(--f-sans);
+      transition: transform .12s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .newnote-card:active { transform: scale(.985); }
+    .newnote-ic {
+      width: 46px; height: 46px; border-radius: 13px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; color: #fff;
+    }
+    .newnote-ic svg { width: 23px; height: 23px; }
+    .newnote-card-rec .newnote-ic { background: var(--food-tomato); }
+    .newnote-card-up  .newnote-ic { background: var(--food-blueberry); }
+    .newnote-txt { flex: 1; min-width: 0; }
+    .newnote-txt b {
+      display: block; font-size: 15.5px; font-weight: 700;
+      color: var(--text-1); margin-bottom: 2px; letter-spacing: -.2px;
+    }
+    .newnote-txt span { font-size: 12.5px; color: var(--text-2); }
+    .newnote-go { font-size: 24px; color: var(--text-3); flex-shrink: 0; font-weight: 300; }
+
     /* ─── Recording toolbar (above FAB) ─── */
     .rec-toolbar {
       position: fixed;
@@ -1873,20 +1907,20 @@
     .auth-hero-tag {
       display: inline-flex; align-items: center; gap: 7px;
       font-size: 11px; font-weight: 600;
-      color: rgba(168,207,110,.9);
+      color: rgba(232,184,74,.95);
       margin: 32px 0 24px;
       text-transform: uppercase;
       letter-spacing: 1.4px;
       padding: 6px 12px;
-      background: rgba(168,207,110,.08);
-      border: 1px solid rgba(168,207,110,.18);
+      background: rgba(232,184,74,.10);
+      border: 1px solid rgba(232,184,74,.22);
       border-radius: 99px;
     }
     .auth-hero-tag::before {
       content: '';
       width: 6px; height: 6px; border-radius: 50%;
-      background: #A8CF6E; flex-shrink: 0;
-      box-shadow: 0 0 8px rgba(168,207,110,.7);
+      background: #E8B84A; flex-shrink: 0;
+      box-shadow: 0 0 8px rgba(232,184,74,.7);
       animation: pulse-dot 2s ease-in-out infinite;
     }
     @keyframes pulse-dot {
@@ -1902,7 +1936,7 @@
     }
     .auth-headline em {
       font-style: normal;
-      background: linear-gradient(135deg, #A8CF6E 0%, #C4E388 100%);
+      background: linear-gradient(135deg, #E8B84A 0%, #F2D182 100%);
       -webkit-background-clip: text;
       background-clip: text;
       -webkit-text-fill-color: transparent;
@@ -2210,6 +2244,12 @@
       padding: 0 16px 15px;
       font-size: 13px; color: var(--text-2);
       line-height: 1.65;
+    }
+
+    /* 모바일 = 미니멀 랜딩 (coconote 모바일처럼 한 화면 집중) — 무거운 섹션 숨김.
+       PC 에서는 전체 노출 (제품 미리보기·작동방식·FAQ 다 보임) */
+    @media (max-width: 600px) {
+      .auth-flow, .auth-faq, .auth-value-list { display: none; }
     }
 
     /* ─── Content section (below hero) ─── */
@@ -2951,13 +2991,34 @@
       <div class="home-greeting-sub" id="homeGreetingSub">오늘 수업도 기록해보세요</div>
     </div>
 
-    <div class="home-focus-card" id="homeFocusCard">
-      <div style="min-width:0;flex:1">
-        <div class="home-focus-eyebrow" id="homeFocusEyebrow">Today Focus</div>
-        <div class="home-focus-title" id="homeFocusTitle">지금 할 일: 수업 녹음 시작</div>
-        <div class="home-focus-sub" id="homeFocusSub">업로드만 끝나면 노트 생성은 백그라운드에서 계속됩니다.</div>
-      </div>
-      <button class="home-focus-btn" id="homeFocusBtn" onclick="toggleRecording()">지금 시작</button>
+    <div class="home-newnote">
+      <button class="newnote-card newnote-card-rec" onclick="toggleRecording()">
+        <div class="newnote-ic">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            <line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>
+          </svg>
+        </div>
+        <div class="newnote-txt">
+          <b>수업 녹음하기</b>
+          <span>지금 바로 녹음을 시작해요</span>
+        </div>
+        <div class="newnote-go">›</div>
+      </button>
+      <button class="newnote-card newnote-card-up" onclick="openUploadHelp()">
+        <div class="newnote-ic">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+        </div>
+        <div class="newnote-txt">
+          <b>녹음 파일 올리기</b>
+          <span>폰 녹음앱 파일을 노트로</span>
+        </div>
+        <div class="newnote-go">›</div>
+      </button>
     </div>
 
     <!-- Pending draft recordings -->
