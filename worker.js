@@ -248,10 +248,7 @@ export default {
         return new Response('OK', { headers: corsHeaders(request, env) });
       }
 
-      // ── AssemblyAI 프록시 (인증 + 한도 필요) ──
-      if (url.pathname === '/asm-upload' && request.method === 'POST') {
-        return handleAsmUpload(request, env);
-      }
+      // ── AssemblyAI transcript 등록 (인증 + 한도 필요) ──
       if (url.pathname === '/asm-transcript' && request.method === 'POST') {
         return handleAsmTranscript(request, env);
       }
@@ -278,13 +275,8 @@ export default {
         return handleGenerateNote(request, env);
       }
 
-      // ── LLM 프록시 (인증 필요) ──
-      if (url.pathname.startsWith('/anthropic/')) {
-        return handleAnthropicProxy(request, env, url);
-      }
-      if (url.pathname === '/gemini/generate' && request.method === 'POST') {
-        return handleGeminiProxy(request, env);
-      }
+      // 참고: LLM(/anthropic, /gemini) · /asm-upload 프록시는 제거됨.
+      // 노트 생성은 /generate-note 내부에서만 LLM 키를 사용 → 키 오남용 표면 차단.
 
       return err('Not found', 404, request, env);
     } catch (e) {
@@ -296,49 +288,10 @@ export default {
 };
 
 /* ═══════════════════════════════════════════
-   ASSEMBLYAI 프록시
-   - upload: 클라가 보낸 raw 오디오를 ASM 으로 forward
-   - transcript: webhook 자동 첨부, 키는 서버측만
-   - status: poll (클라이언트 풀 폴백용)
+   ASSEMBLYAI
+   - transcript: 클라가 Firebase Storage URL 만 보냄 (raw 업로드 프록시 제거됨)
+   - status: poll — 본인이 등록한 transcript 만 조회 가능 (IDOR 방지)
 ═══════════════════════════════════════════ */
-async function handleAsmUpload(request, env) {
-  let user;
-  try { user = await requireUser(request, env); }
-  catch (e) { return err(e.message, 401, request, env); }
-
-  // 한도 사전 체크 (실제 차감은 transcript 등록 시점)
-  if (!isOwner(user.email, env)) {
-    const cur = await getDailyNoteCount(env, user.uid);
-    if (cur >= freeNotesPerDay(env)) {
-      return err(`일일 노트 생성 한도(${freeNotesPerDay(env)}개) 초과 — 내일 다시 시도해주세요`, 429, request, env);
-    }
-  }
-
-  // 크기 상한
-  const lenHdr = parseInt(request.headers.get('Content-Length') || '0');
-  if (lenHdr && lenHdr > MAX_AUDIO_BYTES) {
-    return err(`오디오 파일이 너무 큽니다 (최대 ${Math.round(MAX_AUDIO_BYTES/1024/1024)}MB)`, 413, request, env);
-  }
-
-  // ASM 으로 forward — content-type 은 항상 octet-stream 으로 정규화
-  const r = await fetch(`${ASM_API}/v2/upload`, {
-    method: 'POST',
-    headers: {
-      'authorization': env.ASSEMBLYAI_KEY,
-      'content-type': 'application/octet-stream',
-    },
-    body: request.body,
-    // @ts-ignore — Cloudflare Workers 가 streaming POST 필요로 함
-    duplex: 'half',
-  });
-  if (!r.ok) {
-    const t = await r.text().catch(() => '');
-    return err(`AssemblyAI 업로드 실패: ${r.status} ${t.slice(0, 150)}`, r.status, request, env);
-  }
-  const data = await r.json();
-  return ok({ upload_url: data.upload_url }, 200, request, env);
-}
-
 async function handleAsmTranscript(request, env) {
   let body;
   try { body = await request.json(); } catch { return err('Invalid JSON', 400, request, env); }
@@ -349,6 +302,22 @@ async function handleAsmTranscript(request, env) {
 
   const { upload_url, webhook_url } = body || {};
   if (!upload_url) return err('upload_url required', 400, request, env);
+
+  // 보안 ①: upload_url 은 우리 Firebase Storage 버킷 URL 만 허용.
+  // (임의 URL 을 AssemblyAI 에 던져 키를 오남용하거나 SSRF 하는 것 차단)
+  const projectId = env.FIREBASE_PROJECT_ID || DEFAULT_FIREBASE_PROJECT_ID;
+  const okUploadPrefix = `https://firebasestorage.googleapis.com/v0/b/${projectId}.firebasestorage.app/`;
+  if (typeof upload_url !== 'string' || !upload_url.startsWith(okUploadPrefix)) {
+    return err('허용되지 않은 오디오 URL 입니다', 400, request, env);
+  }
+
+  // 보안 ②: webhook_url 은 이 워커 자신의 /asm-webhook/ 만 허용 (SSRF 차단)
+  if (webhook_url) {
+    const selfOrigin = new URL(request.url).origin;
+    if (typeof webhook_url !== 'string' || !webhook_url.startsWith(`${selfOrigin}/asm-webhook/`)) {
+      return err('허용되지 않은 webhook 입니다', 400, request, env);
+    }
+  }
 
   // 사용량 한도 — 클라이언트 모드(webhook 없음)는 여기서 차감.
   // 서버 모드(webhook 있음)는 /register-job 에서 차감하므로 스킵 (이중 차감 방지).
@@ -378,6 +347,10 @@ async function handleAsmTranscript(request, env) {
     return err(`AssemblyAI transcript 등록 실패: ${r.status} ${t.slice(0, 150)}`, r.status, request, env);
   }
   const data = await r.json();
+  // 보안 ③: transcript 소유자 기록 → 상태조회 시 본인 것만 허용 (IDOR 방지)
+  if (data.id) {
+    try { await env.JOBS.put(`asmowner:${data.id}`, user.uid, { expirationTtl: 86400 }); } catch {}
+  }
   return ok({ id: data.id }, 200, request, env);
 }
 
@@ -386,6 +359,14 @@ async function handleAsmTranscriptStatus(id, request, env) {
   let user;
   try { user = await requireUser(request, env); }
   catch (e) { return err(e.message, 401, request, env); }
+
+  // 보안 ③: 본인이 등록한 transcript 만 조회 가능 (IDOR 방지)
+  try {
+    const owner = await env.JOBS.get(`asmowner:${id}`);
+    if (owner && owner !== user.uid && !isOwner(user.email, env)) {
+      return err('Forbidden', 403, request, env);
+    }
+  } catch { /* KV 조회 실패는 통과 (가용성 우선) */ }
 
   const r = await fetch(`${ASM_API}/v2/transcript/${id}`, {
     headers: { 'authorization': env.ASSEMBLYAI_KEY },
@@ -1260,97 +1241,6 @@ function smartExtract(transcript) {
       paragraphAttachments: {},
     }],
   };
-}
-
-/* ═══════════════════════════════════════════
-   ANTHROPIC PROXY — 인증 필수
-═══════════════════════════════════════════ */
-async function handleAnthropicProxy(request, env, url) {
-  let user;
-  try { user = await requireUser(request, env); }
-  catch (e) { return err(e.message, 401, request, env); }
-
-  const targetPath = url.pathname.replace('/anthropic', '');
-  const targetUrl = `${ANTHROPIC_API}${targetPath}${url.search}`;
-
-  const cleanHeaders = {
-    'x-api-key': env.CLAUDE_KEY,
-    'anthropic-version': request.headers.get('anthropic-version') || '2023-06-01',
-    'content-type': 'application/json',
-  };
-  const beta = request.headers.get('anthropic-beta');
-  if (beta) cleanHeaders['anthropic-beta'] = beta;
-
-  let body = null;
-  if (request.method !== 'GET' && request.method !== 'HEAD') {
-    body = await request.text();
-  }
-
-  const response = await fetch(targetUrl, {
-    method: request.method,
-    headers: cleanHeaders,
-    body,
-  });
-
-  const respText = await response.text();
-  return new Response(respText, {
-    status: response.status,
-    headers: { ...corsHeaders(request, env), 'Content-Type': 'application/json' },
-  });
-}
-
-/* ═══════════════════════════════════════════
-   GEMINI PROXY — 인증 필수
-═══════════════════════════════════════════ */
-async function handleGeminiProxy(request, env) {
-  if (!env.GEMINI_KEY) {
-    return err('GEMINI_KEY not configured', 500, request, env);
-  }
-  let body;
-  try { body = await request.json(); } catch { return err('Invalid JSON body', 400, request, env); }
-
-  let user;
-  try { user = await requireUser(request, env, body); }
-  catch (e) { return err(e.message, 401, request, env); }
-
-  const model = body.model || 'gemini-2.5-flash';
-  const targetUrl = `https://gateway.ai.cloudflare.com/v1/d872f29764b5c5b238824decd2dc6d91/chefnote/google-ai-studio/v1beta/models/${model}:generateContent`;
-  const generationConfig = {
-    responseMimeType: 'application/json',
-    temperature: typeof body.temperature === 'number' ? body.temperature : 0.2,
-    maxOutputTokens: body.maxOutputTokens || 2500,
-  };
-  if (body.responseSchema && typeof body.responseSchema === 'object') {
-    generationConfig.responseSchema = body.responseSchema;
-  }
-
-  // 입력 prompt 길이 상한
-  const promptText = (body.prompt || '').toString();
-  if (promptText.length > MAX_TRANSCRIPT_CHARS + 5000) {
-    return err('prompt 가 너무 깁니다', 413, request, env);
-  }
-
-  const payload = {
-    contents: [{ parts: [{ text: promptText }] }],
-    generationConfig,
-  };
-  try {
-    const response = await fetch(targetUrl, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-goog-api-key': env.GEMINI_KEY,
-      },
-      body: JSON.stringify(payload),
-    });
-    const respText = await response.text();
-    return new Response(respText, {
-      status: response.status,
-      headers: { ...corsHeaders(request, env), 'Content-Type': 'application/json' },
-    });
-  } catch (e) {
-    return err('Gemini proxy error: ' + e.message, 502, request, env);
-  }
 }
 
 /* ═══════════════════════════════════════════
