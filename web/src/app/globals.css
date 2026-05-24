@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #faf6ee;
+  --foreground: #1a1a1a;
+}
+
+body {
+  color: #1a1a1a;
+  background: #faf6ee;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* 줄노트 종이 배경 — "주방 한구석 손때 묻은 메모지" */
+  .paper-lines {
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent 0px,
+      transparent 31px,
+      rgba(92, 110, 63, 0.15) 32px
+    );
+  }
+}
