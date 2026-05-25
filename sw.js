@@ -1,4 +1,4 @@
-const CACHE_NAME = 'chefnote-v26';
+const CACHE_NAME = 'chefnote-v27';
 const SHARE_CACHE = 'chefnote-share-inbox';
 // 상대경로 — 서브패스(/chef-note/) / 루트도메인(/) 모두에서 정상 동작
 const STATIC_ASSETS = [
