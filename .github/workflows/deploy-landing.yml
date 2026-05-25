@@ -1,0 +1,40 @@
+name: Deploy Landing Page (Cloudflare Pages)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - '.github/workflows/deploy-landing.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: web
+
+      - name: Build static export
+        run: npm run build
+        working-directory: web
+        # next.config.mjs output:'export' → web/out/ 에 정적 파일 생성
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # 첫 실행 시 Cloudflare 대시보드에서 프로젝트 자동 생성
+          # 배포 후 URL: https://chefnote-landing.pages.dev
+          command: pages deploy web/out --project-name=chefnote-landing --commit-dirty=true

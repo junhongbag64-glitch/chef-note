@@ -11,6 +11,9 @@ dist/
 build/
 .cache/
 .parcel-cache/
+web/.next/
+web/out/
+web/next-env.d.ts
 
 # ─── Firebase ───
 # firebase.json / firestore.rules / .firebaserc 는 커밋해야 함 (버전 관리 대상)
