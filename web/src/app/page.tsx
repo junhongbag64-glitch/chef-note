@@ -83,7 +83,7 @@ export default function Home() {
         <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-3.5">
           <Logo size="sm" />
           <a
-            href="https://chefnote.kr"
+            href="/app/"
             className="rounded-full bg-ink px-4 py-2 text-sm font-semibold text-cream transition-transform hover:scale-[1.04] active:scale-95"
           >
             시작하기
@@ -126,7 +126,7 @@ export default function Home() {
           <Reveal delay={0.42}>
             <div className="relative mt-9 inline-block">
               <a
-                href="https://chefnote.kr"
+                href="/app/"
                 className="inline-flex items-center gap-2 rounded-full bg-ink px-8 py-4 text-base font-semibold text-cream transition-transform hover:scale-[1.03] active:scale-95"
               >
                 지금 시작하기 →
@@ -252,7 +252,7 @@ export default function Home() {
               녹음만 해보세요.
             </h2>
             <a
-              href="https://chefnote.kr"
+              href="/app/"
               className="mt-8 inline-flex items-center gap-2 rounded-full bg-chili px-9 py-4 text-base font-semibold text-cream transition-transform hover:scale-[1.03] active:scale-95"
             >
               ChefNote 시작하기 →
