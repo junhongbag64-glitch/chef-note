@@ -1864,14 +1864,18 @@
     .btn-primary:active { background: var(--accent-dk); }
 
     /* ═══════════════════════════════════════════
-       AUTH SCREEN — Product Landing Page
+       AUTH SCREEN — 랜딩 + 로그인 (크림/종이 테마)
     ═══════════════════════════════════════════ */
     #auth-screen {
       position: fixed; inset: 0; z-index: 9999;
-      background: #FAF6EF;
+      background: #FAF6EE;
       overflow-y: auto; overflow-x: hidden;
       -webkit-overflow-scrolling: touch;
       padding: 0;
+      /* 종이 줄노트 배경 */
+      background-image: repeating-linear-gradient(
+        to bottom, transparent 0px, transparent 31px, rgba(92,110,63,0.08) 32px
+      );
     }
     #auth-screen.hidden { display: none; }
 
@@ -1882,99 +1886,90 @@
       display: flex; flex-direction: column;
     }
 
-    /* ─── Top nav bar ─── */
+    /* ─── Top nav bar (크림 bg, sticky) ─── */
     .auth-topbar {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 20px 28px 0;
+      padding: 16px 24px;
+      position: sticky; top: 0; z-index: 10;
+      background: rgba(250,246,238,.92);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(92,110,63,.10);
       margin-bottom: 0;
     }
 
-    /* ─── Hero section — clean dark with subtle gradient ─── */
+    /* ─── Hero section — 크림/종이 배경 ─── */
     .auth-hero-section {
-      background:
-        radial-gradient(ellipse 120% 80% at 50% 0%, rgba(124, 156, 84, 0.18) 0%, transparent 60%),
-        linear-gradient(180deg, #1E2814 0%, #1A2310 100%);
-      padding: 32px 24px 80px;
+      background: transparent;
+      padding: 40px 24px 48px;
       position: relative; overflow: hidden;
-    }
-    .auth-hero-section::before {
-      content: '';
-      position: absolute; top: 0; left: 0; right: 0;
-      height: 1px;
-      background: linear-gradient(90deg, transparent, rgba(168,207,110,.3), transparent);
-      pointer-events: none;
+      text-align: center;
     }
 
     /* ─── Brand ─── */
     .auth-brand {
-      display: flex; align-items: center; gap: 9px;
+      display: flex; align-items: center; gap: 8px;
       margin-bottom: 0;
     }
     .auth-brand-icon {
-      width: 34px; height: 34px;
-      background: rgba(255,255,255,.15);
-      border-radius: 10px;
+      width: 32px; height: 32px;
       display: flex; align-items: center; justify-content: center;
-      backdrop-filter: blur(4px);
     }
     .auth-brand-name {
       font-family: var(--f-hand);
-      font-size: 28px; font-weight: 700;
-      color: #fff; letter-spacing: 0;
+      font-size: 26px; font-weight: 700;
+      color: var(--text-1); letter-spacing: 0;
       transform: rotate(-2deg);
+      line-height: 1;
     }
-    .auth-brand-name em { font-style: normal; color: #A8CF6E; }
 
-    /* ─── Hero text — centered, modern SaaS style ─── */
+    /* ─── Hero text ─── */
     .auth-hero-content {
       text-align: center;
       max-width: 420px;
       margin: 0 auto;
-      position: relative; z-index: 2;
     }
     .auth-hero-tag {
-      display: inline-flex; align-items: center; gap: 7px;
+      display: inline-flex; align-items: center; gap: 6px;
       font-size: 11px; font-weight: 600;
-      color: rgba(232,184,74,.95);
-      margin: 32px 0 24px;
+      color: var(--accent);
+      margin: 0 0 20px;
       text-transform: uppercase;
-      letter-spacing: 1.4px;
-      padding: 6px 12px;
-      background: rgba(232,184,74,.10);
-      border: 1px solid rgba(232,184,74,.22);
+      letter-spacing: 1.2px;
+      padding: 5px 12px;
+      background: var(--accent-lt);
+      border: 1px solid rgba(92,110,63,.20);
       border-radius: 99px;
     }
     .auth-hero-tag::before {
       content: '';
-      width: 6px; height: 6px; border-radius: 50%;
-      background: #E8B84A; flex-shrink: 0;
-      box-shadow: 0 0 8px rgba(232,184,74,.7);
-      animation: pulse-dot 2s ease-in-out infinite;
-    }
-    @keyframes pulse-dot {
-      0%,100% { opacity: 1; transform: scale(1); }
-      50% { opacity: .5; transform: scale(.8); }
+      width: 5px; height: 5px; border-radius: 50%;
+      background: var(--accent); flex-shrink: 0;
     }
     .auth-headline {
-      font-family: var(--f-display);
-      font-size: 44px; font-weight: 700;
-      line-height: 1.08; letter-spacing: -1.6px;
-      color: #fff;
+      font-size: 42px; font-weight: 800;
+      line-height: 1.1; letter-spacing: -1.4px;
+      color: var(--text-1);
       margin-bottom: 16px;
     }
     .auth-headline em {
       font-style: normal;
-      background: linear-gradient(135deg, #E8B84A 0%, #F2D182 100%);
-      -webkit-background-clip: text;
-      background-clip: text;
-      -webkit-text-fill-color: transparent;
-      font-weight: 700;
+      color: var(--accent);
+      position: relative;
+    }
+    /* 손그림 밑줄 — headline 강조어 아래 */
+    .auth-squiggle {
+      display: block;
+      margin: -4px auto 0;
+      width: 70%; height: 8px;
+      color: #F4C95D;
+      overflow: visible;
     }
     .auth-tagline {
-      font-size: 15px; line-height: 1.55;
-      color: rgba(255,255,255,.7);
-      margin: 0 auto 36px;
-      max-width: 340px;
+      font-size: 15px; line-height: 1.6;
+      color: var(--text-2);
+      margin: 0 auto 0;
+      max-width: 320px;
     }
 
     /* ─── iPhone-frame mockup — shows real ChefNote app ─── */
@@ -2140,13 +2135,20 @@
       background: #FEFCF7;
       border-radius: 14px;
       overflow: hidden;
-      box-shadow: 0 24px 60px rgba(0,0,0,.4), 0 8px 20px rgba(0,0,0,.25);
-      transform: perspective(900px) rotateX(2deg);
-      transform-origin: bottom center;
+      border: 1px solid rgba(92,110,63,.12);
     }
+    /* 마스킹 테이프 (노트 카드 상단) */
+    .auth-mockup-tape {
+      position: absolute; top: -8px; left: 28px;
+      width: 72px; height: 18px;
+      background: rgba(244,201,93,.75);
+      border-radius: 3px;
+      transform: rotate(-5deg);
+    }
+    .auth-mockup-wrap { position: relative; }
     .auth-mockup-topbar {
       height: 5px;
-      background: linear-gradient(90deg, #4E6035 0%, #7EAA50 100%);
+      background: var(--accent);
     }
     .auth-mockup-header {
       padding: 13px 16px 11px;
@@ -2778,14 +2780,15 @@
   <div class="spinner"></div>
 </div>
 
-<!-- Auth screen — Product Landing Page -->
+<!-- Auth screen — 랜딩 + 로그인 (크림/종이 테마) -->
 <div id="auth-screen" class="hidden">
   <div class="auth-container">
     <div class="auth-hero-section">
-      <div class="auth-topbar" style="padding:0 0 0;position:relative;z-index:2">
+      <!-- sticky 상단 내비 -->
+      <div class="auth-topbar">
         <div class="auth-brand">
           <div class="auth-brand-icon">
-            <svg width="22" height="22" viewBox="0 0 64 60" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-label="ChefNote">
+            <svg width="28" height="28" viewBox="0 0 64 60" fill="none" stroke="var(--text-1)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-label="ChefNote">
               <path d="M15 36c-6 .4-9.5-6.6-3.6-10.6-2.6-7 5.4-12.4 11.6-8.4 2.6-7.4 14.4-7.4 17.4.6 7-3.4 13.6 2.6 8.4 9.8 4.6 2.8 1.8 9.4-3.8 8.6"/>
               <path d="M16.5 35.5c-.3 4 .2 8 1 10.4 9.4 3 21 3 29.8.2 1-2.4 1.4-6.6 1.2-10.8"/>
               <path d="M24 40v5.5M32.5 41v5.5M41 40v5.6"/>
@@ -2793,18 +2796,22 @@
           </div>
           <div class="auth-brand-name">chefnote</div>
         </div>
-        <div style="font-size:10.5px;color:rgba(255,255,255,.55);letter-spacing:.5px;font-weight:500">v1.0 · BETA</div>
+        <span style="font-size:10px;color:var(--text-3);letter-spacing:.5px;font-weight:600">v1.0 · BETA</span>
       </div>
-      <div class="auth-hero-content">
+
+      <!-- 히어로 콘텐츠 -->
+      <div class="auth-hero-content" style="padding-top:40px">
         <div class="auth-hero-tag">조리과 학생 전용</div>
         <h1 class="auth-headline">
-          수업 녹음이<br>
-          <em>시험용 노트</em>로<br>
-          바로 정리됩니다
+          녹음만 하세요.<br>
+          노트는 <em>완성</em>돼 있어요.
         </h1>
-        <p class="auth-tagline">
-          녹음만 하세요. 노트는 완성돼 있어요.<br>
-          재료·조리 순서·교수님 팁까지 자동으로요.
+        <!-- 손그림 물결 밑줄 (강조어 아래) -->
+        <svg class="auth-squiggle" viewBox="0 0 200 10" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" preserveAspectRatio="none">
+          <path d="M4 6c30-5 60-6 95-2 33 3 66 1 97-2"/>
+        </svg>
+        <p class="auth-tagline" style="margin-top:20px">
+          수업을 녹음하면 재료·조리 순서·교수님 팁까지<br>AI가 자동으로 정리해줘요.
         </p>
       </div>
     </div>
@@ -2819,7 +2826,8 @@
       <div class="auth-preview-section">
         <div class="auth-preview-label">완성되는 노트 미리보기</div>
         <div class="auth-mockup-wrap">
-          <div class="auth-mockup-card">
+          <div class="auth-mockup-tape"></div>
+          <div class="auth-mockup-card" style="transform:rotate(1.5deg);box-shadow:0 18px 44px rgba(26,26,26,.13)">
             <div class="auth-mockup-topbar"></div>
             <div class="auth-mockup-header">
               <div>
@@ -2856,6 +2864,11 @@
           </div>
           <div class="auth-mockup-badge">AI가 자동 정리</div>
         </div>
+      </div>
+
+      <div style="text-align:center;margin:32px 0 20px">
+        <p style="font-family:var(--f-hand);font-size:22px;color:var(--text-1);transform:rotate(-1deg);display:inline-block">오늘 수업부터 시작해볼까요?</p>
+        <p style="font-size:13px;color:var(--text-3);margin-top:6px">무료로 시작 · 카드 정보 불필요</p>
       </div>
 
       <div class="auth-cta-block" style="margin-bottom:28px;margin-top:0">
