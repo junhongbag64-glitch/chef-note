@@ -1,15 +1,5 @@
 import type { Metadata } from "next";
-import { Caveat } from "next/font/google";
-import "pretendard/dist/web/static/pretendard-dynamic-subset.css";
 import "./globals.css";
-
-// 손글씨 악센트 (메모/doodle 텍스트 전용) — font-handwrite
-const caveat = Caveat({
-  subsets: ["latin"],
-  variable: "--font-caveat",
-  weight: ["400", "600", "700"],
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "ChefNote — 녹음만 하면 노트는 완성돼 있어요",
@@ -24,9 +14,24 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko">
-      <body
-        className={`${caveat.variable} font-sans bg-cream text-ink antialiased`}
-      >
+      <head>
+        {/* 폰트: CDN 방식 (빌드 아티팩트에 포함 안 됨) */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin="anonymous"
+        />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&display=swap"
+          rel="stylesheet"
+        />
+        <link
+          href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/pretendard-dynamic-subset.css"
+          rel="stylesheet"
+        />
+      </head>
+      <body className="font-sans bg-cream text-ink antialiased">
         {children}
       </body>
     </html>

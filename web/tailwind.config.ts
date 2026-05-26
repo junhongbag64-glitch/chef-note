@@ -20,7 +20,7 @@ const config: Config = {
       },
       fontFamily: {
         sans: ["Pretendard", "sans-serif"],
-        handwrite: ["var(--font-caveat)", "Caveat", "cursive"],
+        handwrite: ["Caveat", "cursive"],
       },
     },
   },
