@@ -30,6 +30,10 @@ export default function RootLayout({
           href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/pretendard-dynamic-subset.css"
           rel="stylesheet"
         />
+        {/* Google Analytics 4 — G-XXXXXXXXXX 자리에 실제 측정 ID 입력 */}
+        {/* GA4 콘솔(analytics.google.com) → 관리 → 데이터 스트림 → 웹 스트림에서 확인 */}
+        {/* <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script> */}
+        {/* <script dangerouslySetInnerHTML={{ __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-XXXXXXXXXX');` }} /> */}
       </head>
       <body className="font-sans bg-cream text-ink antialiased">
         {children}

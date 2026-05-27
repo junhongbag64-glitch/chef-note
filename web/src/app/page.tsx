@@ -151,7 +151,7 @@ export default function Home() {
           </Reveal>
 
           <Reveal delay={0.1}>
-            <p className="mt-8 -rotate-2 font-handwrite text-2xl text-chili">
+            <p className="mt-8 text-xs font-semibold tracking-[0.22em] text-ink/40 uppercase">
               조리과 학생을 위한
             </p>
           </Reveal>
@@ -364,8 +364,8 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ── 학생 후기 — 올리브 다크 섹션 ── */}
-        <section className="bg-olive">
+        {/* ── 학생 후기 — 다크 섹션 ── */}
+        <section className="bg-ink">
           <div className="mx-auto max-w-4xl px-6 py-24">
             <Reveal className="text-center">
               <Eyebrow light>써보고 하는 말</Eyebrow>
@@ -450,12 +450,20 @@ export default function Home() {
       </main>
 
       {/* ── 푸터 ── */}
-      <footer className="relative border-t border-olive/10 px-6 py-10 text-center">
-        <Logo size="sm" className="opacity-70" />
+      <footer className="relative border-t border-olive/10 px-6 py-12 text-center">
+        <Logo size="sm" className="opacity-60" />
         <p className="mt-3 text-sm text-ink/40">
           조리과 학생을 위한 AI 수업 노트
         </p>
-        <p className="mt-1 text-xs text-ink/30">© 2026 ChefNote</p>
+        <nav className="mt-5 flex flex-wrap justify-center gap-x-6 gap-y-2">
+          <a href="/terms/" className="text-xs text-ink/35 transition-colors hover:text-ink/60">이용약관</a>
+          <a href="/privacy/" className="text-xs text-ink/35 transition-colors hover:text-ink/60">개인정보처리방침</a>
+          <a href="/refund/" className="text-xs text-ink/35 transition-colors hover:text-ink/60">환불정책</a>
+        </nav>
+        <p className="mt-5 text-xs text-ink/25">
+          문의: junhongbag64@gmail.com
+        </p>
+        <p className="mt-1 text-xs text-ink/25">© 2026 ChefNote. All rights reserved.</p>
       </footer>
     </div>
   );
