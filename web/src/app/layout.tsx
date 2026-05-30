@@ -3,7 +3,7 @@ import "./globals.css";
 
 // ── Google Analytics 4 ──
 // analytics.google.com → 관리 → 데이터 스트림 → 웹 → "측정 ID"(G-...) 를 아래 한 줄에 붙여넣으면 켜짐.
-const GA_ID = "G-XXXXXXXXXX";
+const GA_ID = "G-T4J7T6XMV4";
 const GA_ENABLED = GA_ID.length > 4 && !GA_ID.includes("XXXX");
 
 export const metadata: Metadata = {
