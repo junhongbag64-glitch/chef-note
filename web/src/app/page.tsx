@@ -9,6 +9,8 @@ import {
   NotebookDoodle,
   CurlyArrow,
   Squiggle,
+  KnifeDoodle,
+  WhiskDoodle,
 } from "@/components/doodles";
 
 const easeOut: [number, number, number, number] = [0.22, 1, 0.36, 1];
@@ -151,9 +153,17 @@ export default function Home() {
           </Reveal>
 
           <Reveal delay={0.1}>
-            <p className="mt-8 text-xs font-semibold tracking-[0.22em] text-ink/40 uppercase">
-              조리과 학생을 위한
-            </p>
+            <div className="mt-8 flex items-center justify-center gap-2.5 sm:gap-4">
+              <KnifeDoodle className="h-7 w-auto -rotate-[18deg] text-ink/25 sm:h-8" />
+              {/* 마스킹테이프 정체성 배지 */}
+              <div className="inline-flex -rotate-2 items-center gap-1.5 rounded-[4px] bg-yolk px-3.5 py-1.5 shadow-[0_2px_10px_rgba(26,26,26,0.12)]">
+                <ChefHat className="h-5 w-5 text-ink/85" />
+                <span className="text-sm font-bold tracking-wide text-ink/85">
+                  조리과 학생 전용
+                </span>
+              </div>
+              <WhiskDoodle className="h-9 w-auto rotate-[15deg] text-ink/25 sm:h-10" />
+            </div>
           </Reveal>
 
           {/* h1: Pretendard bold — 원래 자연스럽고 좋았던 스타일 */}

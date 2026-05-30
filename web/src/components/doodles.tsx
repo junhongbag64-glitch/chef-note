@@ -150,3 +150,51 @@ export function Squiggle({ className }: DoodleProps) {
     </svg>
   );
 }
+
+/** 셰프 나이프 (왼쪽 끝이 뾰족) */
+export function KnifeDoodle({ className }: DoodleProps) {
+  return (
+    <svg
+      viewBox="0 0 72 40"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.3}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      {/* 칼등(직선) + 칼날(곡선), 왼쪽 끝 뾰족 */}
+      <path d="M7 25 50 13" />
+      <path d="M7 25c15 3 31 1 43-6" />
+      <path d="M50 13v6" />
+      {/* 손잡이 */}
+      <path d="M50 13c5-1.6 12-3.4 16-2.2 2 .6 2.4 3 .8 4.4-.6.5-1.4.9-2.3 1.1-4 .9-10 .2-14.5-.3" />
+      <path d="M56 13.4l-.5 4.1M62 12l-.5 4.2" />
+    </svg>
+  );
+}
+
+/** 거품기 (whisk) */
+export function WhiskDoodle({ className }: DoodleProps) {
+  return (
+    <svg
+      viewBox="0 0 40 64"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.3}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      <path d="M20 6v23" />
+      <path d="M15 7.5c3-2.4 7-2.4 10 0" />
+      <path d="M20 29C8.5 34 8.5 54 20 60" />
+      <path d="M20 29c11.5 5 11.5 25 0 31" />
+      <path d="M20 29c-4.5 8-4.5 23 0 31" />
+      <path d="M20 29c4.5 8 4.5 23 0 31" />
+      <path d="M16 58.5h8" />
+    </svg>
+  );
+}
