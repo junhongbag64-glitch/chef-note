@@ -3967,11 +3967,29 @@ async function checkEmailVerifiedNow() {
   }
 }
 
+// 인앱 브라우저(인스타·페북·카톡·라인 등)는 구글 OAuth 팝업이 막힘 → 리다이렉트 필요
+function isInAppBrowser() {
+  const ua = (navigator.userAgent || '').toLowerCase();
+  return /fban|fbav|fb_iab|instagram|kakaotalk|line\/|naver|whale|daumapps|; wv\)|\bwv\b/.test(ua);
+}
+
 async function googleLogin() {
   const provider = new firebase.auth.GoogleAuthProvider();
+  // 인앱 웹뷰는 팝업이 disallowed_useragent 로 실패 → 바로 리다이렉트 방식
+  if (isInAppBrowser()) {
+    try { await auth.signInWithRedirect(provider); }
+    catch(e) { showToast('Google 로그인 실패: ' + e.message); }
+    return;
+  }
   try {
     await auth.signInWithPopup(provider);
   } catch(e) {
+    // 팝업 차단/미지원 환경 → 리다이렉트로 폴백
+    const fallback = ['auth/popup-blocked', 'auth/cancelled-popup-request', 'auth/operation-not-supported-in-this-environment'];
+    if (e && fallback.includes(e.code)) {
+      try { await auth.signInWithRedirect(provider); return; } catch(e2) { /* fallthrough */ }
+    }
+    if (e && e.code === 'auth/popup-closed-by-user') return; // 사용자가 직접 닫음 — 무시
     showToast('Google 로그인 실패: ' + e.message);
   }
 }
@@ -3995,6 +4013,12 @@ function authErrMsg(code) {
 
 /* ───────────────── INIT ───────────────── */
 document.addEventListener('DOMContentLoaded', () => {
+  // 리다이렉트 로그인 복귀 처리 — 성공 시 onAuthStateChanged 가 이어받음. 에러만 표면화.
+  auth.getRedirectResult().catch((e) => {
+    if (e && e.code && e.code !== 'auth/no-auth-event') {
+      showToast('Google 로그인 실패: ' + (e.message || e.code));
+    }
+  });
   // Auth state observer
   auth.onAuthStateChanged(async (user) => {
     const loading = document.getElementById('app-loading');

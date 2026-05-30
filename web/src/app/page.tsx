@@ -45,8 +45,8 @@ function Eyebrow({
 }) {
   return (
     <p
-      className={`-rotate-1 font-handwrite text-xl ${
-        light ? "text-cream/45" : "text-chili/70"
+      className={`text-xs font-semibold uppercase tracking-[0.2em] ${
+        light ? "text-cream/50" : "text-chili/80"
       }`}
     >
       {children}
@@ -320,7 +320,7 @@ export default function Home() {
             {STEPS.map((s, i) => (
               <Reveal key={s.n} delay={i * 0.12}>
                 <div className="group relative h-full rounded-2xl border border-olive/12 bg-white p-6 text-center transition-shadow hover:shadow-md">
-                  <span className="absolute right-5 top-4 font-handwrite text-3xl text-ink/12">
+                  <span className="absolute right-5 top-4 text-3xl font-bold text-ink/12">
                     {s.n}
                   </span>
                   <s.icon className="mx-auto h-12 w-12 text-ink/80" />
@@ -391,7 +391,7 @@ export default function Home() {
             </div>
 
             <Reveal delay={0.35} className="mt-10 text-center">
-              <p className="font-handwrite text-lg text-cream/30">
+              <p className="text-sm font-medium tracking-[0.08em] text-cream/40">
                 — 베타 테스터 학생들의 진짜 후기
               </p>
             </Reveal>
@@ -444,7 +444,9 @@ export default function Home() {
             >
               ChefNote 시작하기 →
             </a>
-            <p className="mt-4 font-handwrite text-xl text-ink/35">무료로 시작</p>
+            <p className="mt-4 text-sm font-medium uppercase tracking-[0.18em] text-ink/40">
+              무료로 시작
+            </p>
           </Reveal>
         </section>
       </main>

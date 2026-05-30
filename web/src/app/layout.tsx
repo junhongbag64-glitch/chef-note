@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
+// ── Google Analytics 4 ──
+// analytics.google.com → 관리 → 데이터 스트림 → 웹 → "측정 ID"(G-...) 를 아래 한 줄에 붙여넣으면 켜짐.
+const GA_ID = "G-XXXXXXXXXX";
+const GA_ENABLED = GA_ID.length > 4 && !GA_ID.includes("XXXX");
+
 export const metadata: Metadata = {
   title: "ChefNote — 녹음만 하면 노트는 완성돼 있어요",
   description:
@@ -30,10 +35,20 @@ export default function RootLayout({
           href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/pretendard-dynamic-subset.css"
           rel="stylesheet"
         />
-        {/* Google Analytics 4 — G-XXXXXXXXXX 자리에 실제 측정 ID 입력 */}
-        {/* GA4 콘솔(analytics.google.com) → 관리 → 데이터 스트림 → 웹 스트림에서 확인 */}
-        {/* <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script> */}
-        {/* <script dangerouslySetInnerHTML={{ __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-XXXXXXXXXX');` }} /> */}
+        {/* Google Analytics 4 — GA_ID 상수에 실제 측정 ID 넣으면 자동 활성화 */}
+        {GA_ENABLED && (
+          <>
+            <script
+              async
+              src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+            />
+            <script
+              dangerouslySetInnerHTML={{
+                __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${GA_ID}');`,
+              }}
+            />
+          </>
+        )}
       </head>
       <body className="font-sans bg-cream text-ink antialiased">
         {children}

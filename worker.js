@@ -76,6 +76,21 @@ function err(msg, status = 500, request = null, env = null) {
 }
 
 /* ═══════════════════════════════════════════
+   에러 모니터링 — Slack Incoming Webhook (선택)
+   wrangler secret put SLACK_WEBHOOK 로 설정하면 활성화. 미설정 시 조용히 무시.
+═══════════════════════════════════════════ */
+async function notifyError(env, context, detail) {
+  if (!env || !env.SLACK_WEBHOOK) return;
+  try {
+    await fetch(env.SLACK_WEBHOOK, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ text: `🚨 ChefNote [${context}]\n${String(detail).slice(0, 800)}` }),
+    });
+  } catch (_) { /* 모니터링 실패는 서비스에 영향 주지 않음 */ }
+}
+
+/* ═══════════════════════════════════════════
    FIREBASE ID TOKEN 검증 (RS256 / JWK)
 ═══════════════════════════════════════════ */
 let _jwkCache = { fetchedAt: 0, keys: {} };
@@ -593,6 +608,7 @@ async function handleGenerateNote(request, env) {
       llmErrors: note._llmErrors || [],
     }, 200, request, env);
   } catch (e) {
+    await notifyError(env, '/generate-note 500', (e && e.message) || String(e));
     return err('노트 생성 실패: ' + (e.message || e), 500, request, env);
   }
 }
@@ -866,6 +882,7 @@ ${transcript}
   // 셋 다 실패 → smartExtract
   if (!parsed) {
     console.warn('[NoteGen] LLM 전부 실패 — smartExtract 사용 / 원인:', llmErrors.join(' | '));
+    await notifyError(env, 'LLM 전부 실패', llmErrors.join(' | '));
     parsed = smartExtract(transcript);
     usedModel = 'smartExtract';
   }
