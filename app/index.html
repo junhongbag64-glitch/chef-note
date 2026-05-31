@@ -1716,7 +1716,51 @@
       font-size: 17px; font-weight: 700; color: var(--text-1);
       margin-bottom: 7px;
     }
-    .proc-desc { font-size: 13px; color: var(--text-2); line-height: 1.55; }
+    .proc-desc { font-size: 13px; color: var(--text-2); line-height: 1.55; min-height: 20px; }
+    /* ── 단계별 로딩 UI ── */
+    .proc-emoji {
+      font-size: 40px; line-height: 1; margin-bottom: 14px;
+      display: inline-block; animation: procBob 1.6s ease-in-out infinite;
+    }
+    @keyframes procBob { 0%,100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-6px) rotate(4deg); } }
+    .proc-bar {
+      margin: 18px 0 20px; height: 6px; border-radius: 999px;
+      background: var(--border-1); overflow: hidden;
+    }
+    .proc-bar-fill {
+      height: 100%; width: 0%; border-radius: 999px;
+      background: linear-gradient(90deg, var(--accent-mid), var(--accent));
+      transition: width .5s cubic-bezier(.4,0,.2,1); position: relative;
+    }
+    .proc-bar-fill::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.45), transparent);
+      animation: procShimmer 1.3s linear infinite;
+    }
+    @keyframes procShimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+    .proc-steps { display: flex; align-items: center; justify-content: space-between; }
+    .proc-step { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+    .proc-step-dot {
+      width: 30px; height: 30px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700;
+      background: var(--border-1); color: var(--text-3);
+      transition: all .3s ease;
+    }
+    .proc-step-label { font-size: 11px; color: var(--text-3); font-weight: 500; transition: color .3s ease; }
+    .proc-step-line { flex: 1; height: 2px; background: var(--border-1); margin: 0 4px 17px; border-radius: 1px; transition: background .3s ease; }
+    .proc-step.active .proc-step-dot {
+      background: var(--accent); color: #fff;
+      box-shadow: 0 0 0 4px var(--accent-lt);
+      animation: procPulse 1.4s ease-in-out infinite;
+    }
+    .proc-step.active .proc-step-label { color: var(--accent); font-weight: 700; }
+    @keyframes procPulse { 0%,100% { box-shadow: 0 0 0 4px var(--accent-lt); } 50% { box-shadow: 0 0 0 7px var(--accent-lt); } }
+    .proc-step.done .proc-step-dot { background: var(--accent); color: #fff; font-size: 0; }
+    .proc-step.done .proc-step-dot::after { content: '✓'; font-size: 14px; }
+    .proc-step.done .proc-step-label { color: var(--text-2); }
+    .proc-step-line.done { background: var(--accent); }
+    .proc-time { margin-top: 16px; font-size: 11.5px; color: var(--text-3); min-height: 14px; }
 
     /* ═══════════════════════════════════════════
        MODALS
