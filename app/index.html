@@ -3484,9 +3484,18 @@
   <!-- ═══════════════════ PROCESSING ═══════════════════ -->
   <div class="proc-overlay" id="procOverlay">
     <div class="proc-card">
-      <div class="proc-spinner"></div>
-      <div class="proc-title" id="procTitle">노트 생성 중</div>
-      <div class="proc-desc" id="procDesc">수업 내용을 분석하고<br>노트를 정리하고 있어요...</div>
+      <div class="proc-emoji" id="procEmoji">🎙️</div>
+      <div class="proc-title" id="procTitle">노트 만드는 중</div>
+      <div class="proc-desc" id="procDesc">수업 내용을 분석하고 있어요</div>
+      <div class="proc-bar"><div class="proc-bar-fill" id="procBarFill"></div></div>
+      <div class="proc-steps" id="procSteps">
+        <div class="proc-step" data-step="upload"><div class="proc-step-dot">1</div><div class="proc-step-label">업로드</div></div>
+        <div class="proc-step-line"></div>
+        <div class="proc-step" data-step="stt"><div class="proc-step-dot">2</div><div class="proc-step-label">음성 인식</div></div>
+        <div class="proc-step-line"></div>
+        <div class="proc-step" data-step="note"><div class="proc-step-dot">3</div><div class="proc-step-label">노트 정리</div></div>
+      </div>
+      <div class="proc-time" id="procTime"></div>
     </div>
   </div>
 
