@@ -4934,6 +4934,7 @@ async function processDraftToNote(draft, isManual = false) {
     const transcript = await transcribeAudio(draft.audioBlob);
     if (isManual) updateProc('🎙️ 레시피 노트 만드는 중...', '잠깐만요, 거의 다 됐어요!\n창을 닫지 마세요');
     const note = await generateNote(transcript, draft.duration || 0, draft.memos || []);
+    if (!noteHasContent(note)) throw new Error('노트 내용이 비어 있어요 — 녹음은 보관됐어요, 수업(요리) 부분 확인 후 다시 시도해 주세요.');
     note.id        = Date.now().toString();
     note.date      = new Date().toLocaleDateString('ko-KR', { year:'numeric', month:'long', day:'numeric' });
     note.timestamp = Date.now();
@@ -5036,6 +5037,7 @@ async function onRecordingDone() {
     updateProc('🎙️ 레시피 노트 만드는 중...', '잠깐만요, 거의 다 됐어요!\n창을 닫지 마세요 — 완료 후 자동 저장돼요');
 
     const note = await generateNote(transcript, dur, memos);
+    if (!noteHasContent(note)) throw new Error('노트 내용이 비어 있어요 — 녹음은 안전하게 보관됐어요. 수업(요리) 부분이 녹음됐는지 확인하고 다시 시도해 주세요.');
     note.id        = Date.now().toString();
     note.date      = new Date().toLocaleDateString('ko-KR', { year:'numeric', month:'long', day:'numeric' });
     note.timestamp = Date.now();
@@ -5483,7 +5485,25 @@ function stopBgJobPoll(jobId) {
   }
 }
 
+// 노트에 실제 내용(본문/재료/팁)이 있는지 — 빈 노트로 녹음을 날리는 것 방지
+function noteHasContent(note) {
+  if (!note || typeof note !== 'object') return false;
+  const recs = Array.isArray(note.recipes) ? note.recipes : [];
+  return recs.some(r => r && (
+    (r.content && r.content.trim().length >= 10) ||
+    (Array.isArray(r.ingredients) && r.ingredients.length > 0) ||
+    (Array.isArray(r.tips) && r.tips.length > 0)
+  ));
+}
+
 async function finalizeServerNote(draft, note) {
+  // 🛡️ 빈/무의미 노트면 녹음을 삭제하지 않고 에러 draft 로 보존 (재시도 가능)
+  if (!noteHasContent(note)) {
+    await saveDraftToDB({ ...draft, status: 'error', lastError: '노트 내용이 비어 있어요 — 수업(요리) 부분이 잘 녹음됐는지 확인하고 다시 시도해 주세요. 녹음은 안전하게 보관됐어요.' });
+    renderPendingDrafts();
+    showToast('⚠️ 노트가 비어 저장하지 않았어요 — 녹음은 보관됨, 다시 시도할 수 있어요');
+    return;
+  }
   note.media = draft.media || [];
   if (draft.audioBlob && draft.audioBlob.size < 10 * 1024 * 1024) {
     note.audioBlob = await blobToDataUrl(draft.audioBlob).catch(() => null);
