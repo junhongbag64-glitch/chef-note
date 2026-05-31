@@ -4895,7 +4895,7 @@ async function processDraftToNote(draft, isManual = false) {
     await deleteDraftFromDB(draft.id);
     renderNotes();
     updateStats();
-    if (isManual) { hideProc(); setTimeout(() => openNote(note.id), 400); }
+    if (isManual) procDone(() => openNote(note.id));
     showToast('✅ 이전 녹음을 노트로 저장했어요!');
     renderPendingDrafts();
   } catch(e) {
