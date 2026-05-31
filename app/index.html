@@ -6971,16 +6971,96 @@ async function clearData() {
 /* ═══════════════════════════════════════════
    PROCESSING OVERLAY
 ═══════════════════════════════════════════ */
+/* ═══════════════════════════════════════════
+   처리 모달 — 단계별 진행 컨트롤러 (업로드→음성인식→노트정리)
+   새 마크업이 없으면 제목/설명만 갱신하도록 전부 null-safe.
+═══════════════════════════════════════════ */
+const PROC_STAGES = ['upload', 'stt', 'note'];
+const PROC_META = {
+  upload: { emoji: '☁️', title: '업로드 중',   desc: '녹음을 안전하게 올리고 있어요',   pct: 18 },
+  stt:    { emoji: '🎧', title: '음성 인식 중', desc: '수업 내용을 받아쓰는 중이에요',   pct: 55 },
+  note:   { emoji: '✨', title: '노트 정리 중', desc: '재료·순서·팁을 구조화하고 있어요', pct: 90 },
+  done:   { emoji: '✅', title: '완성됐어요!',  desc: '노트가 준비됐어요',               pct: 100 },
+};
+let _procTimer = null, _procStartAt = 0;
+
+function _procSet(id, val, asHtml) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (asHtml) el.innerHTML = val; else el.textContent = val;
+}
+function _procRenderSteps(activeKey) {
+  const idx = PROC_STAGES.indexOf(activeKey);
+  const done = activeKey === 'done';
+  document.querySelectorAll('#procSteps .proc-step').forEach((el, i) => {
+    el.classList.toggle('active', !done && i === idx);
+    el.classList.toggle('done', done || i < idx);
+  });
+  document.querySelectorAll('#procSteps .proc-step-line').forEach((el, i) => {
+    el.classList.toggle('done', done || i < idx);
+  });
+}
+function _procFmtTime(sec) {
+  if (sec < 60) return sec + '초 경과';
+  return `${Math.floor(sec / 60)}분 ${sec % 60}초 경과`;
+}
+function _procStartTimer() {
+  if (_procTimer) return;
+  if (!_procStartAt) _procStartAt = Date.now();
+  _procTimer = setInterval(() => {
+    const sec = Math.floor((Date.now() - _procStartAt) / 1000);
+    _procSet('procTime', _procFmtTime(sec) + (sec > 25 ? ' · 곧 완성돼요' : ''));
+  }, 1000);
+}
+function _procStopTimer() {
+  if (_procTimer) { clearInterval(_procTimer); _procTimer = null; }
+  _procStartAt = 0;
+}
+
+/* 단계 전환 (신규 API) */
+function procStage(key) {
+  const m = PROC_META[key]; if (!m) return;
+  _procSet('procEmoji', m.emoji);
+  _procSet('procTitle', m.title);
+  _procSet('procDesc', m.desc, true);
+  const fill = document.getElementById('procBarFill');
+  if (fill) fill.style.width = m.pct + '%';
+  _procRenderSteps(key === 'done' ? 'done' : key);
+  const ov = document.getElementById('procOverlay');
+  if (ov) ov.classList.add('on');
+  _procStartTimer();
+}
+function procDone(cb) {
+  procStage('done');
+  _procStopTimer();
+  _procSet('procTime', '');
+  setTimeout(() => { hideProc(); if (cb) cb(); }, 650);
+}
+
+/* 문구로 단계 추론 — 기존 showProc/updateProc 호출부 하위호환 */
+function _inferStage(t, d) {
+  const s = ((t || '') + ' ' + (d || '')).toLowerCase();
+  if (s.includes('업로드') || s.includes('upload') || s.includes('등록')) return 'upload';
+  if (s.includes('인식') || s.includes('받아') || s.includes('stt')) return 'stt';
+  if (s.includes('완성') || s.includes('done')) return 'done';
+  return 'note';
+}
 function showProc(t, d) {
-  document.getElementById('procTitle').textContent   = t;
-  document.getElementById('procDesc').innerHTML      = d;
-  document.getElementById('procOverlay').classList.add('on');
+  _procStartAt = 0;
+  procStage(_inferStage(t, d));
+  if (t) _procSet('procTitle', t);
+  if (d) _procSet('procDesc', d, true);
 }
 function updateProc(t, d) {
-  document.getElementById('procTitle').textContent   = t;
-  document.getElementById('procDesc').innerHTML      = d;
+  procStage(_inferStage(t, d));
+  if (t) _procSet('procTitle', t);
+  if (d) _procSet('procDesc', d, true);
 }
-function hideProc() { document.getElementById('procOverlay').classList.remove('on'); }
+function hideProc() {
+  const ov = document.getElementById('procOverlay');
+  if (ov) ov.classList.remove('on');
+  _procStopTimer();
+}
 
 /* ═══════════════════════════════════════════
    TOAST
