@@ -4127,21 +4127,23 @@ document.addEventListener('DOMContentLoaded', () => {
       S.currentUser = null;
       S.notes = [];
       appDiv.style.display = 'none';
-      authScr.classList.remove('hidden');
-      loading.classList.add('hidden');
-      // 랜딩 "시작하기"(?login=1)로 진입하면 → 바로 구글 로그인으로 이동.
-      // redirect 방식(팝업은 자동실행 시 차단됨). 취소 후 무한루프 방지로 1회만.
+      // ?login=1 로 진입 + 로그아웃 상태면 → 인증 화면 띄우지 말고 바로 구글 로그인으로.
+      // (인증 랜딩이 깜빡 뜨는 것 방지 — 로딩 화면 유지한 채 redirect)
       try {
         const _p = new URLSearchParams(location.search);
-        // 직전 15초 내 리다이렉트 시도가 있었으면(=취소 후 복귀) 재시도 안 함 → 무한루프 방지.
-        // 그 외 새 클릭은 매번 구글 로그인으로 보냄.
+        // 직전 15초 내 리다이렉트 시도(=취소 후 복귀)면 재시도 안 함 → 무한루프 방지.
         const _last = +(sessionStorage.getItem('cn_login_redirect_at') || 0);
         const _recently = (Date.now() - _last) < 15000;
         if (_p.has('login') && !_recently) {
           sessionStorage.setItem('cn_login_redirect_at', String(Date.now()));
+          loading.classList.remove('hidden');   // 로딩 화면 유지 (인증 랜딩 노출 X)
           await auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider());
+          return;  // 리다이렉트 진행 — 아래 인증화면 노출 코드 도달 안 함
         }
       } catch (e) { console.warn('[auto-login] redirect 실패:', e.message); }
+      // 리다이렉트 안 하는 경우에만 인증 화면 노출
+      authScr.classList.remove('hidden');
+      loading.classList.add('hidden');
     }
   });
 
