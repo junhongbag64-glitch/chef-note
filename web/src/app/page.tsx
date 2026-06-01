@@ -137,7 +137,7 @@ export default function Home() {
         <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-3.5">
           <Logo size="sm" />
           <a
-            href="/app/"
+            href="/app/?login=1"
             className="rounded-full bg-chili px-4 py-2 text-sm font-semibold text-cream transition-transform hover:scale-[1.04] active:scale-95"
           >
             시작하기
@@ -191,7 +191,7 @@ export default function Home() {
           <Reveal delay={0.42}>
             <div className="relative mt-9 inline-block">
               <a
-                href="/app/"
+                href="/app/?login=1"
                 className="inline-flex items-center gap-2 rounded-full bg-chili px-8 py-4 text-base font-semibold text-cream shadow-[0_4px_16px_rgba(217,75,43,0.35)] transition-all hover:scale-[1.03] hover:shadow-[0_6px_20px_rgba(217,75,43,0.45)] active:scale-95"
               >
                 지금 시작하기 →
@@ -449,7 +449,7 @@ export default function Home() {
               설치하고 녹음 버튼 하나면 끝이에요.
             </p>
             <a
-              href="/app/"
+              href="/app/?login=1"
               className="mt-8 inline-flex items-center gap-2 rounded-full bg-chili px-9 py-4 text-base font-semibold text-cream shadow-[0_4px_16px_rgba(217,75,43,0.35)] transition-all hover:scale-[1.03] hover:shadow-[0_6px_20px_rgba(217,75,43,0.45)] active:scale-95"
             >
               ChefNote 시작하기 →

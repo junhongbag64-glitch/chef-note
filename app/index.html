@@ -4129,6 +4129,15 @@ document.addEventListener('DOMContentLoaded', () => {
       appDiv.style.display = 'none';
       authScr.classList.remove('hidden');
       loading.classList.add('hidden');
+      // 랜딩 "시작하기"(?login=1)로 진입하면 → 바로 구글 로그인으로 이동.
+      // redirect 방식(팝업은 자동실행 시 차단됨). 취소 후 무한루프 방지로 1회만.
+      try {
+        const _p = new URLSearchParams(location.search);
+        if (_p.has('login') && !sessionStorage.getItem('cn_login_redirected')) {
+          sessionStorage.setItem('cn_login_redirected', '1');
+          await auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider());
+        }
+      } catch (e) { console.warn('[auto-login] redirect 실패:', e.message); }
     }
   });
 
