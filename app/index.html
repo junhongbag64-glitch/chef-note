@@ -4133,8 +4133,12 @@ document.addEventListener('DOMContentLoaded', () => {
       // redirect 방식(팝업은 자동실행 시 차단됨). 취소 후 무한루프 방지로 1회만.
       try {
         const _p = new URLSearchParams(location.search);
-        if (_p.has('login') && !sessionStorage.getItem('cn_login_redirected')) {
-          sessionStorage.setItem('cn_login_redirected', '1');
+        // 직전 15초 내 리다이렉트 시도가 있었으면(=취소 후 복귀) 재시도 안 함 → 무한루프 방지.
+        // 그 외 새 클릭은 매번 구글 로그인으로 보냄.
+        const _last = +(sessionStorage.getItem('cn_login_redirect_at') || 0);
+        const _recently = (Date.now() - _last) < 15000;
+        if (_p.has('login') && !_recently) {
+          sessionStorage.setItem('cn_login_redirect_at', String(Date.now()));
           await auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider());
         }
       } catch (e) { console.warn('[auto-login] redirect 실패:', e.message); }

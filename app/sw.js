@@ -1,4 +1,4 @@
-const CACHE_NAME = 'chefnote-v29';
+const CACHE_NAME = 'chefnote-v30';
 const SHARE_CACHE = 'chefnote-share-inbox';
 const STATIC_ASSETS = [
   '/app/',
