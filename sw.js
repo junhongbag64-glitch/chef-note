@@ -1,6 +1,6 @@
 // ChefNote — 루트 SW (랜딩 페이지용 최소 버전)
 // 앱은 /app/sw.js 가 담당. 이 SW는 기존 chefnote-v* 캐시를 정리하고 종료.
-const CACHE_NAME = 'chefnote-landing-v1';
+const CACHE_NAME = 'chefnote-landing-v2';
 
 self.addEventListener('install', () => self.skipWaiting());
 

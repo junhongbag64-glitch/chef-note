@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Logo,
@@ -126,7 +127,80 @@ const FAQ = [
   ],
 ];
 
+const FB_CONFIG = {
+  apiKey: "AIzaSyAXla8W0tWBLQV7D08YxPQmQKs6jPkcs4E",
+  authDomain: "chefnote-1833f.firebaseapp.com",
+  projectId: "chefnote-1833f",
+  storageBucket: "chefnote-1833f.firebasestorage.app",
+  messagingSenderId: "553773468055",
+  appId: "1:553773468055:web:0fbd68dc334899fc5f5cd2",
+  measurementId: "G-T4J7T6XMV4",
+};
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function getFb(): any {
+  return (typeof window !== "undefined" ? (window as any).firebase : null) || null;
+}
+
 export default function Home() {
+  // 인앱 브라우저 redirect 로그인 복귀 처리 (성공 시 앱으로)
+  useEffect(() => {
+    const fb = getFb();
+    if (!fb || !fb.auth) return;
+    try {
+      if (!fb.apps?.length) fb.initializeApp(FB_CONFIG);
+    } catch {}
+    try {
+      fb.auth()
+        .getRedirectResult()
+        .then((r: any) => {
+          if (r && r.user) window.location.href = "/app/";
+        })
+        .catch(() => {});
+    } catch {}
+  }, []);
+
+  // "시작하기" → 랜딩에서 바로 구글 로그인. 성공 시 /app/.
+  // firebase 미로드 시 preventDefault 안 하고 href(/app/?login=1)로 자연 폴백.
+  const startApp = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    const fb = getFb();
+    if (!fb || !fb.auth) return;
+    e.preventDefault();
+    try {
+      if (!fb.apps?.length) fb.initializeApp(FB_CONFIG);
+    } catch {}
+    const auth = fb.auth();
+    const provider = new fb.auth.GoogleAuthProvider();
+    const ua = (navigator.userAgent || "").toLowerCase();
+    const inApp = /fban|fbav|instagram|kakaotalk|line\/|naver|\bwv\b/.test(ua);
+    if (inApp) {
+      auth
+        .signInWithRedirect(provider)
+        .catch(() => {
+          window.location.href = "/app/?login=1";
+        });
+      return;
+    }
+    auth
+      .signInWithPopup(provider)
+      .then(() => {
+        window.location.href = "/app/";
+      })
+      .catch((err: any) => {
+        const code = err?.code || "";
+        if (
+          code === "auth/popup-blocked" ||
+          code === "auth/operation-not-supported-in-this-environment" ||
+          code === "auth/cancelled-popup-request"
+        ) {
+          auth.signInWithRedirect(provider).catch(() => {
+            window.location.href = "/app/?login=1";
+          });
+        }
+        // popup-closed-by-user → 무시 (사용자가 직접 닫음)
+      });
+  };
+
   return (
     <div className="relative min-h-screen overflow-x-hidden">
       {/* 줄노트 종이 배경 */}
@@ -138,6 +212,7 @@ export default function Home() {
           <Logo size="sm" />
           <a
             href="/app/?login=1"
+            onClick={startApp}
             className="rounded-full bg-chili px-4 py-2 text-sm font-semibold text-cream transition-transform hover:scale-[1.04] active:scale-95"
           >
             시작하기
@@ -192,6 +267,7 @@ export default function Home() {
             <div className="relative mt-9 inline-block">
               <a
                 href="/app/?login=1"
+            onClick={startApp}
                 className="inline-flex items-center gap-2 rounded-full bg-chili px-8 py-4 text-base font-semibold text-cream shadow-[0_4px_16px_rgba(217,75,43,0.35)] transition-all hover:scale-[1.03] hover:shadow-[0_6px_20px_rgba(217,75,43,0.45)] active:scale-95"
               >
                 지금 시작하기 →
@@ -450,6 +526,7 @@ export default function Home() {
             </p>
             <a
               href="/app/?login=1"
+            onClick={startApp}
               className="mt-8 inline-flex items-center gap-2 rounded-full bg-chili px-9 py-4 text-base font-semibold text-cream shadow-[0_4px_16px_rgba(217,75,43,0.35)] transition-all hover:scale-[1.03] hover:shadow-[0_6px_20px_rgba(217,75,43,0.45)] active:scale-95"
             >
               ChefNote 시작하기 →

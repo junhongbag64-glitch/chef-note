@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import "./globals.css";
 
 // ── Google Analytics 4 ──
@@ -34,6 +35,15 @@ export default function RootLayout({
         <link
           href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/pretendard-dynamic-subset.css"
           rel="stylesheet"
+        />
+        {/* Firebase (CDN compat) — 랜딩에서 바로 구글 로그인. 하이드레이션 전 로드 */}
+        <Script
+          src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"
+          strategy="beforeInteractive"
+        />
+        <Script
+          src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"
+          strategy="beforeInteractive"
         />
         {/* Google Analytics 4 — GA_ID 상수에 실제 측정 ID 넣으면 자동 활성화 */}
         {GA_ENABLED && (
