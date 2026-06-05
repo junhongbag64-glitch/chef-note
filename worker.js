@@ -515,7 +515,7 @@ async function handleJobStatus(jobId, request, env, ctx) {
           headers: { authorization: env.ASSEMBLYAI_KEY },
         });
         const asmData = await r.json();
-        if (asmData.status === 'completed' && asmData.text) {
+        if (asmData.status === 'completed' && asmData.text && asmData.text.trim().length >= 5) {
           let text = asmData.text;
           if (text.length > MAX_TRANSCRIPT_CHARS) text = text.slice(0, MAX_TRANSCRIPT_CHARS);
           job.status = 'generating';
@@ -533,8 +533,16 @@ async function handleJobStatus(jobId, request, env, ctx) {
               }
             })());
           }
+        } else if (asmData.status === 'completed') {
+          // 완료됐으나 텍스트 없음/너무 짧음 → 영원히 transcribing 되는 것 방지, 재시도 가능한 에러로
+          job = { ...job, status: 'error', error: '음성이 감지되지 않았어요 — 녹음에 말소리가 있는지 확인하고 다시 시도해 주세요' };
+          await putJob(env, jobId, job);
         } else if (asmData.status === 'error') {
           job = { ...job, status: 'error', error: asmData.error || '음성 인식 실패' };
+          await putJob(env, jobId, job);
+        } else if (ageSec > 1800) {
+          // 30분 넘게 큐/처리중에 머물면 포기 → 재시도 가능하게 에러 (무한 transcribing 방지)
+          job = { ...job, status: 'error', error: '변환이 너무 오래 걸려요 (시간 초과) — 다시 시도해 주세요' };
           await putJob(env, jobId, job);
         }
       } catch (e) { /* swallow */ }
